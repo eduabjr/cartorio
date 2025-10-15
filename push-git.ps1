@@ -1,105 +1,126 @@
-# Script simples para push no Git
+# push-git.ps1
+# Script simplificado para operações Git: add, commit e push
+
 param(
-    [string]$message = "Update automático - $(Get-Date -Format 'dd/MM/yyyy HH:mm')"
+    [string]$message = "Update automático - $(Get-Date -Format 'dd/MM/yyyy HH:mm')",
+    [switch]$force = $false
 )
 
-Write-Host "========================================" -ForegroundColor Green
-Write-Host "   PUSH AUTOMÁTICO PARA GITHUB" -ForegroundColor Green
-Write-Host "========================================" -ForegroundColor Green
+# Função para exibir mensagens coloridas
+function Write-Color {
+    param (
+        [string]$Message,
+        [string]$ForegroundColor = "White"
+    )
+    Write-Host $Message -ForegroundColor $ForegroundColor
+}
 
-# Configurações
 $REPO_URL = "https://github.com/eduabjr/cartorio"
-$BRANCH = "main"
+$BRANCH = "master"
+
+Write-Color "========================================" "Green"
+Write-Color "   PUSH AUTOMÁTICO PARA GITHUB" "Green"
+Write-Color "   Repositório: $REPO_URL" "Cyan"
+Write-Color "========================================" "Green"
+Write-Color ""
 
 # Verificar se o Git está instalado
 try {
     git --version | Out-Null
-    Write-Host "✅ Git encontrado" -ForegroundColor Green
 } catch {
-    Write-Host "❌ ERRO: Git não encontrado" -ForegroundColor Red
+    Write-Color "❌ ERRO: Git não encontrado. Por favor, instale o Git e configure-o." "Red"
     exit 1
 }
 
 # Verificar se estamos em um repositório Git
 if (-not (Test-Path ".git")) {
-    Write-Host "❌ Este diretório não é um repositório Git!" -ForegroundColor Red
-    Write-Host "Inicializando repositório Git..." -ForegroundColor Yellow
-    
+    Write-Color "❌ ERRO: Este diretório não é um repositório Git!" "Red"
+    Write-Color "Inicializando repositório Git..." "Yellow"
     git init
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ ERRO: Falha ao inicializar repositório Git!" -ForegroundColor Red
+        Write-Color "❌ ERRO: Falha ao inicializar repositório Git!" "Red"
         exit 1
     }
-    
-    Write-Host "✅ Repositório Git inicializado!" -ForegroundColor Green
+    Write-Color "✅ Repositório Git inicializado!" "Green"
 }
 
-# Configurar remote origin se não existir
+# Configurar remote origin se não existir ou se a URL estiver incorreta
 $currentRemoteUrl = git config --get remote.origin.url 2>$null
 if ($LASTEXITCODE -ne 0 -or $currentRemoteUrl -ne $REPO_URL) {
     if ($currentRemoteUrl) {
-        Write-Host "🔗 Removendo remote 'origin' existente" -ForegroundColor Yellow
+        Write-Color "🔗 Removendo remote 'origin' existente com URL incorreta: $currentRemoteUrl" "Yellow"
         git remote remove origin
     }
-    Write-Host "🔗 Adicionando remote 'origin'" -ForegroundColor Yellow
+    Write-Color "🔗 Adicionando remote 'origin' com a URL correta: $REPO_URL" "Yellow"
     git remote add origin $REPO_URL
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ ERRO: Falha ao configurar remote origin!" -ForegroundColor Red
+        Write-Color "❌ ERRO: Falha ao configurar remote origin!" "Red"
         exit 1
     }
-    Write-Host "✅ Remote origin configurado!" -ForegroundColor Green
+    Write-Color "✅ Remote origin configurado!" "Green"
 } else {
-    Write-Host "✅ Remote origin já configurado" -ForegroundColor Green
+    Write-Color "🔗 Remote origin já configurado e correto: $currentRemoteUrl" "Cyan"
 }
 
 # Adicionar todos os arquivos
-Write-Host "📁 Adicionando arquivos..." -ForegroundColor Yellow
+Write-Color "📁 Adicionando arquivos ao staging..." "Yellow"
 git add .
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ ERRO: Falha ao adicionar arquivos!" -ForegroundColor Red
+    Write-Color "❌ ERRO: Falha ao adicionar arquivos!" "Red"
     exit 1
 }
 
 # Verificar se há mudanças para commitar
 $changes = git diff --cached --name-only
 if (-not $changes) {
-    Write-Host "ℹ️  Nenhuma mudança detectada para commitar." -ForegroundColor Yellow
+    Write-Color "ℹ️  Nenhuma mudança detectada para commitar." "Yellow"
+    Write-Color "Tentando fazer pull para sincronizar..." "Yellow"
+    git pull origin $BRANCH
+    if ($LASTEXITCODE -ne 0) {
+        Write-Color "⚠️  Aviso: Falha no pull. Pode haver conflitos ou o branch remoto não existe. Continuando com push..." "Yellow"
+    }
 } else {
-    Write-Host "📝 Fazendo commit..." -ForegroundColor Yellow
-    Write-Host "Mensagem: $message" -ForegroundColor Cyan
-    
+    Write-Color "📝 Fazendo commit das mudanças..." "Yellow"
+    Write-Color "Mensagem: $message" "Cyan"
     git commit -m $message
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ ERRO: Falha ao fazer commit!" -ForegroundColor Red
+        Write-Color "❌ ERRO: Falha ao fazer commit!" "Red"
         exit 1
     }
-    Write-Host "✅ Commit realizado com sucesso!" -ForegroundColor Green
+    Write-Color "✅ Commit realizado com sucesso!" "Green"
 }
 
 # Fazer push para o repositório
-Write-Host "🚀 Enviando para GitHub..." -ForegroundColor Yellow
-git push origin $BRANCH
+Write-Color "🚀 Enviando para GitHub..." "Yellow"
+if ($force) {
+    git push origin $BRANCH --force
+    Write-Color "⚠️  Push forçado executado!" "Yellow"
+} else {
+    git push origin $BRANCH
+}
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host ""
-    Write-Host "🎉 SUCESSO! Código enviado para GitHub!" -ForegroundColor Green
-    Write-Host "🌐 Repositório: $REPO_URL" -ForegroundColor Cyan
-    Write-Host "🌿 Branch: $BRANCH" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "✅ Push automático concluído com sucesso!" -ForegroundColor Green
+    Write-Color "" "White"
+    Write-Color "🎉 SUCESSO! Código enviado para GitHub!" "Green"
+    Write-Color "🌐 Repositório: $REPO_URL" "Cyan"
+    Write-Color "🌿 Branch: $BRANCH" "Cyan"
+    Write-Color "" "White"
+    Write-Color "✅ Push automático concluído com sucesso!" "Green"
 } else {
-    Write-Host ""
-    Write-Host "❌ ERRO: Falha no push para GitHub!" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Possíveis soluções:" -ForegroundColor Yellow
-    Write-Host "1. Verifique sua conexão com a internet" -ForegroundColor White
-    Write-Host "2. Confirme suas credenciais do GitHub" -ForegroundColor White
-    Write-Host "3. Verifique se o repositório existe e você tem permissão" -ForegroundColor White
-    Write-Host ""
+    Write-Color "" "White"
+    Write-Color "❌ ERRO: Falha no push para GitHub!" "Red"
+    Write-Color "" "White"
+    Write-Color "Possíveis soluções:" "Yellow"
+    Write-Color "1. Verifique sua conexão com a internet" "White"
+    Write-Color "2. Confirme suas credenciais do GitHub" "White"
+    Write-Color "3. Execute 'npm run push:quick -- --force' para forçar o push" "White"
+    Write-Color "4. Verifique se o repositório existe e você tem permissão" "White"
+    Write-Color "5. Se o branch remoto '$BRANCH' não existir, crie-o manualmente ou use 'git push -u origin $BRANCH' uma vez." "White"
+    Write-Color "" "White"
     exit 1
 }
 
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Green
-Write-Host "   PUSH CONCLUÍDO!" -ForegroundColor Green
-Write-Host "========================================" -ForegroundColor Green
+Write-Color "" "White"
+Write-Color "========================================" "Green"
+Write-Color "   PUSH CONCLUÍDO!" "Green"
+Write-Color "========================================" "Green"
