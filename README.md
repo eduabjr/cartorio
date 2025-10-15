@@ -8,51 +8,55 @@ Sistema robusto e escalável para cartórios baseado em arquitetura de microsser
 
 1. **Auth Service** (Porta 3001) - Autenticação e autorização
 2. **User Service** (Porta 3002) - Gerenciamento de usuários
-3. **Document Service** (Porta 3003) - Gestão de documentos
-4. **Registry Service** (Porta 3004) - Registros cartoriais
-5. **Payment Service** (Porta 3005) - Processamento de pagamentos
-6. **Notification Service** (Porta 3006) - Sistema de notificações
-7. **API Gateway** (Porta 3000) - Gateway de API
-8. **Frontend** (Porta 3007) - Interface web
+3. **API Gateway** (Porta 3000) - Gateway de API
+4. **Frontend** (Porta 5173) - Interface web
 
-### Infraestrutura
+### Infraestrutura Local (XAMPP)
 
-- **PostgreSQL** - Banco de dados relacional
-- **Redis** - Cache e sessões
-- **RabbitMQ** - Mensageria assíncrona
-- **Nginx** - Proxy reverso e balanceamento de carga
+- **MySQL** - Banco de dados relacional (via XAMPP)
+- **Apache** - Servidor web (via XAMPP)
+- **phpMyAdmin** - Interface de administração do banco
 
-## 🌐 Desenvolvimento via Rede Local
+## 🚀 Desenvolvimento Local com XAMPP
 
 ### Opção 1: Script Automático (Recomendado)
 ```bash
-# Execute o script para modo rede
-start-network.bat
+# Execute o script para configurar e iniciar tudo
+SCRIPTS-AUTOMATIZADOS.bat
+# Escolha a opção [7] - Iniciar Todos os Serviços (XAMPP)
 ```
 
 ### Opção 2: Manual
 ```bash
-# 1. Configure o Vite para aceitar conexões de rede
-# (já configurado no vite.config.ts)
+# 1. Instale e configure o XAMPP
+# 2. Inicie o Apache e MySQL no XAMPP Control Panel
+# 3. Execute os serviços em terminais separados:
 
-# 2. Inicie os serviços
-docker-compose up -d
+# Terminal 1 - Auth Service
+cd services/auth-service && npm run start:dev
 
-# 3. Acesse via IP da rede local
-# Frontend: http://192.168.15.192:3007
+# Terminal 2 - User Service  
+cd services/user-service && npm run start:dev
+
+# Terminal 3 - Frontend
+cd frontend && npm run dev
+
+# 4. Acesse:
+# Frontend: http://localhost:5173
+# phpMyAdmin: http://localhost/phpmyadmin
 ```
 
-### Vantagens do Acesso via Rede:
-- ✅ Teste em dispositivos móveis (celular/tablet)
-- ✅ Demonstração para clientes em outros computadores
-- ✅ Desenvolvimento colaborativo
-- ✅ Teste de responsividade em diferentes telas
-- ✅ Hot reload funciona em todos os dispositivos
+### Vantagens do Desenvolvimento Local:
+- ✅ Ambiente de desenvolvimento estável
+- ✅ Acesso direto ao banco MySQL via phpMyAdmin
+- ✅ Hot reload e debugging facilitados
+- ✅ Sem dependência de Docker
+- ✅ Configuração mais simples
 
 ### Requisitos:
-- Todos os dispositivos devem estar na mesma rede Wi-Fi
-- Firewall do Windows deve permitir conexões na porta 3007
-- Docker Desktop deve estar rodando
+- Node.js 18+ instalado
+- XAMPP instalado (Apache + MySQL)
+- Git para controle de versão
 
 ## 🚀 Tecnologias
 
@@ -60,7 +64,7 @@ docker-compose up -d
 - **Node.js** + **TypeScript**
 - **NestJS** - Framework para microsserviços
 - **Express.js** - Servidor web
-- **Prisma** - ORM para PostgreSQL
+- **Prisma** - ORM para MySQL
 - **JWT** - Autenticação
 - **bcrypt** - Hash de senhas
 - **Winston** - Logs
@@ -71,53 +75,61 @@ docker-compose up -d
 - **Tailwind CSS** - Estilização
 - **React Query** - Gerenciamento de estado
 - **React Router** - Roteamento
+- **Electron** - Aplicação desktop
 
-### DevOps
-- **Docker** + **Docker Compose**
-- **Nginx** - Proxy reverso
-- **PM2** - Process manager
+### Infraestrutura Local
+- **XAMPP** - Ambiente de desenvolvimento
+- **MySQL** - Banco de dados
+- **Apache** - Servidor web
 
 ## 📋 Pré-requisitos
 
 - Node.js 18+
-- Docker e Docker Compose
+- XAMPP (Apache + MySQL)
 - Git
 
 ## 🛠️ Instalação e Execução
 
 ### 1. Clone o repositório
 ```bash
-git clone <repository-url>
-cd sistema-cartorio-microservices
+git clone https://github.com/eduabjr/cartorio.git
+cd cartorio
 ```
 
-### 2. Instale as dependências
+### 2. Configure o XAMPP
+```bash
+# Execute o script de configuração
+SCRIPTS-AUTOMATIZADOS.bat
+# Escolha a opção [5] - Configurar XAMPP
+```
+
+### 3. Instale as dependências
 ```bash
 npm run install-all
 ```
 
-### 3. Execute com Docker
+### 4. Execute os serviços
 ```bash
-npm run dev
+# Execute o script para iniciar tudo
+SCRIPTS-AUTOMATIZADOS.bat
+# Escolha a opção [7] - Iniciar Todos os Serviços (XAMPP)
 ```
 
-### 4. Acesse o sistema
+### 5. Acesse o sistema
 
 #### 🌐 Links de Acesso (Localhost)
-- **Frontend (Interface Principal)**: http://localhost:3007
+- **Frontend (Interface Principal)**: http://localhost:5173
 - **API Gateway**: http://localhost:3000
 - **Auth Service**: http://localhost:3001
 - **User Service**: http://localhost:3002
-- **PostgreSQL**: localhost:5432
-- **RabbitMQ Management**: http://localhost:15672
+- **phpMyAdmin**: http://localhost/phpmyadmin
 
 #### 🌍 Links de Acesso (Rede Local)
-- **Frontend (Interface Principal)**: http://192.168.15.192:3007
+- **Frontend (Interface Principal)**: http://192.168.15.192:5173
 - **API Gateway**: http://192.168.15.192:3000
 - **Auth Service**: http://192.168.15.192:3001
 - **User Service**: http://192.168.15.192:3002
-- **PostgreSQL**: 192.168.15.192:5432
-- **RabbitMQ Management**: http://192.168.15.192:15672
+- **phpMyAdmin**: http://192.168.15.192/phpmyadmin
 
 > **💡 Dica**: Use os links de rede local para acessar o sistema de outros dispositivos na mesma rede Wi-Fi (celular, tablet, outros computadores).
 
@@ -135,42 +147,44 @@ npm run dev
 ## 📁 Estrutura do Projeto
 
 ```
-sistema-cartorio-microservices/
+cartorio/
 ├── services/
 │   ├── auth-service/
 │   ├── user-service/
-│   ├── document-service/
-│   ├── registry-service/
-│   ├── payment-service/
-│   ├── notification-service/
 │   └── api-gateway/
 ├── frontend/
 ├── shared/
-├── database/
-├── nginx/
-├── docker-compose.yml
+├── env-examples/
+├── SCRIPTS-AUTOMATIZADOS.bat
+├── SCRIPTS-POWERSHELL.ps1
+├── GUIA-COMPLETO.md
 └── package.json
 ```
 
 ## 🧪 Como Testar o Sistema
 
-### 1. Iniciar os Serviços
+### 1. Configurar o Ambiente
 ```bash
-# Iniciar PostgreSQL
-docker run -d --name postgres-cartorio -e POSTGRES_DB=cartorio_db -e POSTGRES_USER=cartorio_user -e POSTGRES_PASSWORD=cartorio_password -p 5432:5432 postgres:15-alpine
-
-# Iniciar Frontend
-docker run -d --name frontend -p 3007:3000 -v "C:\Users\Usuário\Desktop\projeto sistema cartorio\frontend:/app" -w /app node:18-alpine sh -c "cd /app && npm install && npm run dev"
+# Execute o script de configuração
+SCRIPTS-AUTOMATIZADOS.bat
+# Escolha a opção [5] - Configurar XAMPP
 ```
 
-### 2. Verificar Status
+### 2. Iniciar os Serviços
 ```bash
-docker ps
+# Execute o script para iniciar tudo
+SCRIPTS-AUTOMATIZADOS.bat
+# Escolha a opção [7] - Iniciar Todos os Serviços (XAMPP)
 ```
 
-### 3. Acessar o Sistema
+### 3. Verificar Status
+- Verifique se o XAMPP está rodando (Apache + MySQL)
+- Verifique se os serviços estão rodando nas portas corretas
+- Acesse o phpMyAdmin para verificar o banco de dados
+
+### 4. Acessar o Sistema
 1. Abra o navegador
-2. Acesse: http://localhost:3007
+2. Acesse: http://localhost:5173
 3. Faça login com as credenciais fornecidas
 4. Explore as funcionalidades do sistema
 
@@ -205,26 +219,36 @@ run-electron-dev.bat
 
 ## 🔧 Scripts Disponíveis
 
-- `npm run dev` - Inicia todos os serviços
-- `npm run build` - Constrói as imagens Docker
-- `npm run stop` - Para todos os serviços
-- `npm run logs` - Visualiza logs dos serviços
+### Scripts NPM
 - `npm run install-all` - Instala dependências de todos os serviços
-- `build-electron.bat` - Cria executável desktop
-- `run-electron-dev.bat` - Executa aplicação desktop em desenvolvimento
+- `npm run push:quick` - Push automático para GitHub
+- `npm run scripts:bat` - Executa scripts .bat consolidados
+- `npm run scripts:ps1` - Executa scripts PowerShell consolidados
+
+### Scripts Consolidados
+- `SCRIPTS-AUTOMATIZADOS.bat` - Todos os scripts .bat em um só lugar
+  - Frontend Web (Desenvolvimento)
+  - Frontend Desktop (Electron)
+  - Gerar Executável
+  - Frontend Estável
+  - Configurar XAMPP
+  - Desenvolvimento Local
+  - Iniciar Todos os Serviços (XAMPP)
+- `SCRIPTS-POWERSHELL.ps1` - Todos os scripts PowerShell em um só lugar
 
 ## 🗄️ Banco de Dados
 
-### Configuração
-- **Host**: localhost:5432
-- **Database**: cartorio_db
-- **User**: cartorio_user
-- **Password**: cartorio_password
+### Configuração (XAMPP/MySQL)
+- **Host**: localhost:3306
+- **Database**: auth_db, user_db, cartorio_db
+- **User**: root (padrão XAMPP)
+- **Password**: (vazio - padrão XAMPP)
 
 ### Migrações
 ```bash
 cd services/[service-name]
-npx prisma migrate dev
+npx prisma generate
+npx prisma db push
 ```
 
 ## 🔐 Segurança

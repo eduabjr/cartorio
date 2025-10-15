@@ -4,14 +4,12 @@
   "description": "Sistema de cartório baseado em microsserviços",
   "main": "index.js",
   "scripts": {
-    "dev": "docker-compose up -d",
-    "build": "docker-compose build",
-    "stop": "docker-compose down",
-    "logs": "docker-compose logs -f",
     "install-all": "npm run install:services && npm run install:frontend",
     "install:services": "cd services && for dir in */; do (cd \"$dir\" && npm install); done",
     "install:frontend": "cd frontend && npm install",
-    "push:quick": "powershell -ExecutionPolicy Bypass -File scripts/push-quick.ps1"
+    "push:quick": "powershell -ExecutionPolicy Bypass -File push-git.ps1",
+    "scripts:bat": "SCRIPTS-AUTOMATIZADOS.bat",
+    "scripts:ps1": "powershell -ExecutionPolicy Bypass -File SCRIPTS-POWERSHELL.ps1"
   },
   "keywords": [
     "cartorio",
@@ -19,7 +17,8 @@
     "nodejs",
     "typescript",
     "react",
-    "postgresql"
+    "mysql",
+    "xampp"
   ],
   "author": "Sistema Cartório",
   "license": "MIT",
