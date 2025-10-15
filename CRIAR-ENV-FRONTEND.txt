@@ -1,0 +1,12 @@
+INSTRUÇÕES PARA CRIAR O ARQUIVO .env DO FRONTEND:
+
+1. Navegue até a pasta: F:\cartorio\frontend\
+2. Crie um novo arquivo chamado: .env
+3. Adicione o seguinte conteúdo no arquivo:
+
+VITE_API_URL=http://localhost:3000/api
+
+4. Salve o arquivo
+
+Este arquivo é necessário para que o frontend se conecte ao backend.
+Se você não criar este arquivo, o frontend funcionará mas não conseguirá se comunicar com a API.

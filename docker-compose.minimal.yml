@@ -1,0 +1,46 @@
+version: '3.8'
+
+# Configurações específicas para Windows
+x-common-variables: &common-variables
+  COMPOSE_CONVERT_WINDOWS_PATHS: 1
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: cartorio-postgres
+    environment:
+      POSTGRES_DB: cartorio_db
+      POSTGRES_USER: cartorio_user
+      POSTGRES_PASSWORD: cartorio_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - cartorio-network
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: cartorio-auth-service
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://cartorio_user:cartorio_password@postgres:5432/cartorio_db
+      JWT_SECRET: your-super-secret-jwt-key
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - cartorio-network
+
+volumes:
+  postgres_data:
+
+networks:
+  cartorio-network:
+    driver: bridge
