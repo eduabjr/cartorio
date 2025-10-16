@@ -5,21 +5,23 @@ import { ArrowRight, Building, Shield, User } from 'lucide-react'
 
 export function LoginPage() {
   const [email, setEmail] = useState('admin@cartorio.com')
-  const [password, setPassword] = useState('')
-  const [profile, setProfile] = useState<'admin' | 'employee'>('employee')
+  const [password, setPassword] = useState('admin123')
+  const [profile, setProfile] = useState<'admin' | 'employee'>('admin')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError('')
     
     try {
       await login(email, password, profile)
       navigate('/')
     } catch (error) {
-      alert('Erro ao fazer login')
+      setError(error instanceof Error ? error.message : 'Erro ao fazer login')
     } finally {
       setIsLoading(false)
     }
@@ -37,6 +39,12 @@ export function LoginPage() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -120,6 +128,15 @@ export function LoginPage() {
           <p>Rua Yara, 49 - São João</p>
           <p>CEP: 17513-370 - Marília/SP</p>
           <p>Tel: (14) 3216-2611</p>
+        </div>
+
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+          <p className="font-medium text-blue-800 mb-2">Credenciais de Demonstração:</p>
+          <div className="space-y-1 text-blue-700">
+            <p><strong>Admin:</strong> admin@cartorio.com / admin123</p>
+            <p><strong>Funcionário:</strong> funcionario@cartorio.com / func123</p>
+            <p><strong>Teste:</strong> teste@cartorio.com / teste123</p>
+          </div>
         </div>
       </div>
     </div>

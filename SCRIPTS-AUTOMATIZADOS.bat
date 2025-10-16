@@ -22,9 +22,13 @@ echo [4] Frontend Estavel
 echo [5] Configurar XAMPP
 echo [6] Desenvolvimento Local
 echo [7] Iniciar Todos os Serviços (XAMPP)
+echo [8] Frontend com XAMPP
+echo [9] Frontend com Docker
+echo [10] Configurar Docker
+echo [11] Frontend Simples
 echo [0] Sair
 echo.
-set /p choice="Digite sua opcao (0-7): "
+set /p choice="Digite sua opcao (0-11): "
 
 if "%choice%"=="1" goto frontend_web
 if "%choice%"=="2" goto frontend_desktop
@@ -33,6 +37,10 @@ if "%choice%"=="4" goto frontend_estavel
 if "%choice%"=="5" goto setup_xampp
 if "%choice%"=="6" goto dev_local
 if "%choice%"=="7" goto start_all_services
+if "%choice%"=="8" goto frontend_xampp
+if "%choice%"=="9" goto frontend_docker
+if "%choice%"=="10" goto setup_docker
+if "%choice%"=="11" goto frontend_simples
 if "%choice%"=="0" goto exit
 goto menu
 
@@ -157,21 +165,35 @@ if not exist "C:\xampp\xampp-control.exe" (
 echo ✅ XAMPP encontrado!
 
 echo.
-echo [2/5] Copiando arquivos .env de exemplo...
-if not exist "env-examples" (
-    echo ERRO: Pasta env-examples nao encontrada!
-    pause
-    goto menu
+echo [2/5] Criando configuração do Apache...
+copy "frontend\xampp-config.conf" "C:\xampp\apache\conf\extra\frontend.conf" >nul 2>&1
+if errorlevel 1 (
+    echo ⚠️ Nao foi possivel copiar automaticamente.
+    echo Copie manualmente: frontend\xampp-config.conf para C:\xampp\apache\conf\extra\frontend.conf
+) else (
+    echo ✅ Configuração copiada!
 )
 
-copy "env-examples\auth-service.env" "services\auth-service\.env" >nul 2>&1
-copy "env-examples\user-service.env" "services\user-service\.env" >nul 2>&1
-copy "env-examples\api-gateway.env" "services\api-gateway\.env" >nul 2>&1
-copy "env-examples\frontend.env" "frontend\.env" >nul 2>&1
-echo ✅ Arquivos .env copiados.
+echo.
+echo [3/5] Configurando httpd.conf...
+echo Adicionando Include para frontend.conf...
+echo Include "conf/extra/frontend.conf" >> "C:\xampp\apache\conf\httpd.conf"
+echo ✅ Configuração adicionada!
 
 echo.
-echo [3/5] Instalando dependencias...
+echo [4/5] Copiando arquivos .env de exemplo...
+if not exist "env-examples" (
+    echo ⚠️ Pasta env-examples nao encontrada! Pulando copia de .env...
+) else (
+    copy "env-examples\auth-service.env" "services\auth-service\.env" >nul 2>&1
+    copy "env-examples\user-service.env" "services\user-service\.env" >nul 2>&1
+    copy "env-examples\api-gateway.env" "services\api-gateway\.env" >nul 2>&1
+    copy "env-examples\frontend.env" "frontend\.env" >nul 2>&1
+    echo ✅ Arquivos .env copiados.
+)
+
+echo.
+echo [5/5] Instalando dependencias...
 echo Instalando dependencias do frontend...
 cd frontend
 call npm install
@@ -331,6 +353,165 @@ echo.
 echo Para parar os servicos, feche as janelas do terminal
 echo ou pressione Ctrl+C em cada uma delas.
 echo.
+pause
+goto menu
+
+:frontend_xampp
+echo.
+echo ========================================
+echo   FRONTEND COM XAMPP - DESENVOLVIMENTO
+echo ========================================
+echo.
+echo [1/3] Verificando XAMPP...
+if not exist "C:\xampp\xampp-control.exe" (
+    echo ERRO: XAMPP nao encontrado em C:\xampp\
+    echo Execute a opcao [5] para configurar o XAMPP primeiro
+    pause
+    goto menu
+)
+
+echo [2/3] Iniciando XAMPP Apache...
+start "" "C:\xampp\xampp-control.exe"
+echo Aguarde 5 segundos para o XAMPP carregar...
+timeout /t 5 /nobreak >nul
+
+echo [3/3] Iniciando frontend de desenvolvimento...
+cd frontend
+echo.
+echo O frontend sera aberto em: http://localhost:5173
+echo XAMPP Apache em: http://localhost
+echo.
+echo Para parar, pressione Ctrl+C
+echo.
+npm run dev
+pause
+goto menu
+
+:frontend_docker
+echo.
+echo ========================================
+echo   FRONTEND COM DOCKER
+echo ========================================
+echo.
+echo [1/3] Verificando Docker...
+docker --version >nul 2>&1
+if errorlevel 1 (
+    echo ERRO: Docker nao encontrado!
+    echo Execute a opcao [10] para configurar o Docker primeiro
+    pause
+    goto menu
+)
+
+echo [2/3] Verificando se Docker Desktop esta rodando...
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo ERRO: Docker Desktop nao esta rodando!
+    echo Por favor, inicie o Docker Desktop primeiro
+    pause
+    goto menu
+)
+
+echo [3/3] Iniciando frontend com Docker...
+echo.
+echo Construindo e iniciando conteneineres...
+echo Este processo pode demorar alguns minutos na primeira vez...
+echo.
+
+docker-compose -f docker-compose.frontend.yml up --build
+
+echo.
+echo ========================================
+echo   FRONTEND DOCKER INICIADO!
+echo ========================================
+echo.
+echo ACESSOS:
+echo - Frontend (Vite): http://localhost:5173
+echo - Frontend (Nginx): http://localhost:80
+echo.
+echo Para parar, pressione Ctrl+C
+echo Para parar completamente: docker-compose -f docker-compose.frontend.yml down
+echo.
+pause
+goto menu
+
+:setup_docker
+echo.
+echo ========================================
+echo   CONFIGURACAO DOCKER PARA FRONTEND
+echo ========================================
+echo.
+echo [1/4] Verificando Docker...
+docker --version >nul 2>&1
+if errorlevel 1 (
+    echo ERRO: Docker nao encontrado!
+    echo Por favor, instale o Docker Desktop primeiro
+    pause
+    goto menu
+)
+echo ✅ Docker encontrado!
+
+echo.
+echo [2/4] Verificando se Docker Desktop esta rodando...
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo ERRO: Docker Desktop nao esta rodando!
+    echo Por favor, inicie o Docker Desktop primeiro
+    pause
+    goto menu
+)
+echo ✅ Docker Desktop esta rodando!
+
+echo.
+echo [3/4] Criando pasta nginx...
+if not exist "nginx" mkdir nginx
+echo ✅ Pasta nginx criada!
+
+echo.
+echo [4/4] Instalando dependencias do frontend...
+cd frontend
+if not exist "node_modules" (
+    echo Instalando dependencias...
+    npm install
+    if errorlevel 1 (
+        echo ERRO: Falha ao instalar dependencias
+        pause
+        cd ..
+        goto menu
+    )
+) else (
+    echo ✅ Dependencias ja instaladas!
+)
+
+echo.
+echo ========================================
+echo   CONFIGURACAO DOCKER CONCLUIDA!
+echo ========================================
+echo.
+echo PRÓXIMOS PASSOS:
+echo.
+echo 1. Execute a opcao [9] Frontend com Docker
+echo 2. Ou use: docker-compose -f docker-compose.frontend.yml up
+echo.
+echo ACESSOS:
+echo - Frontend: http://localhost:5173
+echo - Nginx: http://localhost:80
+echo.
+pause
+goto menu
+
+:frontend_simples
+echo.
+echo ========================================
+echo   INICIANDO FRONTEND - METODO SIMPLES
+echo ========================================
+echo.
+echo Navegando para o diretorio do frontend...
+cd /d "%~dp0frontend"
+echo.
+echo Iniciando o frontend...
+echo O frontend sera aberto em: http://localhost:5173
+echo.
+npm run dev
 pause
 goto menu
 

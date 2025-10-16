@@ -22,28 +22,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (token && savedUser) {
       setUser(JSON.parse(savedUser))
     }
+    // Removido login automático - sempre mostrar tela de login
     
     setIsLoading(false)
   }, [])
 
-  const login = async (email: string, _password: string, profile: 'admin' | 'employee' = 'employee') => {
+  const login = async (email: string, password: string, profile: 'admin' | 'employee' = 'employee') => {
     try {
-      // Simular login - em produção, fazer requisição para API
+      // Simular autenticação - em produção, fazer requisição para API
+      
+      // Credenciais válidas para demonstração
+      const validCredentials = {
+        'admin@cartorio.com': { password: 'admin123', profile: 'admin' as const },
+        'funcionario@cartorio.com': { password: 'func123', profile: 'employee' as const },
+        'teste@cartorio.com': { password: 'teste123', profile: 'employee' as const }
+      }
+      
+      const credential = validCredentials[email as keyof typeof validCredentials]
+      
+      if (!credential || credential.password !== password) {
+        throw new Error('Email ou senha incorretos')
+      }
+      
       const mockUser: User = {
         id: '1',
         email,
         name: email.split('@')[0],
-        profile,
-        permissions: PROFILE_PERMISSIONS[profile]
+        profile: credential.profile,
+        permissions: PROFILE_PERMISSIONS[credential.profile]
       }
       
-      const mockToken = 'mock-jwt-token'
+      const mockToken = 'mock-jwt-token-' + Date.now()
       
       localStorage.setItem('token', mockToken)
       localStorage.setItem('user', JSON.stringify(mockUser))
       setUser(mockUser)
     } catch (error) {
-      throw new Error('Erro ao fazer login')
+      throw new Error(error instanceof Error ? error.message : 'Erro ao fazer login')
     }
   }
 
