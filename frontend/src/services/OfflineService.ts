@@ -194,7 +194,7 @@ class OfflineService {
   }
 
   // Enviar dados para servidor (simulado)
-  private async enviarParaServidor(data: NascimentoData): Promise<void> {
+  private async enviarParaServidor(_data: NascimentoData): Promise<void> {
     // Simular envio para servidor
     return new Promise((resolve, reject) => {
       setTimeout(() => {
@@ -305,7 +305,7 @@ class OfflineService {
   // Verificar status de conexão
   async verificarConexao(): Promise<boolean> {
     try {
-      const response = await fetch('/api/health', { 
+      await fetch('/api/health', { 
         method: 'HEAD',
         mode: 'no-cors',
         cache: 'no-cache'

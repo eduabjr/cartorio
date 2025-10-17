@@ -12,8 +12,121 @@
   }
   
   body {
-    @apply bg-blue-100 text-gray-900 font-sans;
+    @apply font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background: var(--background-color, #f8fafc);
+    color: var(--text-color, #1e293b);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    font-size: var(--base-font-size, 16px);
+  }
+
+  /* Aplicar multiplicador de fonte apenas para elementos de texto */
+  p, span, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, label, li, td, th {
+    font-size: calc(var(--font-multiplier, 1) * 1em);
+  }
+  
+  /* Garantir que divs não quebrem o layout */
+  div {
+    box-sizing: border-box;
+  }
+  
+  /* Ajustar containers para fontes maiores */
+  .font-responsive {
+    min-height: fit-content;
+    overflow: visible;
+  }
+  
+  /* Melhorar responsividade para configurações */
+  .config-container {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .config-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  
+  /* Melhorar acessibilidade de botões */
+  button {
+    min-height: 44px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  
+  /* Melhorar acessibilidade de selects */
+  select {
+    min-height: 40px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #d1d5db);
+  }
+  
+  /* Classes de tamanho de fonte responsivas */
+  .text-xs { font-size: calc(0.75rem * var(--font-multiplier, 1)); }
+  .text-sm { font-size: calc(0.875rem * var(--font-multiplier, 1)); }
+  .text-base { font-size: calc(1rem * var(--font-multiplier, 1)); }
+  .text-lg { font-size: calc(1.125rem * var(--font-multiplier, 1)); }
+  .text-xl { font-size: calc(1.25rem * var(--font-multiplier, 1)); }
+  .text-2xl { font-size: calc(1.5rem * var(--font-multiplier, 1)); }
+  .text-3xl { font-size: calc(1.875rem * var(--font-multiplier, 1)); }
+  .text-4xl { font-size: calc(2.25rem * var(--font-multiplier, 1)); }
+  
+  /* Tema claro */
+  .theme-light {
+    --primary-color: #006F73;
+    --secondary-color: #00A6A1;
+    --accent-color: #A1D2D3;
+    --background-color: #ffffff;
+    --surface-color: #f8fafc;
+    --text-color: #1e293b;
+    --text-secondary-color: #64748b;
+    --border-color: #e2e8f0;
+    --success-color: #059669;
+    --info-color: #0284c7;
+    --warning-color: #d97706;
+    --error-color: #dc2626;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --hover-color: #007F7F;
+  }
+  
+  /* Tema escuro */
+  .theme-dark {
+    --primary-color: #f19830;
+    --secondary-color: #A1D2D3;
+    --accent-color: #00A6A1;
+    --background-color: #121212;
+    --surface-color: #1e1e1e;
+    --text-color: #ffffff;
+    --text-secondary-color: #a1a1aa;
+    --border-color: #374151;
+    --success-color: #10b981;
+    --info-color: #3b82f6;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+    --shadow-color: rgba(255, 255, 255, 0.1);
+    --hover-color: #f19830;
+  }
+  
+  /* Tema de alto contraste */
+  .theme-highContrast {
+    --primary-color: #000000;
+    --secondary-color: #333333;
+    --accent-color: #666666;
+    --background-color: #ffffff;
+    --surface-color: #f0f0f0;
+    --text-color: #000000;
+    --text-secondary-color: #333333;
+    --border-color: #000000;
+    --success-color: #006600;
+    --warning-color: #cc6600;
+    --error-color: #cc0000;
+    --info-color: #0066cc;
   }
 }
 
@@ -41,5 +154,237 @@
   .menu-item:hover {
     @apply bg-gray-100;
   }
+  
+  /* Botões aprimorados com sombras e transições */
+  .btn-enhanced {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .btn-enhanced:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+  
+  .btn-enhanced:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Elementos interativos aprimorados */
+  .interactive-element {
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+  }
+  
+  .interactive-element:hover {
+    background-color: var(--hover-color, #007F7F);
+    color: white;
+  }
+  
+  /* Inputs aprimorados */
+  .input-enhanced {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .input-enhanced:focus {
+    box-shadow: 0 0 0 3px rgba(0, 111, 115, 0.1);
+    border-color: var(--primary-color, #006F73);
+  }
+  
+  /* Filtros de contraste e luz azul */
+  .high-contrast-active {
+    filter: var(--contrast-filter, none);
+  }
+  
+  .blue-light-filter-active {
+    filter: var(--blue-light-filter, none);
+  }
+  
+  .combined-filters {
+    filter: var(--combined-filter, none);
+  }
+  
+  /* Estilos para página de configurações */
+  .config-container {
+    max-width: 800px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .config-content {
+    overflow-y: auto;
+    min-height: 0;
+    max-height: calc(90vh - 120px);
+  }
+  
+  /* Scrollbar customizada */
+  .config-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .config-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .config-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+  }
+  
+  .config-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary-color);
+  }
+  
+  /* Melhorar responsividade para fontes grandes */
+  button {
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: min(14px, calc(var(--font-multiplier, 1) * 0.875rem));
+    white-space: nowrap;
+  }
+  
+  select {
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: min(14px, calc(var(--font-multiplier, 1) * 0.875rem));
+  }
 }
 
+/* Estilos globais para configurações */
+.config-content {
+  max-height: calc(90vh - 120px);
+}
+
+/* Ajustar tamanhos de fonte para configurações */
+.config-container h3 {
+  font-size: min(16px, calc(var(--font-multiplier, 1) * 1rem)) !important;
+}
+
+.config-container span {
+  font-size: min(14px, calc(var(--font-multiplier, 1) * 0.875rem)) !important;
+}
+
+.config-container p {
+  font-size: min(11px, calc(var(--font-multiplier, 1) * 0.6875rem)) !important;
+}
+
+.config-container label {
+  font-size: min(12px, calc(var(--font-multiplier, 1) * 0.75rem)) !important;
+}
+
+/* Classes para leitores de tela */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Otimizações para leitores de tela */
+.screen-reader-optimized {
+  /* Garantir que elementos interativos sejam acessíveis */
+}
+
+.screen-reader-optimized button,
+.screen-reader-optimized textarea {
+  min-height: 44px; /* Tamanho mínimo recomendado para toque */
+  min-width: 44px;
+}
+
+.screen-reader-optimized a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+}
+
+/* Melhorar indicadores de foco */
+.screen-reader-optimized *:focus {
+  outline: 3px solid var(--primary-color, #006F73);
+  outline-offset: 2px;
+}
+
+/* Região para anúncios de leitores de tela */
+.screen-reader-announcements {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Otimizações específicas para NVDA */
+.nvda-optimized {
+  /* Otimizações específicas para NVDA */
+  --nvda-announce-delay: 100ms;
+  --nvda-focus-delay: 50ms;
+  
+  /* Melhorar navegação por teclado */
+  *:focus {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 1px var(--primary-color);
+  }
+  
+  /* Garantir que elementos importantes sejam anunciados */
+  [role="button"], [role="link"], [role="menuitem"] {
+    position: relative;
+  }
+  
+  /* Melhorar anúncios de mudanças de estado */
+  [aria-expanded="true"], [aria-selected="true"], [aria-checked="true"] {
+    border-left: 4px solid var(--primary-color);
+    padding-left: 8px;
+  }
+  
+  /* Otimizar tabelas para NVDA */
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  
+  th, td {
+    border: 1px solid var(--border-color);
+    padding: 8px;
+  }
+  
+  /* Melhorar navegação em listas */
+  ul, ol {
+    list-style-type: disc;
+    padding-left: 20px;
+  }
+  
+  /* Garantir que elementos ocultos sejam realmente ocultos */
+  [aria-hidden="true"] {
+    display: none !important;
+  }
+  
+  /* Melhorar anúncios de formulários */
+  input:invalid, select:invalid, textarea:invalid {
+    border: 2px solid var(--error-color);
+  }
+  
+  input:valid, select:valid, textarea:valid {
+    border: 2px solid var(--success-color);
+  }
+}
