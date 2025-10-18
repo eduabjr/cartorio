@@ -6,7 +6,7 @@ import { announcementService } from '../services/AnnouncementService'
 interface IconMenuItem {
   id: string
   label: string
-  icon: string
+  icon: string | React.ReactNode
   onClick: () => void
 }
 
@@ -73,7 +73,7 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
     transition: 'all 0.2s ease-in-out',
     position: 'relative' as const,
     boxShadow: hoveredItem === itemId ? '0 0 0 3px rgba(255, 255, 255, 0.35)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
-    border: hoveredItem === itemId ? '1px solid rgba(255, 255, 255, 0.5)' : 'none',
+    border: hoveredItem === itemId ? '1px solid rgba(255, 255, 255, 0.5)' : `1px solid ${theme.border}`,
     transform: hoveredItem === itemId ? 'translateY(-1px) scale(1.03)' : 'translateY(0) scale(1)'
   })
 

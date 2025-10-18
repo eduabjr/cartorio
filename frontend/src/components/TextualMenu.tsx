@@ -121,8 +121,7 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
   }
 
   const itemStyles = (itemId: string) => ({
-    padding: '12px 20px',
-    border: 'none',
+    padding: '8px 20px',
     background: activeMenu === itemId 
       ? theme.surface 
       : hoveredItem === itemId 
@@ -137,7 +136,6 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     alignItems: 'center',
     gap: '8px',
     transition: 'all 0.2s ease-in-out',
-    boxShadow: hoveredItem === itemId ? '0 0 0 3px rgba(0, 121, 107, 0.25)' : 'none',
     position: 'relative' as const,
     border: `1px solid ${theme.border}`,
     borderBottom: activeMenu === itemId ? `1px solid ${theme.surface}` : `1px solid ${theme.border}`,
@@ -155,13 +153,13 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     border: `1px solid ${theme.border}`,
     borderRadius: '0 0 8px 8px',
     boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    padding: '10px 0',
+    padding: '6px 0',
     minWidth: '220px',
     zIndex: 1001,
     marginTop: '0',
     display: activeMenu ? 'flex' : 'none',
     flexDirection: 'column' as const,
-    gap: '6px',
+    gap: '3px',
     backdropFilter: 'blur(8px)',
     willChange: 'opacity, transform',
     transition: 'opacity 0.2s ease, transform 0.2s ease',
@@ -170,7 +168,7 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
   }
 
   const submenuItemStyles = {
-    padding: '12px 14px',
+    padding: '8px 14px',
     border: 'none',
     background: 'transparent',
     color: theme.text,
@@ -220,15 +218,24 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
                       ...submenuItemStyles,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between'
+                      justifyContent: 'space-between',
+                      backgroundColor: activeSubmenu === subItem.id ? `${theme.primary}15` : 'transparent',
+                      borderLeft: activeSubmenu === subItem.id ? `3px solid ${theme.primary}` : '3px solid transparent'
                     }}
-                    onClick={() => handleSubmenuClick(subItem, item.id)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleSubmenuClick(subItem, item.id)
+                    }}
                     onMouseEnter={(e) => {
-                      (e.target as HTMLButtonElement).style.backgroundColor = theme.primary + '20'
+                      (e.target as HTMLButtonElement).style.backgroundColor = `${theme.primary}20`
                       handleSubmenuHover(subItem, item.id)
                     }}
                     onMouseLeave={(e) => {
                       (e.target as HTMLButtonElement).style.backgroundColor = 'transparent'
+                    }}
+                    onFocus={() => {
+                      handleSubmenuHover(subItem, item.id)
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -236,7 +243,12 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
                   <span style={{ filter: hoveredItem === subItem.id ? 'brightness(1.1)' : 'none' }}>{subItem.label}</span>
                     </div>
                     {subItem.submenu && (
-                      <span style={{ fontSize: '10px', marginLeft: '8px' }}>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        marginLeft: '8px',
+                        color: activeSubmenu === subItem.id ? theme.primary : theme.text,
+                        fontWeight: 'bold'
+                      }}>
                         {activeSubmenu === subItem.id ? '◀' : '▶'}
                       </span>
                     )}
@@ -252,12 +264,12 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
                       border: `1px solid ${theme.border}`,
                       borderRadius: '0 8px 8px 0',
                       boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                      padding: '10px 0',
+                      padding: '6px 0',
                       minWidth: '200px',
-                      zIndex: 1002,
+                      zIndex: 1003,
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '6px',
+                      gap: '3px',
                       backdropFilter: 'blur(8px)',
                       willChange: 'opacity, transform',
                       transition: 'opacity 0.2s ease, transform 0.2s ease',
@@ -277,11 +289,14 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
                             }
                           }}
                           onMouseEnter={(e) => {
-                            (e.target as HTMLButtonElement).style.backgroundColor = theme.primary + '20'
-                            handleSubmenuHover(nestedItem, subItem.id)
+                            const target = e.target as HTMLButtonElement
+                            target.style.backgroundColor = theme.primary + '20'
+                            target.style.transform = 'translateX(2px)'
                           }}
                           onMouseLeave={(e) => {
-                            (e.target as HTMLButtonElement).style.backgroundColor = 'transparent'
+                            const target = e.target as HTMLButtonElement
+                            target.style.backgroundColor = 'transparent'
+                            target.style.transform = 'translateX(0)'
                           }}
                         >
                           <span style={{ fontSize: '14px' }}>{nestedItem.icon}</span>
