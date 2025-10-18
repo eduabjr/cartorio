@@ -12,10 +12,14 @@ import { IconMenu } from './components/IconMenu'
 import { SideMenu } from './components/SideMenu'
 import { ConfigOverlay } from './components/ConfigOverlay'
 import { PasswordPrompt } from './components/PasswordPrompt'
+import { MovableTabs } from './components/MovableTabs'
+import { ScannerIcon } from './components/ScannerIcon'
 import { useAccessibility } from './hooks/useAccessibility'
 import { useResponsive } from './hooks/useResponsive'
+import { useResponsiveLayout } from './hooks/useResponsiveLayout'
 import { useWindowState } from './hooks/useWindowState'
 import { getRelativeFontSize } from './utils/fontUtils'
+import { announcementService } from './services/AnnouncementService'
 
 interface User {
   id: string
@@ -38,10 +42,12 @@ function App() {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
   const [showConfigOverlay, setShowConfigOverlay] = useState(false)
+  const [movableTabs, setMovableTabs] = useState([])
 
   // Hooks de acessibilidade e responsividade
   const accessibility = useAccessibility()
   const responsive = useResponsive()
+  const responsiveLayout = useResponsiveLayout()
   const windowState = useWindowState()
   
   // Sincronizar isDarkMode com o tema do hook de acessibilidade
@@ -50,7 +56,7 @@ function App() {
         // Aplicar tema ao body com cor única
         document.body.style.background = accessibility.currentTheme === 'dark' 
           ? '#121212'
-          : '#FFFFFF'
+          : '#E1E1E1'
   }, [accessibility.currentTheme])
 
   // Estados para navegação
@@ -100,6 +106,20 @@ function App() {
     }
   }, [navigateToPage, closeCurrentPage])
 
+  // Inicializar serviço de anúncios
+  useEffect(() => {
+    const initAnnouncementService = async () => {
+      try {
+        await announcementService.initialize()
+        console.log('✅ Serviço de anúncios inicializado')
+      } catch (error) {
+        console.error('❌ Erro ao inicializar serviço de anúncios:', error)
+      }
+    }
+    
+    initAnnouncementService()
+  }, [])
+
   // Verificar se já está logado e tema
   useEffect(() => {
     const savedUser = localStorage.getItem('user')
@@ -120,7 +140,7 @@ function App() {
       setIsDarkMode(isDark)
       document.body.style.background = isDark 
         ? '#121212'
-        : '#FFFFFF'
+        : '#E1E1E1'
     }
   }, [])
 
@@ -191,6 +211,25 @@ function App() {
     setUser(null)
     setIsLoggedIn(false)
     localStorage.removeItem('user')
+  }
+
+  // Funções para gerenciar abas móveis
+  const handleTabUpdate = (updatedTabs: any[]) => {
+    setMovableTabs(updatedTabs)
+  }
+
+  const handleTabClose = (tabId: string) => {
+    setMovableTabs(tabs => tabs.filter(tab => tab.id !== tabId))
+  }
+
+  const handleTabMinimize = (tabId: string) => {
+    setMovableTabs(tabs => 
+      tabs.map(tab => 
+        tab.id === tabId 
+          ? { ...tab, isMinimized: !tab.isMinimized }
+          : tab
+      )
+    )
     localStorage.removeItem('token')
     console.log('Logout realizado')
   }
@@ -245,12 +284,11 @@ function App() {
         label: 'Cadastros',
         icon: '',
         submenu: [
-          { id: 'cliente', label: 'Cliente', icon: '', onClick: () => (window as any).navigateToPage?.('cliente') },
+          { id: 'cliente', label: 'Firmas', icon: '', onClick: () => (window as any).navigateToPage?.('cliente') },
           { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => (window as any).navigateToPage?.('cartorio-seade') },
           { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => (window as any).navigateToPage?.('dnv-bloqueadas') },
           { id: 'modelos-procuração', label: 'Modelos e Minutas - Procuração', icon: '', onClick: () => (window as any).navigateToPage?.('modelos-procuração') },
           { id: 'oficios-mandados', label: 'Ofícios e Mandados', icon: '', onClick: () => (window as any).navigateToPage?.('oficios-mandados') },
-          { id: 'averbação', label: 'Averbação', icon: '', onClick: () => (window as any).navigateToPage?.('averbação') },
           { id: 'hospital', label: 'Hospital', icon: '', onClick: () => (window as any).navigateToPage?.('hospital') },
           { id: 'cemiterio', label: 'Cemitério', icon: '', onClick: () => (window as any).navigateToPage?.('cemiterio') },
           { id: 'funeraria', label: 'Funerária', icon: '', onClick: () => (window as any).navigateToPage?.('funeraria') },
@@ -268,9 +306,7 @@ function App() {
               { id: 'config-sistema-cidade', label: 'Cidade', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-cidade') }
             ]
           },
-          { id: 'cadastros-tipos-documento', label: 'Tipos de Documento Digitalizado', icon: '', onClick: () => (window as any).navigateToPage?.('cadastros-tipos-documento') },
-          { id: 'cadastros-cep', label: 'CEP', icon: '', onClick: () => (window as any).navigateToPage?.('cadastros-cep') },
-          { id: 'cadastros-ibge', label: 'IBGE', icon: '', onClick: () => (window as any).navigateToPage?.('cadastros-ibge') }
+          { id: 'cadastros-tipos-documento', label: 'Tipos de Documento Digitalizado', icon: '', onClick: () => (window as any).navigateToPage?.('cadastros-tipos-documento') }
         ]
       },
       {
@@ -409,16 +445,20 @@ function App() {
 
     // Configuração do Menu de Ícones (Menu 2) - Ícones de acesso rápido
     const iconMenuItems = [
-      { id: 'firmas', label: 'Firmas', icon: '✍️', onClick: () => (window as any).navigateToPage?.('firmas') },
+      { id: 'firmas', label: 'Cliente', icon: '✍️', onClick: () => (window as any).navigateToPage?.('firmas') },
       { id: 'nascimento', label: 'Nascimento', icon: '👶', onClick: () => (window as any).navigateToPage?.('nascimento') },
       { id: 'casamento', label: 'Casamento', icon: '💍', onClick: () => (window as any).navigateToPage?.('casamento') },
-      { id: 'obito', label: 'Óbito', icon: '⚰️', onClick: () => (window as any).navigateToPage?.('obito') }
+      { id: 'obito', label: 'Óbito', icon: '⚰️', onClick: () => (window as any).navigateToPage?.('obito') },
+      { id: 'livro', label: 'Livro e', icon: '📖', onClick: () => (window as any).navigateToPage?.('livro') },
+      { id: 'digitalizacao', label: 'Digitalização', icon: <ScannerIcon size={20} />, onClick: () => (window as any).navigateToPage?.('digitalizacao') },
+      { id: 'login', label: 'Login', icon: '🔐', onClick: () => console.log('Login clicado') },
+      { id: 'logout', label: 'Sair', icon: '🚪', onClick: handleLogout }
     ]
 
     return (
       <div style={{
         height: '100vh',
-        background: theme.background,
+        background: accessibility.currentTheme === 'dark' ? theme.background : '#E1E1E1',
         display: 'flex',
         flexDirection: 'column',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -428,7 +468,7 @@ function App() {
 
         {/* Header com Controles de Janela */}
              <div style={{
-               background: theme.surface,
+               background: accessibility.currentTheme === 'dark' ? '#004D40' : '#00796B',
                backdropFilter: 'blur(20px)',
                padding: '8px 16px',
                borderBottom: `1px solid ${theme.border}`,
@@ -440,24 +480,26 @@ function App() {
             alignItems: 'center'
           }}>
           {/* Controles de Janela */}
-          <WindowControls
-            onClose={windowState.close}
-            onMinimize={windowState.minimize}
-            onMaximize={windowState.maximize}
-          />
+          <div data-window-controls>
+            <WindowControls
+              onClose={windowState.close}
+              onMinimize={windowState.minimize}
+              onMaximize={windowState.maximize}
+            />
+          </div>
         </div>
 
         {/* Menu Textual (Menu 1) */}
-        <div style={{ marginTop: '20px' }}>
+        <div style={{ marginTop: '20px' }} data-responsive-menu>
           <TextualMenu 
             items={textualMenuItems}
             isExpanded={isTextualMenuExpanded}
             onToggleExpanded={() => setIsTextualMenuExpanded(!isTextualMenuExpanded)}
           />
-                           </div>
+        </div>
 
         {/* Menu de Ícones (Menu 2) */}
-        <div style={{ marginTop: '10px' }}>
+        <div style={{ marginTop: '10px' }} data-responsive-menu>
           <IconMenu 
             items={iconMenuItems}
             onOpenSideMenu={() => setIsSideMenuOpen(true)}
@@ -472,6 +514,14 @@ function App() {
           onLogout={handleLogout}
           onOpenConfigurations={() => setShowConfiguracoes(true)}
           onOpenMaternidade={navigateToMaternidade}
+        />
+
+        {/* Abas Móveis - Aparecem apenas na Tela 2 */}
+        <MovableTabs
+          tabs={movableTabs}
+          onTabUpdate={handleTabUpdate}
+          onTabClose={handleTabClose}
+          onTabMinimize={handleTabMinimize}
         />
 
         {/* Área de Conteúdo Principal - COMPLETAMENTE LIMPA */}
@@ -546,7 +596,7 @@ function App() {
     buttonBg: isDarkMode ? '#3b82f6' : '#1e40af',
     buttonHover: isDarkMode ? '#2563eb' : '#1d4ed8',
     inputBg: isDarkMode ? '#1e293b' : '#ffffff',
-    inputBorder: isDarkMode ? '#475569' : '#d1d5db'
+    inputBorder: isDarkMode ? '#475569' : '#D1D1D1'
   }
 
   return (
@@ -711,6 +761,128 @@ function App() {
           <p style={{ margin: '4px 0' }}>👤 admin@cartorio.com / admin123</p>
           <p style={{ margin: '4px 0' }}>👥 funcionario@cartorio.com / func123</p>
           <p style={{ margin: '4px 0' }}>🧪 teste@cartorio.com / teste123</p>
+        </div>
+
+        {/* Botões de teste */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+          <button
+            onClick={async () => {
+              console.log('🔊 Testando leitor de tela...')
+              await announcementService.announce('Teste do leitor de tela funcionando', {
+                priority: 'normal',
+                interrupt: true,
+                volume: 0.8
+              })
+            }}
+            style={{
+              padding: '8px 16px',
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            🔊 Testar Leitor
+          </button>
+          
+          <button
+            onClick={() => {
+              const currentMotion = document.body.style.getPropertyValue('--animation-duration')
+              const isReduced = currentMotion === '0.01s'
+              console.log('🎬 Movimento reduzido ativo:', isReduced)
+              console.log('🎬 Variável CSS --animation-duration:', currentMotion)
+              console.log('🎬 Variável CSS --transition-duration:', document.body.style.getPropertyValue('--transition-duration'))
+            }}
+            style={{
+              padding: '8px 16px',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            🎬 Testar Movimento
+          </button>
+          
+          <button
+            onClick={() => {
+              const currentFilter = document.body.style.filter
+              const blueLightFilter = document.body.style.getPropertyValue('--blue-light-filter')
+              const contrastFilter = document.body.style.getPropertyValue('--contrast-filter')
+              console.log('🔵 Filtro atual aplicado:', currentFilter)
+              console.log('🔵 Variável CSS --blue-light-filter:', blueLightFilter)
+              console.log('🔵 Variável CSS --contrast-filter:', contrastFilter)
+              console.log('🔵 Classes do body:', document.body.className)
+            }}
+            style={{
+              padding: '8px 16px',
+              background: '#f59e0b',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            🔵 Testar Filtro Azul
+          </button>
+          
+          <button
+            onClick={async () => {
+              const savedSettings = localStorage.getItem('accessibility-settings')
+              const screenReaderEnabled = savedSettings ? JSON.parse(savedSettings).screenReader : false
+              console.log('🔊 Leitor de tela ativado nas configurações:', screenReaderEnabled)
+              console.log('🔊 Configurações completas:', savedSettings ? JSON.parse(savedSettings) : 'Nenhuma configuração salva')
+              
+              // Testar anúncio
+              await announcementService.announce('Teste de controle do leitor de tela', {
+                priority: 'normal',
+                interrupt: true,
+                volume: 0.8
+              })
+            }}
+            style={{
+              padding: '8px 16px',
+              background: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            🔊 Testar Controle
+          </button>
+          
+          <button
+            onClick={() => {
+              const savedSettings = localStorage.getItem('accessibility-settings')
+              console.log('💾 Configurações salvas no localStorage:', savedSettings)
+              
+              if (savedSettings) {
+                const parsed = JSON.parse(savedSettings)
+                console.log('📋 Configurações parseadas:', parsed)
+                console.log('🔊 Estado do leitor de tela:', parsed.screenReader)
+              } else {
+                console.log('❌ Nenhuma configuração encontrada')
+              }
+            }}
+            style={{
+              padding: '8px 16px',
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            💾 Verificar Estado
+          </button>
         </div>
       </div>
     </div>

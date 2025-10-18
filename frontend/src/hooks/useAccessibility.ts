@@ -73,22 +73,22 @@ export const blueLightPresets = {
 
 export const professionalThemes = {
   light: {
-    primary: '#006F73', // Azul Petróleo para links e botões
+    primary: '#FF8C00', // Laranja vibrante para links e botões
     secondary: '#00A6A1', // Verde Água Sofisticado para elementos de destaque
-    accent: '#00A6A1', // Verde Água Sofisticado para elementos de destaque
-    background: '#FFFFFF', // Branco Neve
-    surface: '#FFFFFF', // Branco Neve
+    accent: '#2196F3', // Azul vibrante para links e elementos interativos
+    background: '#E1E1E1', // Cinza Claro Suave
+    surface: '#E1E1E1', // Cinza Claro Suave
     text: '#212121', // Cinza Escuro
     textSecondary: '#2C2C2C', // Cinza Profundo
-    border: '#E0E0E0', // Cinza Claro Neutro
+    border: '#D1D1D1', // Cinza suave para bordas de inputs/seletores
     success: '#00A6A1', // Verde Água Sofisticado
     warning: '#f59e0b', // Amarelo moderno
     error: '#ef4444', // Vermelho moderno
-    info: '#006F73' // Azul Petróleo para informações
+    info: '#2196F3' // Azul vibrante para informações/links
   } as ThemeColors,
   
   dark: {
-    primary: '#f19830', // Laranja para links e botões
+    primary: '#FF8C00', // Laranja vibrante para links e botões
     secondary: '#A1D2D3', // Azul suave para elementos de destaque
     accent: '#A1D2D3', // Azul suave para elementos de destaque
     background: '#121212', // Preto escuro
@@ -122,6 +122,13 @@ export const professionalThemes = {
 function applyContrastSettings(settings: AccessibilitySettings) {
   const { contrastLevel, highContrast, blueLightFilter, blueLightIntensity } = settings
   
+  console.log('🔵 Aplicando configurações de filtro:', {
+    blueLightFilter,
+    blueLightIntensity,
+    highContrast,
+    contrastLevel
+  })
+  
   // Remover classes anteriores
   document.body.classList.remove('high-contrast-active', 'high-contrast-custom')
   
@@ -134,6 +141,7 @@ function applyContrastSettings(settings: AccessibilitySettings) {
       high: 'sepia(0.3) hue-rotate(30deg) saturate(0.7)'
     }
     blueLightFilterValue = blueLightPresets[blueLightIntensity]
+    console.log('🔵 Filtro azul aplicado:', blueLightFilterValue)
   }
 
   // Se alto contraste está desabilitado, aplicar apenas filtro azul
@@ -141,6 +149,7 @@ function applyContrastSettings(settings: AccessibilitySettings) {
     document.body.style.filter = blueLightFilterValue
     document.body.style.setProperty('--contrast-filter', 'none')
     document.body.style.setProperty('--blue-light-filter', blueLightFilterValue)
+    console.log('🔵 Aplicado apenas filtro azul:', blueLightFilterValue)
     return
   }
   
@@ -161,14 +170,23 @@ function applyContrastSettings(settings: AccessibilitySettings) {
   let combinedFilter = contrastFilterValue
   if (blueLightFilter && contrastFilterValue !== 'none') {
     combinedFilter = `${contrastFilterValue} ${blueLightFilterValue}`
+    console.log('🔵 Filtros combinados (contraste + azul):', combinedFilter)
   } else if (blueLightFilter) {
     combinedFilter = blueLightFilterValue
+    console.log('🔵 Apenas filtro azul (com contraste):', combinedFilter)
+  } else {
+    console.log('🔵 Apenas filtro de contraste:', combinedFilter)
   }
   
   // Aplicar filtros combinados
   document.body.style.filter = combinedFilter
   document.body.style.setProperty('--contrast-filter', contrastFilterValue)
   document.body.style.setProperty('--blue-light-filter', blueLightFilterValue)
+  console.log('🔵 Filtros aplicados ao body:', {
+    filter: document.body.style.filter,
+    contrastFilter: contrastFilterValue,
+    blueLightFilter: blueLightFilterValue
+  })
 }
 
 export function useAccessibility() {
@@ -258,7 +276,21 @@ export function useAccessibility() {
   // Detectar leitor de tela
   useEffect(() => {
     const detectScreenReader = async () => {
-      console.log('🔍 Iniciando detecção de leitor de tela...')
+      // Verificar se já existem configurações salvas
+      const savedSettings = localStorage.getItem('accessibility-settings')
+      if (savedSettings) {
+        try {
+          const parsedSettings = JSON.parse(savedSettings)
+          if (parsedSettings.screenReader !== undefined) {
+            console.log('🔍 Configuração de leitor de tela já existe, não detectando automaticamente')
+            return
+          }
+        } catch (error) {
+          console.warn('⚠️ Erro ao ler configurações salvas, continuando com detecção automática')
+        }
+      }
+      
+      console.log('🔍 Iniciando detecção automática de leitor de tela...')
       
       // Aguardar um pouco para o NVDA service inicializar
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -341,6 +373,7 @@ export function useAccessibility() {
         keyboardUsage
       })
       
+      // Só atualizar se não houver configuração salva
       setSettings(prev => ({ ...prev, screenReader: !!hasScreenReader }))
       
       // Aplicar classe CSS para otimização de leitor de tela
@@ -542,8 +575,10 @@ export function useAccessibility() {
     
     if (settings.reducedMotion) {
       document.body.style.setProperty('--animation-duration', '0.01s')
+      document.body.style.setProperty('--transition-duration', '0.01s')
     } else {
       document.body.style.removeProperty('--animation-duration')
+      document.body.style.removeProperty('--transition-duration')
     }
   }, [currentTheme, settings])
 

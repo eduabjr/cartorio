@@ -262,6 +262,316 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   </span>
                 </label>
               </div>
+
+              {/* Comandos de Teclado */}
+              {settings.keyboardNavigation && (
+                <div style={{ padding: '8px 0', borderBottom: `1px solid ${theme.border}` }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <span style={{ color: theme.text, fontSize: '12px', fontWeight: '600' }}>
+                      Comandos Disponíveis:
+                    </span>
+                  </div>
+                  
+                  {/* Tab Navigation */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 0',
+                    marginBottom: '4px'
+                  }}>
+                    <div>
+                      <span style={{ color: theme.text, fontSize: '12px', fontWeight: '500' }}>
+                        Tab Navigation
+                      </span>
+                      <p style={{ margin: '1px 0 0 0', fontSize: '10px', color: theme.textSecondary }}>
+                        Tab / Shift+Tab - Navegar entre elementos
+                      </p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      display: 'inline-block',
+                      width: '36px',
+                      height: '20px'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.keyboardCommands?.tabNavigation !== false}
+                        onChange={(e) => updateSettings({ 
+                          keyboardCommands: { 
+                            ...settings.keyboardCommands, 
+                            tabNavigation: e.target.checked 
+                          } 
+                        })}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        cursor: 'pointer',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: (settings.keyboardCommands?.tabNavigation !== false) ? '#10b981' : '#f3f4f6',
+                        transition: '0.3s',
+                        borderRadius: '20px'
+                      }}>
+                        <span style={{
+                          position: 'absolute',
+                          content: '""',
+                          height: '14px',
+                          width: '14px',
+                          left: '3px',
+                          bottom: '3px',
+                          background: 'white',
+                          transition: '0.3s',
+                          borderRadius: '50%',
+                          transform: (settings.keyboardCommands?.tabNavigation !== false) ? 'translateX(16px)' : 'translateX(0)'
+                        }} />
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Arrow Keys */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 0',
+                    marginBottom: '4px'
+                  }}>
+                    <div>
+                      <span style={{ color: theme.text, fontSize: '12px', fontWeight: '500' }}>
+                        Setas de Navegação
+                      </span>
+                      <p style={{ margin: '1px 0 0 0', fontSize: '10px', color: theme.textSecondary }}>
+                        ↑↓←→ - Navegar em listas e menus
+                      </p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      display: 'inline-block',
+                      width: '36px',
+                      height: '20px'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.keyboardCommands?.arrowKeys !== false}
+                        onChange={(e) => updateSettings({ 
+                          keyboardCommands: { 
+                            ...settings.keyboardCommands, 
+                            arrowKeys: e.target.checked 
+                          } 
+                        })}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        cursor: 'pointer',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: (settings.keyboardCommands?.arrowKeys !== false) ? '#10b981' : '#f3f4f6',
+                        transition: '0.3s',
+                        borderRadius: '20px'
+                      }}>
+                        <span style={{
+                          position: 'absolute',
+                          content: '""',
+                          height: '14px',
+                          width: '14px',
+                          left: '3px',
+                          bottom: '3px',
+                          background: 'white',
+                          transition: '0.3s',
+                          borderRadius: '50%',
+                          transform: (settings.keyboardCommands?.arrowKeys !== false) ? 'translateX(16px)' : 'translateX(0)'
+                        }} />
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Enter/Space */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 0',
+                    marginBottom: '4px'
+                  }}>
+                    <div>
+                      <span style={{ color: theme.text, fontSize: '12px', fontWeight: '500' }}>
+                        Enter/Space
+                      </span>
+                      <p style={{ margin: '1px 0 0 0', fontSize: '10px', color: theme.textSecondary }}>
+                        Enter/Space - Ativar botões e links
+                      </p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      display: 'inline-block',
+                      width: '36px',
+                      height: '20px'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.keyboardCommands?.enterSpace !== false}
+                        onChange={(e) => updateSettings({ 
+                          keyboardCommands: { 
+                            ...settings.keyboardCommands, 
+                            enterSpace: e.target.checked 
+                          } 
+                        })}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        cursor: 'pointer',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: (settings.keyboardCommands?.enterSpace !== false) ? '#10b981' : '#f3f4f6',
+                        transition: '0.3s',
+                        borderRadius: '20px'
+                      }}>
+                        <span style={{
+                          position: 'absolute',
+                          content: '""',
+                          height: '14px',
+                          width: '14px',
+                          left: '3px',
+                          bottom: '3px',
+                          background: 'white',
+                          transition: '0.3s',
+                          borderRadius: '50%',
+                          transform: (settings.keyboardCommands?.enterSpace !== false) ? 'translateX(16px)' : 'translateX(0)'
+                        }} />
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Escape */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 0',
+                    marginBottom: '4px'
+                  }}>
+                    <div>
+                      <span style={{ color: theme.text, fontSize: '12px', fontWeight: '500' }}>
+                        Escape
+                      </span>
+                      <p style={{ margin: '1px 0 0 0', fontSize: '10px', color: theme.textSecondary }}>
+                        Esc - Fechar modais e cancelar ações
+                      </p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      display: 'inline-block',
+                      width: '36px',
+                      height: '20px'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.keyboardCommands?.escape !== false}
+                        onChange={(e) => updateSettings({ 
+                          keyboardCommands: { 
+                            ...settings.keyboardCommands, 
+                            escape: e.target.checked 
+                          } 
+                        })}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        cursor: 'pointer',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: (settings.keyboardCommands?.escape !== false) ? '#10b981' : '#f3f4f6',
+                        transition: '0.3s',
+                        borderRadius: '20px'
+                      }}>
+                        <span style={{
+                          position: 'absolute',
+                          content: '""',
+                          height: '14px',
+                          width: '14px',
+                          left: '3px',
+                          bottom: '3px',
+                          background: 'white',
+                          transition: '0.3s',
+                          borderRadius: '50%',
+                          transform: (settings.keyboardCommands?.escape !== false) ? 'translateX(16px)' : 'translateX(0)'
+                        }} />
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Shortcuts */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 0'
+                  }}>
+                    <div>
+                      <span style={{ color: theme.text, fontSize: '12px', fontWeight: '500' }}>
+                        Atalhos Rápidos
+                      </span>
+                      <p style={{ margin: '1px 0 0 0', fontSize: '10px', color: theme.textSecondary }}>
+                        Ctrl+1-9 - Acessar menus rapidamente
+                      </p>
+                    </div>
+                    <label style={{
+                      position: 'relative',
+                      display: 'inline-block',
+                      width: '36px',
+                      height: '20px'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.keyboardCommands?.shortcuts !== false}
+                        onChange={(e) => updateSettings({ 
+                          keyboardCommands: { 
+                            ...settings.keyboardCommands, 
+                            shortcuts: e.target.checked 
+                          } 
+                        })}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        cursor: 'pointer',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: (settings.keyboardCommands?.shortcuts !== false) ? '#10b981' : '#f3f4f6',
+                        transition: '0.3s',
+                        borderRadius: '20px'
+                      }}>
+                        <span style={{
+                          position: 'absolute',
+                          content: '""',
+                          height: '14px',
+                          width: '14px',
+                          left: '3px',
+                          bottom: '3px',
+                          background: 'white',
+                          transition: '0.3s',
+                          borderRadius: '50%',
+                          transform: (settings.keyboardCommands?.shortcuts !== false) ? 'translateX(16px)' : 'translateX(0)'
+                        }} />
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Seção Aparência */}
@@ -650,32 +960,43 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   Desativa animações para usuários sensíveis
                 </p>
               </div>
-              <button
-                onClick={() => updateSettings({ reducedMotion: !settings.reducedMotion })}
-                style={{
-                  width: '44px',
-                  height: '22px',
-                  background: '#f3f4f6',
-                  borderRadius: '11px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-                }}
-              >
-                <div style={{
-                  width: '18px',
-                  height: '18px',
-                  background: 'white',
-                  borderRadius: '50%',
+              <label style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '44px',
+                height: '24px'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={settings.reducedMotion}
+                  onChange={() => updateSettings({ reducedMotion: !settings.reducedMotion })}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
                   position: 'absolute',
-                  top: '2px',
-                  left: settings.reducedMotion ? '24px' : '2px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                }} />
-              </button>
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: settings.reducedMotion ? '#10b981' : '#f3f4f6',
+                  transition: '0.3s',
+                  borderRadius: '24px'
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    content: '""',
+                    height: '18px',
+                    width: '18px',
+                    left: '3px',
+                    bottom: '3px',
+                    background: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                    transform: settings.reducedMotion ? 'translateX(20px)' : 'translateX(0)'
+                  }} />
+                </span>
+              </label>
             </div>
 
             {/* Leitor de Tela */}
@@ -694,32 +1015,43 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   Otimiza a interface para leitores de tela
                 </p>
               </div>
-              <button
-                onClick={() => updateSettings({ screenReader: !settings.screenReader })}
-                style={{
-                  width: '44px',
-                  height: '22px',
-                  background: '#f3f4f6',
-                  borderRadius: '11px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-                }}
-              >
-                <div style={{
-                  width: '18px',
-                  height: '18px',
-                  background: 'white',
-                  borderRadius: '50%',
+              <label style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '44px',
+                height: '24px'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={settings.screenReader}
+                  onChange={() => updateSettings({ screenReader: !settings.screenReader })}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
                   position: 'absolute',
-                  top: '2px',
-                  left: settings.screenReader ? '24px' : '2px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                }} />
-              </button>
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: settings.screenReader ? '#10b981' : '#f3f4f6',
+                  transition: '0.3s',
+                  borderRadius: '24px'
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    content: '""',
+                    height: '18px',
+                    width: '18px',
+                    left: '3px',
+                    bottom: '3px',
+                    background: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                    transform: settings.screenReader ? 'translateX(20px)' : 'translateX(0)'
+                  }} />
+                </span>
+              </label>
             </div>
 
 

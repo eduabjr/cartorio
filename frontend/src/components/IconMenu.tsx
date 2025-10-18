@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
+import { announcementService } from '../services/AnnouncementService'
 
 interface IconMenuItem {
   id: string
@@ -18,6 +19,28 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const { getTheme } = useAccessibility()
   const theme = getTheme()
+
+  const handleItemClick = (item: IconMenuItem) => {
+    // Anunciar clique
+    announcementService.announceClick(item.label, 'ícone')
+    item.onClick()
+  }
+
+  const handleItemHover = (itemLabel: string) => {
+    // Anunciar hover
+    announcementService.announceHover(itemLabel, 'ícone')
+  }
+
+  const handleSideMenuClick = () => {
+    // Anunciar clique no menu lateral
+    announcementService.announceClick('Menu lateral', 'botão')
+    onOpenSideMenu()
+  }
+
+  const handleSideMenuHover = () => {
+    // Anunciar hover no menu lateral
+    announcementService.announceHover('Menu lateral', 'botão')
+  }
 
   const menuStyles = {
     position: 'relative' as const,
@@ -37,9 +60,8 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
 
   const iconStyles = (itemId: string) => ({
     padding: '12px',
-    border: 'none',
-    background: hoveredItem === itemId ? '#007F7F' : 'transparent',
-    color: hoveredItem === itemId ? theme.primary : theme.text,
+    background: hoveredItem === itemId ? '#00695C' : 'transparent',
+    color: hoveredItem === itemId ? '#FFFFFF' : theme.text,
     cursor: 'pointer',
     borderRadius: '12px',
     fontSize: getRelativeFontSize(24),
@@ -48,10 +70,11 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
     justifyContent: 'center',
     minWidth: '48px',
     minHeight: '48px',
-    transition: 'all 0.3s ease-in-out',
+    transition: 'all 0.2s ease-in-out',
     position: 'relative' as const,
-    boxShadow: hoveredItem === itemId ? '0 4px 8px rgba(0, 0, 0, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
-    transform: hoveredItem === itemId ? 'translateY(-1px)' : 'translateY(0)'
+    boxShadow: hoveredItem === itemId ? '0 0 0 3px rgba(255, 255, 255, 0.35)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+    border: hoveredItem === itemId ? '1px solid rgba(255, 255, 255, 0.5)' : 'none',
+    transform: hoveredItem === itemId ? 'translateY(-1px) scale(1.03)' : 'translateY(0) scale(1)'
   })
 
   const sideMenuButtonStyles = {
@@ -77,8 +100,11 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
         <button
           key={item.id}
           style={iconStyles(item.id)}
-          onClick={item.onClick}
-          onMouseEnter={() => setHoveredItem(item.id)}
+          onClick={() => handleItemClick(item)}
+          onMouseEnter={() => {
+            setHoveredItem(item.id)
+            handleItemHover(item.label)
+          }}
           onMouseLeave={() => setHoveredItem(null)}
           title={item.label}
         >
@@ -89,10 +115,11 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
       {/* Botão do menu lateral */}
       <button
         style={sideMenuButtonStyles}
-        onClick={onOpenSideMenu}
+        onClick={handleSideMenuClick}
         onMouseEnter={(e) => {
           (e.target as HTMLButtonElement).style.backgroundColor = theme.primary + '20'
           ;(e.target as HTMLButtonElement).style.color = theme.primary
+          handleSideMenuHover()
         }}
         onMouseLeave={(e) => {
           (e.target as HTMLButtonElement).style.backgroundColor = 'transparent'

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
+import { announcementService } from '../services/AnnouncementService'
 
 interface MenuItem {
   id: string
@@ -13,7 +14,8 @@ interface SubMenuItem {
   id: string
   label: string
   icon: string
-  onClick: () => void
+  onClick?: () => void
+  submenu?: SubMenuItem[]
 }
 
 interface TextualMenuProps {
@@ -24,6 +26,7 @@ interface TextualMenuProps {
 
 export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenuProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
+  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const { getTheme } = useAccessibility()
@@ -34,29 +37,71 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setActiveMenu(null)
+        setActiveSubmenu(null)
       }
     }
 
-    if (activeMenu) {
+    if (activeMenu || activeSubmenu) {
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [activeMenu])
+  }, [activeMenu, activeSubmenu])
 
-  const handleItemClick = (itemId: string) => {
+  const handleItemClick = (itemId: string, itemLabel: string) => {
+    // Anunciar clique
+    announcementService.announceClick(itemLabel, 'menu')
+    
     if (activeMenu === itemId) {
       setActiveMenu(null)
+      setActiveSubmenu(null)
     } else {
       setActiveMenu(itemId)
+      setActiveSubmenu(null)
     }
   }
 
-  const handleSubmenuClick = (subItem: SubMenuItem) => {
-    subItem.onClick()
-    setActiveMenu(null)
+  const handleItemHover = (itemId: string, itemLabel: string) => {
+    // Se há um menu ativo e o item hovered é diferente, trocar automaticamente
+    if (activeMenu && activeMenu !== itemId) {
+      setActiveMenu(itemId)
+      setActiveSubmenu(null) // Fechar submenu ao trocar de menu
+    }
+    
+    // Anunciar hover
+    announcementService.announceHover(itemLabel, 'menu')
+  }
+
+  const handleSubmenuClick = (subItem: SubMenuItem, parentId: string) => {
+    // Anunciar clique no submenu
+    announcementService.announceClick(subItem.label, 'submenu')
+    
+    if (subItem.submenu) {
+      // Se tem submenu, abrir o submenu aninhado
+      if (activeSubmenu === subItem.id) {
+        setActiveSubmenu(null)
+      } else {
+        setActiveSubmenu(subItem.id)
+      }
+    } else if (subItem.onClick) {
+      // Se não tem submenu, executar a ação
+      subItem.onClick()
+      setActiveMenu(null)
+      setActiveSubmenu(null)
+    }
+  }
+
+
+  const handleSubmenuHover = (subItem: SubMenuItem, parentId: string) => {
+    // Se o subitem tem submenu, abrir automaticamente
+    if (subItem.submenu && activeSubmenu !== subItem.id) {
+      setActiveSubmenu(subItem.id)
+    }
+    
+    // Anunciar hover no submenu
+    announcementService.announceHover(subItem.label, 'submenu')
   }
 
   const menuStyles = {
@@ -68,10 +113,10 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     backgroundColor: theme.surface,
     borderBottom: `1px solid ${theme.border}`,
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    padding: '0',
+    padding: '0 8px',
     display: 'flex',
     alignItems: 'flex-end',
-    gap: '0',
+    gap: '8px',
     backdropFilter: 'blur(8px)'
   }
 
@@ -81,9 +126,9 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     background: activeMenu === itemId 
       ? theme.surface 
       : hoveredItem === itemId 
-        ? '#007F7F' 
+        ? '#009688' 
         : 'transparent',
-    color: activeMenu === itemId ? theme.primary : theme.text,
+    color: activeMenu === itemId ? theme.primary : (hoveredItem === itemId ? '#FFFFFF' : theme.text),
     cursor: 'pointer',
     borderRadius: '8px 8px 0 0',
     fontSize: getRelativeFontSize(14),
@@ -91,15 +136,15 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    transition: 'all 0.3s ease-in-out',
-    boxShadow: hoveredItem === itemId ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
+    transition: 'all 0.2s ease-in-out',
+    boxShadow: hoveredItem === itemId ? '0 0 0 3px rgba(0, 121, 107, 0.25)' : 'none',
     position: 'relative' as const,
     border: `1px solid ${theme.border}`,
     borderBottom: activeMenu === itemId ? `1px solid ${theme.surface}` : `1px solid ${theme.border}`,
     marginRight: '2px',
     marginBottom: activeMenu === itemId ? '-1px' : '0',
     zIndex: activeMenu === itemId ? 2 : 1,
-    boxShadow: activeMenu === itemId ? '0 -2px 4px rgba(0, 0, 0, 0.05)' : 'none'
+    boxShadow: activeMenu === itemId ? '0 -2px 4px rgba(0, 0, 0, 0.05)' : (hoveredItem === itemId ? '0 0 0 3px rgba(0, 121, 107, 0.25)' : 'none')
   })
 
   const submenuStyles = {
@@ -110,16 +155,22 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     border: `1px solid ${theme.border}`,
     borderRadius: '0 0 8px 8px',
     boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    padding: '8px 0',
+    padding: '10px 0',
     minWidth: '220px',
     zIndex: 1001,
     marginTop: '0',
-    display: activeMenu ? 'block' : 'none',
-    backdropFilter: 'blur(8px)'
+    display: activeMenu ? 'flex' : 'none',
+    flexDirection: 'column' as const,
+    gap: '6px',
+    backdropFilter: 'blur(8px)',
+    willChange: 'opacity, transform',
+    transition: 'opacity 0.2s ease, transform 0.2s ease',
+    opacity: 1,
+    transform: 'translateY(0)'
   }
 
   const submenuItemStyles = {
-    padding: '10px 12px',
+    padding: '12px 14px',
     border: 'none',
     background: 'transparent',
     color: theme.text,
@@ -140,9 +191,14 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
         <div key={item.id} style={{ position: 'relative' }}>
           <button
             style={itemStyles(item.id)}
-            onClick={() => handleItemClick(item.id)}
-            onMouseEnter={() => setHoveredItem(item.id)}
+            onClick={() => handleItemClick(item.id, item.label)}
+            onMouseEnter={() => {
+              setHoveredItem(item.id)
+              handleItemHover(item.id, item.label)
+            }}
             onMouseLeave={() => setHoveredItem(null)}
+            onFocus={() => setHoveredItem(item.id)}
+            onBlur={() => setHoveredItem(null)}
             title={item.label}
           >
             <span style={{ fontSize: '16px' }}>{item.icon}</span>
@@ -158,20 +214,83 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
           {activeMenu === item.id && item.submenu && (
             <div style={submenuStyles}>
               {item.submenu.map((subItem) => (
-                <button
-                  key={subItem.id}
-                  style={submenuItemStyles}
-                  onClick={() => handleSubmenuClick(subItem)}
-                  onMouseEnter={(e) => {
-                    (e.target as HTMLButtonElement).style.backgroundColor = theme.primary + '20'
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.target as HTMLButtonElement).style.backgroundColor = 'transparent'
-                  }}
-                >
-                  <span style={{ fontSize: '14px' }}>{subItem.icon}</span>
-                  <span>{subItem.label}</span>
-                </button>
+                <div key={subItem.id} style={{ position: 'relative' }}>
+                  <button
+                    style={{
+                      ...submenuItemStyles,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}
+                    onClick={() => handleSubmenuClick(subItem, item.id)}
+                    onMouseEnter={(e) => {
+                      (e.target as HTMLButtonElement).style.backgroundColor = theme.primary + '20'
+                      handleSubmenuHover(subItem, item.id)
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.target as HTMLButtonElement).style.backgroundColor = 'transparent'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '14px', filter: hoveredItem === subItem.id ? 'brightness(1.2) contrast(1.1)' : 'none' }}>{subItem.icon}</span>
+                  <span style={{ filter: hoveredItem === subItem.id ? 'brightness(1.1)' : 'none' }}>{subItem.label}</span>
+                    </div>
+                    {subItem.submenu && (
+                      <span style={{ fontSize: '10px', marginLeft: '8px' }}>
+                        {activeSubmenu === subItem.id ? '◀' : '▶'}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Submenu aninhado */}
+                  {activeSubmenu === subItem.id && subItem.submenu && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '0',
+                      left: '100%',
+                      backgroundColor: theme.surface,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '0 8px 8px 0',
+                      boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                      padding: '10px 0',
+                      minWidth: '200px',
+                      zIndex: 1002,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      backdropFilter: 'blur(8px)',
+                      willChange: 'opacity, transform',
+                      transition: 'opacity 0.2s ease, transform 0.2s ease',
+                      opacity: 1,
+                      transform: 'translateX(0)'
+                    }}>
+                      {subItem.submenu.map((nestedItem) => (
+                        <button
+                          key={nestedItem.id}
+                          style={submenuItemStyles}
+                          onClick={() => {
+                            if (nestedItem.onClick) {
+                              announcementService.announceClick(nestedItem.label, 'submenu')
+                              nestedItem.onClick()
+                              setActiveMenu(null)
+                              setActiveSubmenu(null)
+                            }
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.target as HTMLButtonElement).style.backgroundColor = theme.primary + '20'
+                            handleSubmenuHover(nestedItem, subItem.id)
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.target as HTMLButtonElement).style.backgroundColor = 'transparent'
+                          }}
+                        >
+                          <span style={{ fontSize: '14px' }}>{nestedItem.icon}</span>
+                          <span style={{ filter: 'brightness(1.05)' }}>{nestedItem.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}

@@ -1,34 +1,22 @@
 @echo off
+CHCP 65001 > NUL
+
+echo.
 echo ========================================
-echo   INICIANDO FRONTEND DO SISTEMA
+echo    INICIANDO FRONTEND SIMPLES
 echo ========================================
 echo.
 
-cd /d "%~dp0frontend"
+cd frontend
 
-echo Verificando se Node.js esta instalado...
-node --version >nul 2>&1
-if errorlevel 1 (
-    echo ERRO: Node.js nao encontrado!
-    echo Por favor, instale o Node.js primeiro.
-    pause
-    exit /b 1
-)
-
-echo Node.js encontrado!
-echo.
-
-echo Instalando dependencias...
-call npm install
+echo Instalando dependências...
+npm install
 
 echo.
-echo Iniciando o servidor de desenvolvimento...
-echo.
-echo O frontend estara disponivel em: http://localhost:5173
-echo.
-echo Pressione Ctrl+C para parar o servidor
+echo Iniciando servidor de desenvolvimento...
+echo O frontend estará disponível em: http://localhost:5173
 echo.
 
-call npm run dev
+npm run dev
 
 pause

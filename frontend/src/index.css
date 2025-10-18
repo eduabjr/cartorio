@@ -16,8 +16,36 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     background: var(--background-color, #f8fafc);
     color: var(--text-color, #1e293b);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color var(--transition-duration, 0.3s) ease, color var(--transition-duration, 0.3s) ease;
     font-size: var(--base-font-size, 16px);
+  }
+
+  /* Configuração de movimento reduzido */
+  :root {
+    --animation-duration: 0.3s;
+    --transition-duration: 0.3s;
+  }
+
+  /* Aplicar movimento reduzido quando ativado */
+  body[style*="--animation-duration: 0.01s"] *,
+  body[style*="--animation-duration: 0.01s"] *::before,
+  body[style*="--animation-duration: 0.01s"] *::after {
+    animation-duration: 0.01s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01s !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Respeitar preferência do sistema para movimento reduzido */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01s !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   /* Aplicar multiplicador de fonte apenas para elementos de texto */
@@ -56,7 +84,7 @@
     padding: 8px 16px;
     border-radius: 6px;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all var(--transition-duration, 0.2s) ease;
   }
   
   /* Melhorar acessibilidade de selects */
@@ -82,8 +110,8 @@
     --primary-color: #006F73;
     --secondary-color: #00A6A1;
     --accent-color: #A1D2D3;
-    --background-color: #ffffff;
-    --surface-color: #f8fafc;
+    --background-color: #E1E1E1;
+    --surface-color: #E1E1E1;
     --text-color: #1e293b;
     --text-secondary-color: #64748b;
     --border-color: #e2e8f0;
@@ -118,7 +146,7 @@
     --primary-color: #000000;
     --secondary-color: #333333;
     --accent-color: #666666;
-    --background-color: #ffffff;
+    --background-color: #F7F7F7;
     --surface-color: #f0f0f0;
     --text-color: #000000;
     --text-secondary-color: #333333;
@@ -158,7 +186,7 @@
   /* Botões aprimorados com sombras e transições */
   .btn-enhanced {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease-in-out;
+    transition: all var(--transition-duration, 0.3s) ease-in-out;
   }
   
   .btn-enhanced:hover {
@@ -173,7 +201,7 @@
   
   /* Elementos interativos aprimorados */
   .interactive-element {
-    transition: all 0.3s ease-in-out;
+    transition: all var(--transition-duration, 0.3s) ease-in-out;
     cursor: pointer;
   }
   
@@ -185,7 +213,7 @@
   /* Inputs aprimorados */
   .input-enhanced {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease-in-out;
+    transition: all var(--transition-duration, 0.3s) ease-in-out;
   }
   
   .input-enhanced:focus {
