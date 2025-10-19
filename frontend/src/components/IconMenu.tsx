@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
 import { announcementService } from '../services/AnnouncementService'
+import { useMenuProtection } from './ProtectedMenu'
 
 interface IconMenuItem {
   id: string
@@ -19,6 +20,7 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const { getTheme } = useAccessibility()
   const theme = getTheme()
+  const { getProtectedStyles } = useMenuProtection('ICON_MENU')
 
   const handleItemClick = (item: IconMenuItem) => {
     // Anunciar clique
@@ -42,12 +44,10 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
     announcementService.announceHover('Menu lateral', 'botão')
   }
 
-  const menuStyles = {
-    position: 'relative' as const,
+  const menuStyles = getProtectedStyles({
     top: '0',
     left: '0',
     right: '0',
-    zIndex: 50,
     backgroundColor: theme.surface,
     borderBottom: `1px solid ${theme.border}`,
     padding: '8px 16px',
@@ -56,7 +56,7 @@ export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
     gap: '12px',
     boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
     backdropFilter: 'blur(8px)'
-  }
+  })
 
   const iconStyles = (itemId: string) => ({
     padding: '8px',

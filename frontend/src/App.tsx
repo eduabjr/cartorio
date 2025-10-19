@@ -8,6 +8,7 @@ import { FeedbackSystem } from './components/FeedbackSystem'
 import { WindowControls } from './components/WindowControls'
 import { TextualMenu } from './components/TextualMenu'
 import { IconMenu } from './components/IconMenu'
+import { ProtectedMenu } from './components/ProtectedMenu'
 import { SideMenu } from './components/SideMenu'
 import { ConfigOverlay } from './components/ConfigOverlay'
 import { PasswordPrompt } from './components/PasswordPrompt'
@@ -776,7 +777,9 @@ function AppContent() {
           minHeight: '36px',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            position: 'relative',
+            zIndex: 1001
           }}>
           {/* Logo Civitas */}
         <div style={{
@@ -784,7 +787,12 @@ function AppContent() {
           alignItems: 'center',
           marginLeft: '16px'
         }}>
-          <CivitasLogo size={24} theme={accessibility.currentTheme === 'highContrast' ? 'dark' : accessibility.currentTheme} />
+          <CivitasLogo 
+            size={24} 
+            theme={accessibility.currentTheme === 'highContrast' ? 'dark' : accessibility.currentTheme} 
+            showText={true}
+            textColor="#ffffff"
+          />
         </div>
 
           {/* Controles de Janela */}
@@ -797,22 +805,29 @@ function AppContent() {
           </div>
         </div>
 
-        {/* Menu Textual (Menu 1) */}
-        <div style={{ marginTop: '10px' }} data-responsive-menu>
+        {/* Menu Textual (Menu 1) - PROTEGIDO */}
+        <ProtectedMenu 
+          menuType="TEXTUAL_MENU"
+          style={{ marginTop: '10px' }}
+          data-responsive-menu
+        >
           <TextualMenu 
             items={textualMenuItems}
             isExpanded={isTextualMenuExpanded}
             onToggleExpanded={() => setIsTextualMenuExpanded(!isTextualMenuExpanded)}
           />
-                           </div>
+        </ProtectedMenu>
 
-        {/* Menu de Ícones (Menu 2) */}
-        <div data-responsive-menu>
+        {/* Menu de Ícones (Menu 2) - PROTEGIDO */}
+        <ProtectedMenu 
+          menuType="ICON_MENU"
+          data-responsive-menu
+        >
           <IconMenu 
             items={iconMenuItems}
             onOpenSideMenu={() => setIsSideMenuOpen(true)}
           />
-                  </div>
+        </ProtectedMenu>
 
         {/* Menu lateral */}
         <SideMenu 

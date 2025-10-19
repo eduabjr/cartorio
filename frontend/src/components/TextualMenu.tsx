@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
 import { announcementService } from '../services/AnnouncementService'
+import { useMenuProtection } from './ProtectedMenu'
 
 interface MenuItem {
   id: string
@@ -31,6 +32,7 @@ export function TextualMenu({ items }: TextualMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const { getTheme } = useAccessibility()
   const theme = getTheme()
+  const { getProtectedStyles, validateAndCorrectZIndex } = useMenuProtection('TEXTUAL_MENU')
 
   // Fechar submenu ao clicar fora
   useEffect(() => {
@@ -110,12 +112,10 @@ export function TextualMenu({ items }: TextualMenuProps) {
     announcementService.announceHover(subItem.label, 'submenu')
   }
 
-  const menuStyles = {
-    position: 'relative' as const,
+  const menuStyles = getProtectedStyles({
     top: '0',
     left: '0',
     right: '0',
-    zIndex: 60,
     backgroundColor: theme.surface,
     borderBottom: `1px solid ${theme.border}`,
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
@@ -126,7 +126,7 @@ export function TextualMenu({ items }: TextualMenuProps) {
     backdropFilter: 'blur(8px)',
     maxWidth: '100%',
     overflow: 'visible' as const
-  }
+  })
 
   const itemStyles = (itemId: string) => ({
     padding: '8px 12px',
@@ -168,7 +168,7 @@ export function TextualMenu({ items }: TextualMenuProps) {
     boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     padding: '6px 0',
     minWidth: '220px',
-    zIndex: 1000,
+    zIndex: 61,
     marginTop: '0',
     display: activeMenu ? 'flex' : 'none',
     flexDirection: 'column' as const,
@@ -287,7 +287,7 @@ export function TextualMenu({ items }: TextualMenuProps) {
                       boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                       padding: '6px 0',
                       minWidth: '200px',
-                      zIndex: 1001,
+                      zIndex: 62,
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '3px',

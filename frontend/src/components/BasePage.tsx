@@ -24,8 +24,8 @@ export function BasePage({
   height = '700px',
   draggable = true,
   windowId,
-  initialPosition = { x: 100, y: 100 },
-  initialZIndex = 70,
+  initialPosition = { x: 100, y: 150 },
+  initialZIndex = 50,
   isMinimized = false,
   isMaximized = false
 }: BasePageProps) {
@@ -62,13 +62,16 @@ export function BasePage({
       const newX = e.clientX - dragStart.x
       const newY = e.clientY - dragStart.y
       
-      // Limitar movimento dentro da tela
+      // Limitar movimento dentro da tela, respeitando área dos menus
       const maxX = window.innerWidth - parseInt(width)
       const maxY = window.innerHeight - parseInt(height)
       
+      // Área mínima Y para não invadir os menus (header + menu1 + menu2)
+      const minY = 120 // Espaço para header (36px) + menu1 + menu2
+      
       const newPosition = {
         x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY))
+        y: Math.max(minY, Math.min(newY, maxY))
       }
       
       setPosition(newPosition)
@@ -105,9 +108,9 @@ export function BasePage({
     backgroundColor: 'transparent',
     zIndex: zIndex,
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '20px'
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    padding: '120px 20px 20px 20px' // Espaço para os menus no topo (header + menu1 + menu2)
   }
 
   const windowStyles = {
@@ -130,7 +133,7 @@ export function BasePage({
   const headerStyles = {
     backgroundColor: theme.primary,
     color: 'white',
-    padding: '12px 16px',
+    padding: '6px 16px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -139,7 +142,7 @@ export function BasePage({
 
   const contentStyles = {
     flex: 1,
-    padding: '18px',
+    padding: '12px',
     overflow: 'hidden',
     backgroundColor: theme.surface
   }
@@ -164,7 +167,7 @@ export function BasePage({
       >
         {/* Header */}
         <div style={headerStyles} data-draggable-header>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
+          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>
             {title}
           </h3>
           <button

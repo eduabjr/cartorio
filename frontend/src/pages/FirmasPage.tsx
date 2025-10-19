@@ -66,15 +66,15 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
 
   const buttonStyles = {
     padding: '8px 16px',
-    border: 'none',
+              border: 'none',
     borderRadius: '4px',
-    cursor: 'pointer',
+              cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '500',
-    display: 'flex',
-    alignItems: 'center',
+              display: 'flex',
+              alignItems: 'center',
     gap: '8px',
-    transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease'
   }
 
   const primaryButtonStyles = {
@@ -96,7 +96,7 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
   }
 
   const buttonsContainerStyles = {
-    display: 'flex',
+          display: 'flex',
     gap: '12px',
     marginTop: '20px',
     paddingTop: '20px',
@@ -108,54 +108,54 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
       <form style={formStyles}>
         <div style={fieldStyles}>
           <label style={labelStyles}>Código</label>
-          <input
-            type="text"
-            value={formData.codigo}
+                      <input
+                        type="text"
+                        value={formData.codigo}
             onChange={(e) => handleInputChange('codigo', e.target.value)}
             style={inputStyles}
             placeholder="Código da firma"
           />
-        </div>
+                  </div>
 
         <div style={fieldStyles}>
           <label style={labelStyles}>Nome *</label>
-          <input
-            type="text"
-            value={formData.nome}
+                    <input
+                      type="text"
+                      value={formData.nome}
             onChange={(e) => handleInputChange('nome', e.target.value)}
             style={inputStyles}
             placeholder="Nome completo"
-            required
-          />
-        </div>
+                      required
+                    />
+                  </div>
 
         <div style={fieldStyles}>
           <label style={labelStyles}>CPF *</label>
-          <input
-            type="text"
-            value={formData.cpf}
+                      <input
+                        type="text"
+                        value={formData.cpf}
             onChange={(e) => handleInputChange('cpf', e.target.value)}
             style={inputStyles}
             placeholder="000.000.000-00"
-            required
+                        required
           />
-        </div>
+                  </div>
 
         <div style={fieldStyles}>
           <label style={labelStyles}>RG *</label>
-          <input
-            type="text"
-            value={formData.rg}
+                    <input
+                      type="text"
+                      value={formData.rg}
             onChange={(e) => handleInputChange('rg', e.target.value)}
             style={inputStyles}
             placeholder="Número do RG"
-            required
-          />
-        </div>
+                      required
+                    />
+                  </div>
 
         <div style={fieldStyles}>
           <label style={labelStyles}>Tipo de Documento</label>
-          <select
+                    <select
             value={formData.tipoDocumento}
             onChange={(e) => handleInputChange('tipoDocumento', e.target.value)}
             style={selectStyles}
@@ -165,8 +165,8 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
             <option value="PROCURACAO">Procuração</option>
             <option value="RECONHECIMENTO">Reconhecimento de Firma</option>
             <option value="AUTENTICACAO">Autenticação</option>
-          </select>
-        </div>
+                    </select>
+                  </div>
 
         <div style={{ ...fieldStyles, gridColumn: '1 / -1' }}>
           <label style={labelStyles}>Observações</label>
@@ -176,27 +176,27 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
             style={textareaStyles}
             placeholder="Observações adicionais..."
           />
-        </div>
-      </form>
+              </div>
+            </form>
 
       {/* Botões de Ação */}
       <div style={buttonsContainerStyles}>
         <button type="button" style={primaryButtonStyles}>
-          📄 Novo
-        </button>
+            📄 Novo
+          </button>
         <button type="button" style={primaryButtonStyles}>
-          💾 Gravar
-        </button>
+            💾 Gravar
+          </button>
         <button type="button" style={secondaryButtonStyles}>
-          🧹 Limpar
-        </button>
+            🧹 Limpar
+          </button>
         <button type="button" style={secondaryButtonStyles}>
           🔍 Consultar
-        </button>
+          </button>
         <button type="button" style={dangerButtonStyles} onClick={onClose}>
-          🚪 Fechar
-        </button>
-      </div>
+            🚪 Fechar
+          </button>
+        </div>
     </BasePage>
   )
 }

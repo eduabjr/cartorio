@@ -4,17 +4,24 @@ interface CivitasLogoProps {
   size?: number
   color?: string
   theme?: 'light' | 'dark'
+  showText?: boolean
+  textColor?: string
 }
 
-export function CivitasLogo({ size = 64, color = '#2D5A5A', theme = 'light' }: CivitasLogoProps) {
+export function CivitasLogo({ size = 64, color = '#2D5A5A', theme = 'light', showText = false, textColor = '#ffffff' }: CivitasLogoProps) {
   const [logoExists, setLogoExists] = useState(false)
   const [logoPath, setLogoPath] = useState('')
 
   useEffect(() => {
     // Verificar se existe um logo personalizado para o tema atual
     const checkLogo = async () => {
-      // Prioridade: logo específico do tema, depois logo genérico
+      // Prioridade: logo-header, depois logo específico do tema, depois logo genérico
       const possiblePaths = [
+        // Logo específico para header
+        '/logo-header.png',
+        '/logo-header.svg',
+        '/assets/logo/logo-header.png',
+        '/assets/logo/logo-header.svg',
         // Logos específicos do tema
         `/logo-${theme}.png`,
         `/logo-${theme}.svg`,
@@ -51,16 +58,32 @@ export function CivitasLogo({ size = 64, color = '#2D5A5A', theme = 'light' }: C
   // Se houver logo personalizado, usar ele
   if (logoExists) {
     return (
-      <img 
-        src={logoPath}
-        alt="Logo CIVITAS"
-        width={size}
-        height={size}
-        style={{
-          objectFit: 'contain',
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-        }}
-      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <img 
+          src={logoPath}
+          alt="Logo CIVITAS"
+          width={size}
+          height={size}
+          style={{
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+          }}
+        />
+        {showText && (
+          <span 
+            style={{
+              color: textColor,
+              fontSize: `${size * 0.6}px`,
+              fontWeight: 'bold',
+              fontFamily: 'Arial, sans-serif',
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              letterSpacing: '1px'
+            }}
+          >
+            CIVITAS
+          </span>
+        )}
+      </div>
     )
   }
 
@@ -84,7 +107,7 @@ export function CivitasLogo({ size = 64, color = '#2D5A5A', theme = 'light' }: C
   const currentTheme = themeColors[theme]
   const logoColor = color || currentTheme.primary
 
-  return (
+  const svgContent = (
     <svg 
       width={size} 
       height={size} 
@@ -200,4 +223,28 @@ export function CivitasLogo({ size = 64, color = '#2D5A5A', theme = 'light' }: C
       </g>
     </svg>
   )
+
+  // Se showText for true, retornar com texto
+  if (showText) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {svgContent}
+        <span 
+          style={{
+            color: textColor,
+            fontSize: `${size * 0.6}px`,
+            fontWeight: 'bold',
+            fontFamily: 'Arial, sans-serif',
+            textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+            letterSpacing: '1px'
+          }}
+        >
+          CIVITAS
+        </span>
+      </div>
+    )
+  }
+
+  // Retornar apenas o SVG
+  return svgContent
 }
