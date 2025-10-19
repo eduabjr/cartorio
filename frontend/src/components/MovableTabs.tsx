@@ -110,7 +110,7 @@ export function MovableTabs({ tabs, onTabUpdate, onTabClose, onTabMinimize }: Mo
     border: `2px solid ${theme.border}`,
     borderRadius: '8px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    zIndex: draggedTab === tab.id ? 1000 : 100,
+    zIndex: draggedTab === tab.id ? 10 : 2,
     cursor: draggedTab === tab.id ? 'grabbing' : 'grab',
     overflow: 'hidden',
     transition: draggedTab === tab.id ? 'none' : 'all 0.2s ease'

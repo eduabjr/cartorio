@@ -75,8 +75,7 @@ export function ClienteCadastroWindow({ onClose }: ClienteCadastroWindowProps) {
     padding: '12px 16px',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    cursor: 'move'
+    alignItems: 'center'
   }
 
   const tabStyles = {
@@ -177,7 +176,7 @@ export function ClienteCadastroWindow({ onClose }: ClienteCadastroWindowProps) {
   return (
     <div style={windowStyles}>
       {/* Header */}
-      <div style={headerStyles} data-draggable-header>
+      <div style={headerStyles}>
         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Cliente</h3>
         <button
           onClick={onClose}

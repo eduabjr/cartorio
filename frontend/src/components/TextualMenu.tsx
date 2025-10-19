@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
 import { announcementService } from '../services/AnnouncementService'
@@ -24,7 +24,7 @@ interface TextualMenuProps {
   onToggleExpanded: () => void
 }
 
-export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenuProps) {
+export function TextualMenu({ items }: TextualMenuProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
@@ -57,9 +57,11 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     if (activeMenu === itemId) {
       setActiveMenu(null)
       setActiveSubmenu(null)
+      setHoveredItem(null) // Limpar hover ao fechar menu
     } else {
       setActiveMenu(itemId)
       setActiveSubmenu(null)
+      setHoveredItem(null) // Limpar hover ao abrir novo menu
     }
   }
 
@@ -68,13 +70,14 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     if (activeMenu && activeMenu !== itemId) {
       setActiveMenu(itemId)
       setActiveSubmenu(null) // Fechar submenu ao trocar de menu
+      setHoveredItem(null) // Limpar hover ao trocar de menu
     }
     
     // Anunciar hover
     announcementService.announceHover(itemLabel, 'menu')
   }
 
-  const handleSubmenuClick = (subItem: SubMenuItem, parentId: string) => {
+  const handleSubmenuClick = (subItem: SubMenuItem) => {
     // Anunciar clique no submenu
     announcementService.announceClick(subItem.label, 'submenu')
     
@@ -82,19 +85,22 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
       // Se tem submenu, abrir o submenu aninhado
       if (activeSubmenu === subItem.id) {
         setActiveSubmenu(null)
+        setHoveredItem(null) // Limpar hover ao fechar submenu
       } else {
         setActiveSubmenu(subItem.id)
+        setHoveredItem(null) // Limpar hover ao abrir novo submenu
       }
     } else if (subItem.onClick) {
       // Se não tem submenu, executar a ação
       subItem.onClick()
       setActiveMenu(null)
       setActiveSubmenu(null)
+      setHoveredItem(null) // Limpar hover ao executar ação
     }
   }
 
 
-  const handleSubmenuHover = (subItem: SubMenuItem, parentId: string) => {
+  const handleSubmenuHover = (subItem: SubMenuItem) => {
     // Se o subitem tem submenu, abrir automaticamente
     if (subItem.submenu && activeSubmenu !== subItem.id) {
       setActiveSubmenu(subItem.id)
@@ -109,19 +115,21 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     top: '0',
     left: '0',
     right: '0',
-    zIndex: 1000,
+    zIndex: 60,
     backgroundColor: theme.surface,
     borderBottom: `1px solid ${theme.border}`,
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
     padding: '0 8px',
     display: 'flex',
     alignItems: 'flex-end',
-    gap: '8px',
-    backdropFilter: 'blur(8px)'
+    gap: '4px',
+    backdropFilter: 'blur(8px)',
+    maxWidth: '100%',
+    overflow: 'visible' as const
   }
 
   const itemStyles = (itemId: string) => ({
-    padding: '8px 20px',
+    padding: '8px 12px',
     background: activeMenu === itemId 
       ? theme.surface 
       : hoveredItem === itemId 
@@ -130,19 +138,24 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     color: activeMenu === itemId ? theme.primary : (hoveredItem === itemId ? '#FFFFFF' : theme.text),
     cursor: 'pointer',
     borderRadius: '8px 8px 0 0',
-    fontSize: getRelativeFontSize(14),
+    fontSize: getRelativeFontSize(13),
     fontWeight: activeMenu === itemId ? '600' : '500',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
     transition: 'all 0.2s ease-in-out',
     position: 'relative' as const,
     border: `1px solid ${theme.border}`,
     borderBottom: activeMenu === itemId ? `1px solid ${theme.surface}` : `1px solid ${theme.border}`,
-    marginRight: '2px',
+    marginRight: '1px',
     marginBottom: activeMenu === itemId ? '-1px' : '0',
-    zIndex: activeMenu === itemId ? 2 : 1,
-    boxShadow: activeMenu === itemId ? '0 -2px 4px rgba(0, 0, 0, 0.05)' : (hoveredItem === itemId ? '0 0 0 3px rgba(0, 121, 107, 0.25)' : 'none')
+    zIndex: activeMenu === itemId ? 62 : 61,
+    boxShadow: activeMenu === itemId ? '0 -2px 4px rgba(0, 0, 0, 0.05)' : (hoveredItem === itemId ? '0 0 0 3px rgba(0, 121, 107, 0.25)' : 'none'),
+    flex: '1 1 auto',
+    minWidth: '0',
+    overflow: 'hidden' as const,
+    textOverflow: 'ellipsis' as const,
+    whiteSpace: 'nowrap' as const
   })
 
   const submenuStyles = {
@@ -155,7 +168,7 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
     boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     padding: '6px 0',
     minWidth: '220px',
-    zIndex: 1001,
+    zIndex: 1000,
     marginTop: '0',
     display: activeMenu ? 'flex' : 'none',
     flexDirection: 'column' as const,
@@ -219,23 +232,31 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      backgroundColor: activeSubmenu === subItem.id ? `${theme.primary}15` : 'transparent',
+                      backgroundColor: activeSubmenu === subItem.id 
+                        ? `${theme.primary}15` 
+                        : hoveredItem === subItem.id 
+                          ? `${theme.primary}20` 
+                          : 'transparent',
                       borderLeft: activeSubmenu === subItem.id ? `3px solid ${theme.primary}` : '3px solid transparent'
                     }}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      handleSubmenuClick(subItem, item.id)
+                      handleSubmenuClick(subItem)
                     }}
-                    onMouseEnter={(e) => {
-                      (e.target as HTMLButtonElement).style.backgroundColor = `${theme.primary}20`
-                      handleSubmenuHover(subItem, item.id)
+                    onMouseEnter={() => {
+                      setHoveredItem(subItem.id)
+                      handleSubmenuHover(subItem)
                     }}
-                    onMouseLeave={(e) => {
-                      (e.target as HTMLButtonElement).style.backgroundColor = 'transparent'
+                    onMouseLeave={() => {
+                      setHoveredItem(null)
                     }}
                     onFocus={() => {
-                      handleSubmenuHover(subItem, item.id)
+                      setHoveredItem(subItem.id)
+                      handleSubmenuHover(subItem)
+                    }}
+                    onBlur={() => {
+                      setHoveredItem(null)
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -266,7 +287,7 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
                       boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                       padding: '6px 0',
                       minWidth: '200px',
-                      zIndex: 1003,
+                      zIndex: 1001,
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '3px',
@@ -279,24 +300,25 @@ export function TextualMenu({ items, isExpanded, onToggleExpanded }: TextualMenu
                       {subItem.submenu.map((nestedItem) => (
                         <button
                           key={nestedItem.id}
-                          style={submenuItemStyles}
+                          style={{
+                            ...submenuItemStyles,
+                            backgroundColor: hoveredItem === nestedItem.id ? `${theme.primary}20` : 'transparent',
+                            transform: hoveredItem === nestedItem.id ? 'translateX(2px)' : 'translateX(0)'
+                          }}
                           onClick={() => {
                             if (nestedItem.onClick) {
                               announcementService.announceClick(nestedItem.label, 'submenu')
                               nestedItem.onClick()
                               setActiveMenu(null)
                               setActiveSubmenu(null)
+                              setHoveredItem(null)
                             }
                           }}
-                          onMouseEnter={(e) => {
-                            const target = e.target as HTMLButtonElement
-                            target.style.backgroundColor = theme.primary + '20'
-                            target.style.transform = 'translateX(2px)'
+                          onMouseEnter={() => {
+                            setHoveredItem(nestedItem.id)
                           }}
-                          onMouseLeave={(e) => {
-                            const target = e.target as HTMLButtonElement
-                            target.style.backgroundColor = 'transparent'
-                            target.style.transform = 'translateX(0)'
+                          onMouseLeave={() => {
+                            setHoveredItem(null)
                           }}
                         >
                           <span style={{ fontSize: '14px' }}>{nestedItem.icon}</span>

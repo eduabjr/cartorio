@@ -123,7 +123,7 @@ export function HoverMenu({ items, className, style }: HoverMenuProps) {
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
     padding: '8px',
     minWidth: '200px',
-    zIndex: 1000,
+    zIndex: 60,
     opacity: activeMenu ? 1 : 0,
     visibility: activeMenu ? 'visible' : 'hidden',
     transform: activeMenu ? 'translateY(0)' : 'translateY(-10px)',

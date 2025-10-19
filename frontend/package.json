@@ -16,17 +16,20 @@
     "electron-dist": "npm run build && electron-builder --publish=never"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.1",
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
-    "framer-motion": "^10.16.4",
-    "react-hook-form": "^7.45.4",
     "@hookform/resolvers": "^3.3.2",
-    "zod": "^3.22.4",
     "@tanstack/react-query": "^5.8.4",
-    "lucide-react": "^0.263.1"
+    "framer-motion": "^10.16.4",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.3",
+    "lucide-react": "^0.263.1",
+    "pdf-parse": "^2.4.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.45.4",
+    "react-router-dom": "^6.8.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

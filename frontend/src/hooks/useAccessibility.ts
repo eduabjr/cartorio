@@ -7,7 +7,7 @@ export interface AccessibilitySettings {
   blueLightFilter: boolean
   blueLightIntensity: 'low' | 'medium' | 'high'
   reducedMotion: boolean
-  fontSize: 'padrao' | 'grande' | 'extra-grande'
+  fontSize: 'padrao' | 'grande'
   screenReader: boolean
   keyboardNavigation: boolean
 }
@@ -76,8 +76,8 @@ export const professionalThemes = {
     primary: '#FF8C00', // Laranja vibrante para links e botões
     secondary: '#00A6A1', // Verde Água Sofisticado para elementos de destaque
     accent: '#2196F3', // Azul vibrante para links e elementos interativos
-    background: '#E1E1E1', // Cinza Claro Suave
-    surface: '#E1E1E1', // Cinza Claro Suave
+    background: '#E0E0E0', // Cinza claro para fundo
+    surface: '#FFFFFF', // Branco para superfícies
     text: '#212121', // Cinza Escuro
     textSecondary: '#2C2C2C', // Cinza Profundo
     border: '#D1D1D1', // Cinza suave para bordas de inputs/seletores
@@ -144,12 +144,30 @@ function applyContrastSettings(settings: AccessibilitySettings) {
     console.log('🔵 Filtro azul aplicado:', blueLightFilterValue)
   }
 
-  // Se alto contraste está desabilitado, aplicar apenas filtro azul
+  // Aplicar filtros de daltonismo independentemente do alto contraste
+  const daltonismPresets = {
+    normal: 'none',
+    light: 'sepia(0.3) hue-rotate(20deg) saturate(0.8)', // Protanopia
+    dark: 'sepia(0.4) hue-rotate(40deg) saturate(0.9)', // Deuteranopia  
+    extreme: 'sepia(0.5) hue-rotate(60deg) saturate(1.1)' // Tritanopia
+  }
+  
+  const daltonismFilter = daltonismPresets[contrastLevel] || 'none'
+  
+  // Se alto contraste está desabilitado, aplicar filtros de daltonismo + azul
   if (!highContrast) {
-    document.body.style.filter = blueLightFilterValue
+    let combinedFilter = daltonismFilter
+    if (blueLightFilter && daltonismFilter !== 'none') {
+      combinedFilter = `${daltonismFilter} ${blueLightFilterValue}`
+    } else if (blueLightFilter) {
+      combinedFilter = blueLightFilterValue
+    }
+    
+    document.body.style.filter = combinedFilter
     document.body.style.setProperty('--contrast-filter', 'none')
     document.body.style.setProperty('--blue-light-filter', blueLightFilterValue)
-    console.log('🔵 Aplicado apenas filtro azul:', blueLightFilterValue)
+    document.body.style.setProperty('--daltonism-filter', daltonismFilter)
+    console.log('🔵 Aplicado filtros de daltonismo:', { daltonismFilter, blueLightFilterValue, combinedFilter })
     return
   }
   
@@ -166,26 +184,34 @@ function applyContrastSettings(settings: AccessibilitySettings) {
   
   const contrastFilterValue = contrastPresets[contrastLevel] || 'none'
   
-  // Combinar filtros de contraste e luz azul
+  // Combinar filtros de contraste, daltonismo e luz azul
   let combinedFilter = contrastFilterValue
-  if (blueLightFilter && contrastFilterValue !== 'none') {
-    combinedFilter = `${contrastFilterValue} ${blueLightFilterValue}`
-    console.log('🔵 Filtros combinados (contraste + azul):', combinedFilter)
+  if (daltonismFilter !== 'none' && contrastFilterValue !== 'none') {
+    combinedFilter = `${contrastFilterValue} ${daltonismFilter}`
+  } else if (daltonismFilter !== 'none') {
+    combinedFilter = daltonismFilter
+  }
+  
+  if (blueLightFilter && combinedFilter !== 'none') {
+    combinedFilter = `${combinedFilter} ${blueLightFilterValue}`
+    console.log('🔵 Filtros combinados (contraste + daltonismo + azul):', combinedFilter)
   } else if (blueLightFilter) {
     combinedFilter = blueLightFilterValue
     console.log('🔵 Apenas filtro azul (com contraste):', combinedFilter)
   } else {
-    console.log('🔵 Apenas filtro de contraste:', combinedFilter)
+    console.log('🔵 Filtros de contraste e daltonismo:', combinedFilter)
   }
   
   // Aplicar filtros combinados
   document.body.style.filter = combinedFilter
   document.body.style.setProperty('--contrast-filter', contrastFilterValue)
   document.body.style.setProperty('--blue-light-filter', blueLightFilterValue)
+  document.body.style.setProperty('--daltonism-filter', daltonismFilter)
   console.log('🔵 Filtros aplicados ao body:', {
     filter: document.body.style.filter,
     contrastFilter: contrastFilterValue,
-    blueLightFilter: blueLightFilterValue
+    blueLightFilter: blueLightFilterValue,
+    daltonismFilter: daltonismFilter
   })
 }
 
@@ -374,7 +400,9 @@ export function useAccessibility() {
       })
       
       // Só atualizar se não houver configuração salva
-      setSettings(prev => ({ ...prev, screenReader: !!hasScreenReader }))
+      // DESABILITADO: Não ativar automaticamente o leitor de tela
+      // setSettings(prev => ({ ...prev, screenReader: !!hasScreenReader }))
+      console.log('🔇 Detecção automática de leitor de tela desabilitada')
       
       // Aplicar classe CSS para otimização de leitor de tela
       if (hasScreenReader) {
@@ -427,8 +455,7 @@ export function useAccessibility() {
       if (newSettings.fontSize !== undefined) {
         const sizeNames = {
           'padrao': 'tamanho padrão',
-          'grande': 'tamanho grande',
-          'extra-grande': 'tamanho extra grande'
+          'grande': 'tamanho grande'
         }
         announceToScreenReader(`Fonte alterada para ${sizeNames[newSettings.fontSize]}`)
       }
@@ -469,8 +496,7 @@ export function useAccessibility() {
   const getFontSize = () => {
     const sizes = {
       'padrao': '16px',
-      'grande': '18px',
-      'extra-grande': '20px'
+      'grande': '18px'
     }
     return sizes[settings.fontSize]
   }
@@ -478,17 +504,17 @@ export function useAccessibility() {
   const getFontMultiplier = () => {
     const multipliers = {
       'padrao': 1,
-      'grande': 1.125,
-      'extra-grande': 1.25
+      'grande': 1.125
     }
     return multipliers[settings.fontSize]
   }
 
   // Função para anunciar mudanças para leitor de tela
-  const announceToScreenReader = async (message: string, priority: 'polite' | 'assertive' = 'polite') => {
-    console.log('🔊 Tentando anunciar:', message, 'Prioridade:', priority)
+  const announceToScreenReader = async (message: string, priority: 'polite' | 'assertive' = 'polite', forceAnnounce: boolean = false) => {
+    console.log('🔊 Tentando anunciar:', message, 'Prioridade:', priority, 'Forçar:', forceAnnounce)
     
-    if (!settings.screenReader) {
+    // Permitir anúncio se for forçado (para notificar desativação) ou se leitor estiver ativo
+    if (!forceAnnounce && !settings.screenReader) {
       console.log('❌ Leitor de tela não detectado, pulando anúncio')
       return
     }

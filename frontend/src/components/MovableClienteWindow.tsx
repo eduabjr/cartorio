@@ -58,7 +58,7 @@ export function MovableClienteWindow({ onClose }: MovableClienteWindowProps) {
     position: 'fixed' as const,
     left: `${position.x}px`,
     top: `${position.y}px`,
-    zIndex: 1000,
+    zIndex: 5,
     cursor: isDragging ? 'grabbing' : 'default'
   }
 

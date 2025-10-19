@@ -60,7 +60,7 @@ export function AccessibilitySettingsPage({ onClose, isDarkMode }: Accessibility
     backgroundColor: theme.background,
     display: 'flex',
     flexDirection: 'column' as const,
-    zIndex: 1000
+    zIndex: 1
   }
 
   const headerStyles = {

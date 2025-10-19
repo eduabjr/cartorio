@@ -18,26 +18,22 @@ export function WindowControls({
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const containerStyles = {
-    position: 'fixed' as const,
-    top: '0',
-    right: '0',
-    zIndex: 1001,
+    position: 'relative' as const,
     display: 'flex',
     alignItems: 'center',
-    padding: '8px 16px',
     gap: '8px'
   }
 
   const buttonStyles = {
-    width: '46px',
-    height: '32px',
+    width: '36px',
+    height: '24px',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '4px',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '16px',
+    fontSize: '14px',
     fontWeight: '600',
     transition: 'all 0.15s ease',
     position: 'relative' as const

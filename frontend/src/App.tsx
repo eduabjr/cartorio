@@ -13,12 +13,14 @@ import { ConfigOverlay } from './components/ConfigOverlay'
 import { PasswordPrompt } from './components/PasswordPrompt'
 import { MovableTabs } from './components/MovableTabs'
 import { ClientePage } from './pages/ClientePage'
+import { FirmasPage } from './pages/FirmasPage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { useAccessibility } from './hooks/useAccessibility'
 import { useWindowState } from './hooks/useWindowState'
 import { getRelativeFontSize } from './utils/fontUtils'
 import { announcementService } from './services/AnnouncementService'
+import { WindowProvider, useWindowManager } from './contexts/WindowContext'
 
 interface User {
   id: string
@@ -27,7 +29,36 @@ interface User {
   role: string
 }
 
-function App() {
+// Componente para renderizar múltiplas janelas
+function WindowRenderer() {
+  const { windows, closeWindow } = useWindowManager()
+  
+  return (
+    <>
+      {windows.map((window) => {
+        const Component = window.component
+        return (
+          <Component
+            key={window.id}
+            windowId={window.id}
+            initialPosition={window.position}
+            initialZIndex={window.zIndex}
+            isMinimized={window.isMinimized}
+            isMaximized={window.isMaximized}
+            {...window.props}
+            onClose={() => {
+              console.log('🔄 WindowRenderer onClose chamado para:', window.id)
+              closeWindow(window.id)
+            }}
+          />
+        )
+      })}
+    </>
+  )
+}
+
+function AppContent() {
+  const { openWindow } = useWindowManager()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [email, setEmail] = useState('admin@cartorio.com')
@@ -51,17 +82,10 @@ function App() {
     height: number
     isMinimized: boolean
   }>>([])
-  const [showClienteWindow, setShowClienteWindow] = useState(false)
+  // Removido: sistema antigo de janelas únicas
+  // Agora usando WindowManager para múltiplas janelas
 
-  // Log quando o estado mudar
-  useEffect(() => {
-    console.log('🔔 ESTADO showClienteWindow MUDOU PARA:', showClienteWindow)
-    if (showClienteWindow) {
-      console.log('🟢 Janela DEVE estar visível agora!')
-    } else {
-      console.log('🔴 Janela DEVE estar oculta agora!')
-    }
-  }, [showClienteWindow])
+  // Sistema de múltiplas janelas implementado
   
 
   // Hooks de acessibilidade e responsividade
@@ -203,20 +227,6 @@ function App() {
         localStorage.setItem('token', 'fake-jwt-token')
         
         console.log('Login realizado com sucesso:', userData)
-      } else if (email === 'teste@cartorio.com' && password === 'teste123') {
-        const userData = {
-          id: '3',
-          email: email,
-          name: 'Usuário Teste',
-          role: 'teste'
-        }
-        
-        setUser(userData)
-        setIsLoggedIn(true)
-        localStorage.setItem('user', JSON.stringify(userData))
-        localStorage.setItem('token', 'fake-jwt-token')
-        
-        console.log('Login realizado com sucesso:', userData)
     } else {
         setError('Credenciais inválidas')
       }
@@ -306,8 +316,14 @@ function App() {
         submenu: [
           { id: 'cliente', label: 'Cliente', icon: '', onClick: () => {
             console.log('✅ CLIENTE CLICADO! Abrindo janela...')
-            setShowClienteWindow(true)
-            console.log('✅ setShowClienteWindow(true) chamado!')
+            const windowId = `cliente-${Date.now()}`
+            openWindow({
+              id: windowId,
+              title: 'Cliente',
+              component: ClientePage,
+              props: {}
+            })
+            console.log('✅ Janela de Cliente aberta!')
           } },
           { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => (window as any).navigateToPage?.('cartorio-seade') },
           { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => (window as any).navigateToPage?.('dnv-bloqueadas') },
@@ -458,16 +474,16 @@ function App() {
             label: 'Livro E',
             icon: '',
             submenu: [
-              { id: 'lavratura-ausencia', label: 'Ausência', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-ausencia') },
-              { id: 'lavratura-emancipacao', label: 'Emancipação', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-emancipacao') },
-              { id: 'lavratura-interdicao', label: 'Interdição', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-interdicao') },
-              { id: 'lavratura-opcao-nacionalidade', label: 'Opção de Nacionalidade', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-opcao-nacionalidade') },
-              { id: 'lavratura-registro-sentenca', label: 'Registro de Sentença', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-registro-sentenca') },
-              { id: 'lavratura-registro-uniao-estavel', label: 'Registro de União Estável', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-registro-uniao-estavel') },
-              { id: 'lavratura-traslado-casamento', label: 'Traslado de Assento de Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-casamento') },
-              { id: 'lavratura-traslado-nascimento', label: 'Traslado de Assento de Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-nascimento') },
-              { id: 'lavratura-traslado-obito', label: 'Traslado de Assento de Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-obito') }
-            ]
+          { id: 'lavratura-ausencia', label: 'Ausência', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-ausencia') },
+          { id: 'lavratura-emancipacao', label: 'Emancipação', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-emancipacao') },
+          { id: 'lavratura-interdicao', label: 'Interdição', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-interdicao') },
+          { id: 'lavratura-opcao-nacionalidade', label: 'Opção de Nacionalidade', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-opcao-nacionalidade') },
+          { id: 'lavratura-registro-sentenca', label: 'Registro de Sentença', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-registro-sentenca') },
+          { id: 'lavratura-registro-uniao-estavel', label: 'Registro de União Estável', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-registro-uniao-estavel') },
+          { id: 'lavratura-traslado-casamento', label: 'Traslado de Assento de Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-casamento') },
+          { id: 'lavratura-traslado-nascimento', label: 'Traslado de Assento de Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-nascimento') },
+          { id: 'lavratura-traslado-obito', label: 'Traslado de Assento de Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-obito') }
+        ]
           }
         ]
       },
@@ -501,11 +517,11 @@ function App() {
           {
             id: 'livro-e-certidoes',
             label: 'Livro E',
-            icon: '',
-            submenu: [
-              { id: 'certidao-2-via-ausencia', label: '2ª Via de Ausência', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-ausencia') },
-              { id: 'certidao-2-via-emancipacao', label: '2ª Via de Emancipação', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-emancipacao') },
-              { id: 'certidao-2-via-uniao-estavel', label: '2ª Via de União Estável', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-uniao-estavel') },
+        icon: '',
+        submenu: [
+          { id: 'certidao-2-via-ausencia', label: '2ª Via de Ausência', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-ausencia') },
+          { id: 'certidao-2-via-emancipacao', label: '2ª Via de Emancipação', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-emancipacao') },
+          { id: 'certidao-2-via-uniao-estavel', label: '2ª Via de União Estável', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-uniao-estavel') },
               { id: 'certidao-2-via-opcao-nacionalidade', label: '2ª via Opção de Nacionalidade', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-opcao-nacionalidade') },
               { id: 'certidao-2-via-interdicao', label: '2ª Via de Interdição', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-interdicao') },
               { id: 'certidao-2-via-registro-sentenca', label: '2ª Via Registro de Sentença', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-registro-sentenca') }
@@ -585,25 +601,122 @@ function App() {
         label: 'Firmas',
         icon: '',
         submenu: [
-          { id: 'firmas-cadastrar', label: 'Cadastrar Firma', icon: '', onClick: () => (window as any).navigateToPage?.('firmas-cadastrar') },
-          { id: 'documento-desentranhado', label: 'Documento Desentranhado', icon: '', onClick: () => (window as any).navigateToPage?.('documento-desentranhado') },
-          { id: 'autenticacao-item-13', label: 'Autenticação Item 13', icon: '', onClick: () => (window as any).navigateToPage?.('autenticacao-item-13') },
+          { id: 'firmas-cadastrar', label: 'Cadastrar Firma', icon: '', onClick: () => {
+            console.log('✅ CADASTRAR FIRMA CLICADO! Abrindo janela...')
+            openWindow({
+              id: `firmas-${Date.now()}`,
+              title: 'Firmas',
+              component: FirmasPage,
+              props: { onClose: () => {} }
+            })
+            console.log('✅ Janela de Firmas aberta!')
+          } },
+          { id: 'documento-desentranhado', label: 'Documento Desentranhado', icon: '', onClick: () => {
+            console.log('✅ DOCUMENTO DESENTRANHADO CLICADO! Abrindo janela...')
+            openWindow({
+              id: `firmas-doc-${Date.now()}`,
+              title: 'Documento Desentranhado',
+              component: FirmasPage,
+              props: { onClose: () => {} }
+            })
+            console.log('✅ Janela de Documento Desentranhado aberta!')
+          } },
+          { id: 'autenticacao-item-13', label: 'Autenticação Item 13', icon: '', onClick: () => {
+            console.log('✅ AUTENTICAÇÃO ITEM 13 CLICADO! Abrindo janela...')
+            openWindow({
+              id: `firmas-auth-${Date.now()}`,
+              title: 'Autenticação Item 13',
+              component: FirmasPage,
+              props: { onClose: () => {} }
+            })
+            console.log('✅ Janela de Autenticação Item 13 aberta!')
+          } },
           {
             id: 'autenticacao-firmas',
             label: 'Autenticação Eletrônica',
             icon: '',
-            submenu: [
-              { id: 'antecedentes-pf', label: 'Antecedentes PF', icon: '', onClick: () => (window as any).navigateToPage?.('antecedentes-pf') },
-              { id: 'antecedentes-ssp', label: 'Antecedentes SSP', icon: '', onClick: () => (window as any).navigateToPage?.('antecedentes-ssp') },
-              { id: 'antecedente-epol', label: 'Antecedente Epol', icon: '', onClick: () => (window as any).navigateToPage?.('antecedente-epol') },
-              { id: 'certificado-digital', label: 'Certificado Digital', icon: '', onClick: () => (window as any).navigateToPage?.('certificado-digital') },
-              { id: 'certidao-naturalizacao', label: 'Certidão de Naturalização', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-naturalizacao') },
-              { id: 'cnh-digital', label: 'CNH Digital', icon: '', onClick: () => (window as any).navigateToPage?.('cnh-digital') },
-              { id: 'qrcode', label: 'QRCODE', icon: '', onClick: () => (window as any).navigateToPage?.('qrcode') },
-              { id: 'rg-digital', label: 'RG Digital', icon: '', onClick: () => (window as any).navigateToPage?.('rg-digital') },
-              { id: 'tjsp', label: 'TJSP', icon: '', onClick: () => (window as any).navigateToPage?.('tjsp') },
-              { id: 'tse', label: 'TSE', icon: '', onClick: () => (window as any).navigateToPage?.('tse') }
-            ]
+              submenu: [
+                { id: 'antecedentes-pf', label: 'Antecedentes PF', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-pf-${Date.now()}`,
+                    title: 'Antecedentes PF',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'antecedentes-ssp', label: 'Antecedentes SSP', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-ssp-${Date.now()}`,
+                    title: 'Antecedentes SSP',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'antecedente-epol', label: 'Antecedente Epol', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-epol-${Date.now()}`,
+                    title: 'Antecedente Epol',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'certificado-digital', label: 'Certificado Digital', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-cert-${Date.now()}`,
+                    title: 'Certificado Digital',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'certidao-naturalizacao', label: 'Certidão de Naturalização', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-nat-${Date.now()}`,
+                    title: 'Certidão de Naturalização',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'cnh-digital', label: 'CNH Digital', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-cnh-${Date.now()}`,
+                    title: 'CNH Digital',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'qrcode', label: 'QRCODE', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-qr-${Date.now()}`,
+                    title: 'QRCODE',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'rg-digital', label: 'RG Digital', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-rg-${Date.now()}`,
+                    title: 'RG Digital',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'tjsp', label: 'TJSP', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-tjsp-${Date.now()}`,
+                    title: 'TJSP',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } },
+                { id: 'tse', label: 'TSE', icon: '', onClick: () => {
+                  openWindow({
+                    id: `firmas-tse-${Date.now()}`,
+                    title: 'TSE',
+                    component: FirmasPage,
+                    props: { onClose: () => {} }
+                  })
+                } }
+              ]
           }
         ]
       },
@@ -613,23 +726,38 @@ function App() {
     const iconMenuItems = [
       { id: 'cadastro-cliente', label: 'Cadastro de Cliente', icon: '👤', onClick: () => {
         console.log('✅ ÍCONE CADASTRO CLIENTE CLICADO! Abrindo janela...')
-        setShowClienteWindow(true)
-        console.log('✅ setShowClienteWindow(true) chamado!')
+        const windowId = `cliente-${Date.now()}`
+        openWindow({
+          id: windowId,
+          title: 'Cliente',
+          component: ClientePage,
+          props: {}
+        })
+        console.log('✅ Janela de Cliente aberta!')
       } },
-      { id: 'firmas', label: 'Firmas', icon: '✍️', onClick: () => (window as any).navigateToPage?.('firmas') },
+      { id: 'firmas', label: 'Firmas', icon: '✍️', onClick: () => {
+        console.log('✅ FIRMAS CLICADO! Abrindo janela...')
+        openWindow({
+          id: `firmas-${Date.now()}`,
+          title: 'Firmas',
+          component: FirmasPage,
+          props: { onClose: () => {} }
+        })
+        console.log('✅ Janela de Firmas aberta!')
+      } },
       { id: 'nascimento', label: 'Nascimento', icon: '👶', onClick: () => (window as any).navigateToPage?.('nascimento') },
       { id: 'casamento', label: 'Casamento', icon: '💍', onClick: () => (window as any).navigateToPage?.('casamento') },
       { id: 'obito', label: 'Óbito', icon: '⚰️', onClick: () => (window as any).navigateToPage?.('obito') },
       { id: 'livro', label: 'Livro e', icon: '📖', onClick: () => (window as any).navigateToPage?.('livro') },
       { id: 'digitalizacao', label: 'Digitalização', icon: <ScannerIcon size={28} />, onClick: () => (window as any).navigateToPage?.('digitalizacao') },
-      { id: 'login', label: 'Login', icon: '🔐', onClick: () => console.log('Login clicado') },
+      { id: 'login', label: 'Logoff', icon: '🔐', onClick: () => console.log('Logoff clicado') },
       { id: 'logout', label: 'Sair', icon: '🚪', onClick: handleLogout }
     ]
 
     return (
       <div style={{
         height: '100vh',
-        background: accessibility.currentTheme === 'dark' ? theme.background : '#E1E1E1',
+        background: accessibility.currentTheme === 'dark' ? theme.background : '#E0E0E0',
         display: 'flex',
         flexDirection: 'column',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -641,11 +769,11 @@ function App() {
              <div style={{
                background: accessibility.currentTheme === 'dark' ? '#004D40' : '#00796B',
                backdropFilter: 'blur(20px)',
-               padding: '8px 16px',
+               padding: '6px 16px',
                borderBottom: `1px solid ${theme.border}`,
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-          height: '48px',
-          minHeight: '48px',
+          height: '36px',
+          minHeight: '36px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
@@ -656,30 +784,30 @@ function App() {
           alignItems: 'center',
           marginLeft: '16px'
         }}>
-          <CivitasLogo size={32} />
+          <CivitasLogo size={24} theme={accessibility.currentTheme === 'highContrast' ? 'dark' : accessibility.currentTheme} />
         </div>
 
           {/* Controles de Janela */}
           <div data-window-controls>
-            <WindowControls
-              onClose={windowState.close}
-              onMinimize={windowState.minimize}
-              onMaximize={windowState.maximize}
-            />
+          <WindowControls
+            onClose={windowState.close}
+            onMinimize={windowState.minimize}
+            onMaximize={windowState.maximize}
+          />
           </div>
         </div>
 
         {/* Menu Textual (Menu 1) */}
-        <div style={{ marginTop: '20px' }} data-responsive-menu>
+        <div style={{ marginTop: '10px' }} data-responsive-menu>
           <TextualMenu 
             items={textualMenuItems}
             isExpanded={isTextualMenuExpanded}
             onToggleExpanded={() => setIsTextualMenuExpanded(!isTextualMenuExpanded)}
           />
-        </div>
+                           </div>
 
         {/* Menu de Ícones (Menu 2) */}
-        <div style={{ marginTop: '10px' }} data-responsive-menu>
+        <div data-responsive-menu>
           <IconMenu 
             items={iconMenuItems}
             onOpenSideMenu={() => setIsSideMenuOpen(true)}
@@ -759,13 +887,8 @@ function App() {
           message="Este módulo requer senha de acesso. Digite a senha para continuar:"
         />
 
-        {/* Janela de Cadastro de Cliente */}
-        {showClienteWindow && (
-          <ClientePage onClose={() => {
-            console.log('❌ Fechando janela de cliente...')
-            setShowClienteWindow(false)
-          }} />
-        )}
+        {/* Sistema de Múltiplas Janelas */}
+        <WindowRenderer />
       </div>
     )
   }
@@ -794,8 +917,213 @@ function App() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      position: 'relative'
     }}>
+      {/* Botões de Acessibilidade - Canto Superior Direito */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        display: 'flex',
+        gap: '8px',
+        zIndex: 1000
+      }}>
+        {/* Botão Leitor de Tela */}
+        <button
+          aria-label="Ativar ou desativar leitor de tela"
+          aria-pressed={accessibility.settings.screenReader}
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            const currentState = accessibility.settings.screenReader
+            const newState = !currentState
+            
+            accessibility.updateSettings({ screenReader: newState })
+            
+            // Anunciar o novo estado (não o estado anterior)
+            const message = newState ? 'Leitor de tela ativado' : 'Leitor de tela desativado'
+            
+            // Anunciar apenas se leitor de tela estiver ativo (usar newState, não o estado anterior)
+            if (newState && window.speechSynthesis) {
+              const utterance = new SpeechSynthesisUtterance(message)
+              utterance.volume = 0.8
+              utterance.rate = 0.9
+              speechSynthesis.speak(utterance)
+            }
+            
+            // Anunciar via sistema de acessibilidade (usar newState)
+            accessibility.announceToScreenReader(message, 'polite', !newState)
+            
+            console.log('🔊 Estado do leitor de tela alterado:', { anterior: currentState, novo: newState, mensagem: message })
+          }}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            border: `1px solid ${loginTheme.border}`,
+            background: accessibility.settings.screenReader ? '#10b981' : loginTheme.inputBg,
+            color: accessibility.settings.screenReader ? 'white' : loginTheme.text,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          title={accessibility.settings.screenReader ? 'Desativar Leitor de Tela' : 'Ativar Leitor de Tela'}
+        >
+          🔊
+        </button>
+
+        {/* Botão Daltonismo */}
+        <button
+          aria-label="Alternar entre modos de daltonismo"
+          aria-pressed={accessibility.settings.contrastLevel !== 'normal'}
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            // Ciclar entre os 4 tipos de daltonismo
+            const currentLevel = accessibility.settings.contrastLevel
+            let newLevel: 'normal' | 'light' | 'dark' | 'extreme'
+            let message: string
+            
+            switch (currentLevel) {
+              case 'normal':
+                newLevel = 'light'
+                message = 'Modo protanopia ativado'
+                break
+              case 'light':
+                newLevel = 'dark'
+                message = 'Modo deuteranopia ativado'
+                break
+              case 'dark':
+                newLevel = 'extreme'
+                message = 'Modo tritanopia ativado'
+                break
+              default:
+                newLevel = 'normal'
+                message = 'Modo normal ativado'
+            }
+            
+            accessibility.setContrastLevel(newLevel)
+            
+            // Anunciar apenas se leitor de tela estiver ativo
+            if (accessibility.settings.screenReader && window.speechSynthesis) {
+              const utterance = new SpeechSynthesisUtterance(message)
+              utterance.volume = 0.8
+              utterance.rate = 0.9
+              speechSynthesis.speak(utterance)
+            }
+            accessibility.announceToScreenReader(message, 'polite', false)
+          }}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            border: `1px solid ${loginTheme.border}`,
+            background: accessibility.settings.contrastLevel !== 'normal' ? '#8b5cf6' : loginTheme.inputBg,
+            color: accessibility.settings.contrastLevel !== 'normal' ? 'white' : loginTheme.text,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          title={`Daltonismo - ${accessibility.settings.contrastLevel === 'normal' ? 'Normal' : accessibility.settings.contrastLevel === 'light' ? 'Protanopia' : accessibility.settings.contrastLevel === 'dark' ? 'Deuteranopia' : 'Tritanopia'}`}
+        >
+          🎨
+        </button>
+
+        {/* Botão Alto Contraste */}
+        <button
+          aria-label="Ativar ou desativar alto contraste"
+          aria-pressed={accessibility.settings.highContrast}
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            accessibility.toggleHighContrast()
+            // Anunciar apenas se leitor de tela estiver ativo
+            if (accessibility.settings.screenReader && window.speechSynthesis) {
+              const utterance = new SpeechSynthesisUtterance(
+                accessibility.settings.highContrast ? 'Alto contraste desativado' : 'Alto contraste ativado'
+              )
+              utterance.volume = 0.8
+              utterance.rate = 0.9
+              speechSynthesis.speak(utterance)
+            }
+            accessibility.announceToScreenReader(
+              accessibility.settings.highContrast ? 'Alto contraste desativado' : 'Alto contraste ativado',
+              'polite'
+            )
+          }}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            border: `1px solid ${loginTheme.border}`,
+            background: accessibility.settings.highContrast ? '#f59e0b' : loginTheme.inputBg,
+            color: accessibility.settings.highContrast ? 'white' : loginTheme.text,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          title={accessibility.settings.highContrast ? 'Desativar Alto Contraste' : 'Ativar Alto Contraste'}
+        >
+          ⚫⚪
+        </button>
+
+        {/* Botão Tema Light/Dark */}
+        <button
+          aria-label="Alternar entre modo claro e escuro"
+          aria-pressed={accessibility.currentTheme === 'dark'}
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            const newTheme = accessibility.currentTheme === 'dark' ? 'light' : 'dark'
+            accessibility.setTheme(newTheme)
+            // Anunciar apenas se leitor de tela estiver ativo
+            if (accessibility.settings.screenReader && window.speechSynthesis) {
+              const utterance = new SpeechSynthesisUtterance(
+                newTheme === 'dark' ? 'Modo escuro ativado' : 'Modo claro ativado'
+              )
+              utterance.volume = 0.8
+              utterance.rate = 0.9
+              speechSynthesis.speak(utterance)
+            }
+            accessibility.announceToScreenReader(
+              newTheme === 'dark' ? 'Modo escuro ativado' : 'Modo claro ativado',
+              'polite'
+            )
+          }}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            border: `1px solid ${loginTheme.border}`,
+            background: accessibility.currentTheme === 'dark' ? '#1e293b' : '#fbbf24',
+            color: accessibility.currentTheme === 'dark' ? '#fbbf24' : '#1e293b',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          title={accessibility.currentTheme === 'dark' ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
+        >
+          {accessibility.currentTheme === 'dark' ? '☀️' : '🌙'}
+        </button>
+      </div>
+
       <div style={{
         background: loginTheme.cardBg,
         backdropFilter: 'blur(20px)',
@@ -811,19 +1139,26 @@ function App() {
           marginBottom: '32px'
         }}>
           <div style={{
-            fontSize: getRelativeFontSize(48),
-            marginBottom: '16px'
+            marginBottom: '16px',
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+            display: 'flex',
+            justifyContent: 'center'
         }}>
-          🏛️
+          <CivitasLogo size={80} color="#2D5A5A" theme={accessibility.currentTheme === 'highContrast' ? 'dark' : accessibility.currentTheme} />
+          <span style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}>
+            Logo do sistema CIVITAS - Balança de justiça com documento e silhueta de cidade
+          </span>
         </div>
         
         <h1 style={{ 
-          fontSize: getRelativeFontSize(28), 
+          fontSize: getRelativeFontSize(32), 
           fontWeight: '700',
             margin: '0 0 8px 0',
-            color: loginTheme.text
+          color: '#00515c',
+          letterSpacing: '1px',
+          textTransform: 'uppercase'
         }}>
-          Sistema de Cartório
+          CIVITAS
         </h1>
           
         <p style={{ 
@@ -836,7 +1171,10 @@ function App() {
         </div>
         
         {error && (
-          <div style={{
+          <div 
+            role="alert"
+            aria-live="assertive"
+            style={{
             background: 'rgba(239, 68, 68, 0.1)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
             borderRadius: '8px',
@@ -845,25 +1183,33 @@ function App() {
             color: '#ef4444',
             fontSize: getRelativeFontSize(14),
             fontWeight: '500'
-          }}>
+            }}
+          >
             {error}
           </div>
         )}
         
+        <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
         <div style={{ marginBottom: '24px' }}>
-          <label style={{
+          <label 
+            htmlFor="email-input"
+            style={{
             display: 'block',
             marginBottom: '8px',
             fontSize: getRelativeFontSize(14),
             fontWeight: '500',
             color: loginTheme.text
-          }}>
+            }}
+          >
             Email
           </label>
           <input 
+            id="email-input"
             type="email" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            aria-required="true"
+            aria-invalid={error ? 'true' : 'false'}
             style={{
               width: '100%',
               padding: '12px 16px',
@@ -881,19 +1227,25 @@ function App() {
         </div>
         
         <div style={{ marginBottom: '32px' }}>
-          <label style={{
+          <label 
+            htmlFor="password-input"
+            style={{
             display: 'block',
             marginBottom: '8px',
             fontSize: getRelativeFontSize(14),
             fontWeight: '500',
             color: loginTheme.text
-          }}>
+            }}
+          >
             Senha
           </label>
           <input 
+            id="password-input"
             type="password" 
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            aria-required="true"
+            aria-invalid={error ? 'true' : 'false'}
             style={{
               width: '100%',
               padding: '12px 16px',
@@ -910,9 +1262,17 @@ function App() {
           />
         </div>
         
+        <div id="login-description" style={{ display: 'none' }}>
+          Botão para fazer login no sistema com as credenciais fornecidas
+        </div>
+        
         <button 
           onClick={handleLogin}
           disabled={isLoading}
+          aria-label="Fazer login no sistema"
+          aria-describedby="login-description"
+          role="button"
+          tabIndex={0}
           style={{
             width: '100%',
             padding: '12px 24px',
@@ -939,6 +1299,7 @@ function App() {
         >
           {isLoading ? 'Entrando...' : 'Entrar'}
         </button>
+        </form>
         
         <div style={{ 
           textAlign: 'center',
@@ -948,133 +1309,20 @@ function App() {
         }}>
           <p style={{ margin: '4px 0' }}>👤 admin@cartorio.com / admin123</p>
           <p style={{ margin: '4px 0' }}>👥 funcionario@cartorio.com / func123</p>
-          <p style={{ margin: '4px 0' }}>🧪 teste@cartorio.com / teste123</p>
         </div>
 
-        {/* Botões de teste */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-          <button
-            onClick={async () => {
-              console.log('🔊 Testando leitor de tela...')
-              await announcementService.announce('Teste do leitor de tela funcionando', {
-                priority: 'normal',
-                interrupt: true,
-                volume: 0.8
-              })
-            }}
-            style={{
-              padding: '8px 16px',
-              background: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            🔊 Testar Leitor
-          </button>
-          
-          <button
-            onClick={() => {
-              const currentMotion = document.body.style.getPropertyValue('--animation-duration')
-              const isReduced = currentMotion === '0.01s'
-              console.log('🎬 Movimento reduzido ativo:', isReduced)
-              console.log('🎬 Variável CSS --animation-duration:', currentMotion)
-              console.log('🎬 Variável CSS --transition-duration:', document.body.style.getPropertyValue('--transition-duration'))
-            }}
-            style={{
-              padding: '8px 16px',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            🎬 Testar Movimento
-          </button>
-          
-          <button
-            onClick={() => {
-              const currentFilter = document.body.style.filter
-              const blueLightFilter = document.body.style.getPropertyValue('--blue-light-filter')
-              const contrastFilter = document.body.style.getPropertyValue('--contrast-filter')
-              console.log('🔵 Filtro atual aplicado:', currentFilter)
-              console.log('🔵 Variável CSS --blue-light-filter:', blueLightFilter)
-              console.log('🔵 Variável CSS --contrast-filter:', contrastFilter)
-              console.log('🔵 Classes do body:', document.body.className)
-            }}
-            style={{
-              padding: '8px 16px',
-              background: '#f59e0b',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            🔵 Testar Filtro Azul
-          </button>
-          
-          <button
-            onClick={async () => {
-              const savedSettings = localStorage.getItem('accessibility-settings')
-              const screenReaderEnabled = savedSettings ? JSON.parse(savedSettings).screenReader : false
-              console.log('🔊 Leitor de tela ativado nas configurações:', screenReaderEnabled)
-              console.log('🔊 Configurações completas:', savedSettings ? JSON.parse(savedSettings) : 'Nenhuma configuração salva')
-              
-              // Testar anúncio
-              await announcementService.announce('Teste de controle do leitor de tela', {
-                priority: 'normal',
-                interrupt: true,
-                volume: 0.8
-              })
-            }}
-            style={{
-              padding: '8px 16px',
-              background: '#8b5cf6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            🔊 Testar Controle
-          </button>
-          
-          <button
-            onClick={() => {
-              const savedSettings = localStorage.getItem('accessibility-settings')
-              console.log('💾 Configurações salvas no localStorage:', savedSettings)
-              
-              if (savedSettings) {
-                const parsed = JSON.parse(savedSettings)
-                console.log('📋 Configurações parseadas:', parsed)
-                console.log('🔊 Estado do leitor de tela:', parsed.screenReader)
-              } else {
-                console.log('❌ Nenhuma configuração encontrada')
-              }
-            }}
-            style={{
-              padding: '8px 16px',
-              background: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            💾 Verificar Estado
-          </button>
-        </div>
       </div>
 
     </div>
+  )
+}
+
+// Função principal que envolve tudo com o WindowProvider
+function App() {
+  return (
+    <WindowProvider>
+      <AppContent />
+    </WindowProvider>
   )
 }
 

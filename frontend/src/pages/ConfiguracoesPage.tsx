@@ -70,7 +70,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
     }
   }
 
-  const handleTamanhoFonte = (tamanho: 'padrao' | 'grande' | 'extra-grande') => {
+  const handleTamanhoFonte = (tamanho: 'padrao' | 'grande') => {
     updateSettings({ fontSize: tamanho })
   }
 
@@ -802,7 +802,6 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
               >
                 <option value="padrao">Padrão</option>
                 <option value="grande">Grande</option>
-                <option value="extra-grande">Extra Grande</option>
               </select>
               <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
                 Ajusta o tamanho do texto em todo o sistema
