@@ -15,6 +15,7 @@ function Write-Color {
     Write-Host $Message -ForegroundColor $ForegroundColor
 }
 
+
 $REPO_URL = "https://github.com/eduabjr/cartorio"
 $BRANCH = "master"
 
@@ -23,6 +24,7 @@ Write-Color "   PUSH AUTOMATICO PARA GITHUB" "Green"
 Write-Color "   Repositorio: $REPO_URL" "Cyan"
 Write-Color "========================================" "Green"
 Write-Color ""
+
 
 # Verificar se o Git esta instalado
 try {

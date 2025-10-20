@@ -228,6 +228,7 @@ export function useAccessibility() {
   })
 
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'highContrast'>('light')
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false)
 
   // Carregar configurações salvas
   useEffect(() => {
@@ -246,6 +247,8 @@ export function useAccessibility() {
     if (savedTheme && ['light', 'dark', 'highContrast'].includes(savedTheme)) {
       setCurrentTheme(savedTheme as 'light' | 'dark' | 'highContrast')
     }
+    
+    setIsThemeLoaded(true)
   }, [])
 
   // Detectar preferências do sistema
@@ -628,6 +631,7 @@ export function useAccessibility() {
   return {
     settings,
     currentTheme,
+    isThemeLoaded,
     updateSettings,
     setTheme,
     getTheme,

@@ -17,7 +17,7 @@ export function MenuBar() {
         <div className="flex justify-between items-center">
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="flex items-center space-x-2 text-white hover:text-yellow-200"
+            className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
           >
             <span className="font-medium">Menu</span>
           </button>
@@ -30,77 +30,77 @@ export function MenuBar() {
           <div className="flex items-center space-x-8">
             <button
               onClick={() => navigate('/cadastros')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Cadastros</span>
             </button>
             
             <button
               onClick={() => navigate('/processos')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Processos</span>
             </button>
             
             <button
               onClick={() => navigate('/atendimento')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Atendimento</span>
             </button>
             
             <button
               onClick={() => navigate('/protocolo')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Protocolo</span>
             </button>
             
             <button
               onClick={() => navigate('/lavratura')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Lavratura</span>
             </button>
             
             <button
               onClick={() => navigate('/certidoes')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Certidões</span>
             </button>
             
             <button
               onClick={() => navigate('/firmas')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Firmas</span>
             </button>
             
             <button
               onClick={() => navigate('/livro-e')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Livro E</span>
             </button>
             
             <button
               onClick={() => navigate('/livro-comercial')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Livro Comercial</span>
             </button>
             
             <button
               onClick={() => navigate('/remessas')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Remessas</span>
             </button>
             
             <button
               onClick={() => navigate('/relatorios')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
             >
               <span className="font-medium">Relatórios</span>
             </button>
@@ -109,7 +109,7 @@ export function MenuBar() {
           <div className="flex items-center space-x-4">
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-1 px-3 py-2 text-white hover:text-red-200 hover:bg-red-500 hover:bg-opacity-20 rounded-lg transition-colors"
+              className="flex items-center space-x-1 px-3 py-2 text-white hover:text-red-200 hover:bg-red-500 hover:bg-opacity-20 rounded-lg transition-colors duration-150"
             >
               <span className="text-sm">Sair</span>
             </button>
@@ -126,7 +126,7 @@ export function MenuBar() {
                 navigate('/cadastros')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Cadastros</span>
             </button>
@@ -136,7 +136,7 @@ export function MenuBar() {
                 navigate('/processos')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Processos</span>
             </button>
@@ -146,7 +146,7 @@ export function MenuBar() {
                 navigate('/atendimento')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Atendimento</span>
             </button>
@@ -156,7 +156,7 @@ export function MenuBar() {
                 navigate('/protocolo')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Protocolo</span>
             </button>
@@ -166,7 +166,7 @@ export function MenuBar() {
                 navigate('/lavratura')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Lavratura</span>
             </button>
@@ -176,7 +176,7 @@ export function MenuBar() {
                 navigate('/certidoes')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Certidões</span>
             </button>
@@ -186,7 +186,7 @@ export function MenuBar() {
                 navigate('/firmas')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Firmas</span>
             </button>
@@ -196,7 +196,7 @@ export function MenuBar() {
                 navigate('/livro-e')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Livro E</span>
             </button>
@@ -206,7 +206,7 @@ export function MenuBar() {
                 navigate('/livro-comercial')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Livro Comercial</span>
             </button>
@@ -216,7 +216,7 @@ export function MenuBar() {
                 navigate('/remessas')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Remessas</span>
             </button>
@@ -226,7 +226,7 @@ export function MenuBar() {
                 navigate('/relatorios')
                 setIsMobileMenuOpen(false)
               }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2"
+              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
             >
               <span className="font-medium">Relatórios</span>
             </button>
@@ -237,7 +237,7 @@ export function MenuBar() {
                   handleLogout()
                   setIsMobileMenuOpen(false)
                 }}
-                className="flex items-center space-x-1 px-3 py-2 text-white hover:text-red-200 hover:bg-red-500 hover:bg-opacity-20 rounded-lg transition-colors"
+                className="flex items-center space-x-1 px-3 py-2 text-white hover:text-red-200 hover:bg-red-500 hover:bg-opacity-20 rounded-lg transition-colors duration-150"
               >
                 <span className="text-sm">Sair</span>
               </button>

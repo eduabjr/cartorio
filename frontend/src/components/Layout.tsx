@@ -6,12 +6,25 @@ import { SideMenu } from './SideMenu'
 import { WindowManager } from './WindowManager'
 import { SafeComponent } from './SafeComponent'
 import { useAuth } from '../contexts/AuthContext'
+import { useAccessibility } from '../hooks/useAccessibility'
 import { useEffect, useState } from 'react'
 
 export function Layout() {
   const { user, isLoading } = useAuth()
   const navigate = useNavigate()
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
+  const { getTheme, currentTheme, isThemeLoaded } = useAccessibility()
+  const theme = getTheme()
+
+
+  // Aguardar o tema estar carregado
+  if (!isThemeLoaded || !theme || !currentTheme) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Carregando tema...</div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -32,7 +45,13 @@ export function Layout() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100">
+    <div 
+      className={`flex flex-col h-screen theme-${currentTheme}`}
+      style={{
+        backgroundColor: theme.background,
+        color: theme.text
+      }}
+    >
       <SafeComponent name="Header">
         <Header onMenuClick={() => setIsSideMenuOpen(true)} />
       </SafeComponent>
@@ -41,7 +60,13 @@ export function Layout() {
         <MenuBar />
       </SafeComponent>
       
-      <main className="flex-1 overflow-auto">
+      <main 
+        className="flex-1 overflow-auto"
+        style={{
+          backgroundColor: theme.background,
+          color: theme.text
+        }}
+      >
         <SafeComponent name="MainContent">
           <Outlet />
         </SafeComponent>

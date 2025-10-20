@@ -14,6 +14,7 @@ interface BasePageProps {
   initialZIndex?: number
   isMinimized?: boolean
   isMaximized?: boolean
+  resetToOriginalPosition?: boolean
 }
 
 export function BasePage({ 
@@ -27,7 +28,8 @@ export function BasePage({
   initialPosition = { x: 100, y: 150 },
   initialZIndex = 50,
   isMinimized = false,
-  isMaximized = false
+  isMaximized = false,
+  resetToOriginalPosition = false
 }: BasePageProps) {
   const { getTheme } = useAccessibility()
   const theme = getTheme()
@@ -38,6 +40,20 @@ export function BasePage({
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const windowRef = useRef<HTMLDivElement>(null)
+
+  // Reset para posição original quando solicitado
+  useEffect(() => {
+    if (resetToOriginalPosition) {
+      console.log(`🔄 Resetando ${title} para posição original:`, initialPosition)
+      setPosition(initialPosition)
+      setZIndex(initialZIndex)
+      
+      // Atualizar posição no WindowManager se disponível
+      if (windowId && updateWindowPosition) {
+        updateWindowPosition(windowId, initialPosition)
+      }
+    }
+  }, [resetToOriginalPosition, initialPosition, initialZIndex, windowId, updateWindowPosition, title])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!draggable) return
@@ -110,7 +126,8 @@ export function BasePage({
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
-    padding: '120px 20px 20px 20px' // Espaço para os menus no topo (header + menu1 + menu2)
+    padding: '120px 20px 20px 20px', // Espaço para os menus no topo (header + menu1 + menu2)
+    pointerEvents: 'none' // Permite cliques passarem através da página para os menus
   }
 
   const windowStyles = {
@@ -127,13 +144,14 @@ export function BasePage({
     flexDirection: 'column' as const,
     overflow: 'hidden',
     cursor: isDragging ? 'grabbing' : 'default',
-    transition: isDragging ? 'none' : 'all 0.2s ease'
+    transition: isDragging ? 'none' : 'all 0.2s ease',
+    pointerEvents: 'auto' // Reabilita cliques na janela
   }
 
   const headerStyles = {
     backgroundColor: theme.primary,
     color: 'white',
-    padding: '6px 16px',
+    padding: '2px 12px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -142,9 +160,10 @@ export function BasePage({
 
   const contentStyles = {
     flex: 1,
-    padding: '12px',
+    padding: '12px 12px 0px 12px',
     overflow: 'hidden',
-    backgroundColor: theme.surface
+    backgroundColor: theme.surface,
+    color: theme.text
   }
 
   const closeButtonStyles = {
@@ -167,7 +186,7 @@ export function BasePage({
       >
         {/* Header */}
         <div style={headerStyles} data-draggable-header>
-          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>
+          <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '600' }}>
             {title}
           </h3>
           <button

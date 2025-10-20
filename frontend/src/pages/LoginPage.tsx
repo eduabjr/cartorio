@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowRight, Building, Shield, User } from 'lucide-react'
+import { CivitasLogo } from '../components/CivitasLogo'
+import { useAccessibility } from '../hooks/useAccessibility'
 
 export function LoginPage() {
   const [email, setEmail] = useState('admin@cartorio.com')
@@ -11,6 +13,7 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
+  const { currentTheme } = useAccessibility()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,11 +35,21 @@ export function LoginPage() {
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
         <div className="flex items-center justify-center mb-6">
           <div className="flex items-center space-x-3">
-            <Building className="h-12 w-12 text-blue-600" />
-            <div>
-              <h1 className="text-2xl font-bold text-blue-600">Sistema Cartório</h1>
-              <p className="text-sm text-gray-600">Tecnologia da Informação</p>
-            </div>
+            {currentTheme === 'dark' ? (
+              // No modo dark, mostrar apenas o texto CIVITAS em branco
+              <div>
+                <h1 className="text-2xl font-bold text-white">CIVITAS</h1>
+                <p className="text-sm text-gray-300">Sistema Cartório</p>
+              </div>
+            ) : (
+              // No modo light, usar o logo-light
+              <CivitasLogo 
+                size={48} 
+                theme="light" 
+                showText={true}
+                textColor="#2D5A5A"
+              />
+            )}
           </div>
         </div>
 

@@ -57,6 +57,22 @@
   div {
     box-sizing: border-box;
   }
+
+  /* Garantir consistência de tema nas janelas */
+  .theme-dark {
+    background-color: var(--surface-color, #121212);
+    color: var(--text-color, #B0B0B0);
+  }
+
+  .theme-light {
+    background-color: var(--surface-color, #FFFFFF);
+    color: var(--text-color, #212121);
+  }
+
+  .theme-highContrast {
+    background-color: var(--surface-color, #ffffff);
+    color: var(--text-color, #000000);
+  }
   
   /* Ajustar containers para fontes maiores */
   .font-responsive {

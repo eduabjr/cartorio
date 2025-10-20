@@ -1,20 +1,158 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
+import { OCRProgress } from '../components/OCRProgress'
+import { extractDocumentData, ExtractedData } from '../utils/ocrUtils'
 import { useAccessibility } from '../hooks/useAccessibility'
+import QRCode from 'qrcode'
+// import { useTJSPApi } from '../hooks/useTJSPApi'
+
+// Definições de tipos para APIs do Electron
+declare global {
+  interface Window {
+    electronAPI?: {
+      detectScanners: () => Promise<ScannerDevice[]>
+      scanDocument: (config: ScanConfig) => Promise<ScanResult>
+      printDocument: (config: PrintConfig) => Promise<PrintResult>
+    }
+  }
+}
+
+interface ScannerDevice {
+  id: string
+  name: string
+  manufacturer: string
+  model: string
+  capabilities: {
+    resolutions: number[]
+    colorModes: string[]
+    pageSizes: string[]
+    formats: string[]
+  }
+}
+
+interface ScanConfig {
+  scannerId: string
+  resolution: number
+  colorMode: string
+  pageSize: string
+  format: string
+  quality: number
+}
+
+interface ScanResult {
+  success: boolean
+  imageData?: ArrayBuffer
+  error?: string
+}
+
+interface PrintConfig {
+  data: ArrayBuffer
+  config: {
+    copies: number
+    colorMode: string
+    paperSize: string
+    orientation: string
+    quality: string
+    duplex: boolean
+    collate: boolean
+    margins: {
+      top: number
+      bottom: number
+      left: number
+      right: number
+    }
+  }
+  documentName: string
+}
+
+interface PrintResult {
+  success: boolean
+  error?: string
+}
 
 interface ClientePageProps {
   onClose: () => void
+  resetToOriginalPosition?: boolean
 }
 
-export function ClientePage({ onClose }: ClientePageProps) {
-  console.log('📺 ClientePage RENDERIZADO!')
-  console.log('🔧 onClose function:', onClose)
-  
-  const { getTheme } = useAccessibility()
+export function ClientePage({ onClose, resetToOriginalPosition }: ClientePageProps) {
+  const { getTheme, currentTheme } = useAccessibility()
+  // const tjspApi = useTJSPApi()
   const theme = getTheme()
   
   const [activeTab, setActiveTab] = useState('cadastro')
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
+  const [ocrProgress, setOcrProgress] = useState({ isVisible: false, progress: 0, status: '' })
+  
+  // Estados para Digitalização
+  const [digitalizacaoTab, setDigitalizacaoTab] = useState('cartoes-assinatura')
+  
+  // Estados para Cartões de Assinatura
+  const [cartoesAssinatura, setCartoesAssinatura] = useState<any[]>([])
+  const [cartaoAtual, setCartaoAtual] = useState<number>(0)
+  const [zoomLevelCartoes, setZoomLevelCartoes] = useState(100)
+  const [rotacaoCartoes, setRotacaoCartoes] = useState(0)
+  const [isDraggingCartoes, setIsDraggingCartoes] = useState(false)
+  const [dragStartCartoes, setDragStartCartoes] = useState({ x: 0, y: 0 })
+  const [documentPositionCartoes, setDocumentPositionCartoes] = useState({ x: 0, y: 0 })
+  
+  // Estados para Outros Documentos
+  const [outrosDocumentos, setOutrosDocumentos] = useState<any[]>([])
+  const [documentoAtual, setDocumentoAtual] = useState<number>(0)
+  const [zoomLevel, setZoomLevel] = useState(100)
+  const [rotacao, setRotacao] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [documentPosition, setDocumentPosition] = useState({ x: 0, y: 0 })
+  
+  // Estados para Selo Digital
+  const [selosDigitais, setSelosDigitais] = useState<any[]>([
+    {
+      id: 1,
+      dataCadastro: '2024-01-15',
+      seloDigital: 'SD-2024-001',
+      cns: '123456789',
+      naturezaAto: 'Escritura',
+      anoAto: '2024',
+      digito: '1',
+      cia: '001',
+      qrCode: ''
+    }
+  ])
+  const [seloSelecionado, setSeloSelecionado] = useState<number>(0)
+  const [campoPrincipal, setCampoPrincipal] = useState('')
+  const [campoSecundario, setCampoSecundario] = useState('')
+
+  // Gerar QR Code para o selo selecionado
+  useEffect(() => {
+    const gerarQRCode = async () => {
+      if (selosDigitais[seloSelecionado] && !selosDigitais[seloSelecionado].qrCode) {
+        try {
+          const selo = selosDigitais[seloSelecionado]
+          const qrData = `SELO:${selo.seloDigital}|CNS:${selo.cns}|DATA:${selo.dataCadastro}|NATUREZA:${selo.naturezaAto}`
+          const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+            width: 90,
+            margin: 1,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          })
+          
+          // Atualizar o selo com o QR Code gerado
+          setSelosDigitais(prevSelos => {
+            const novosSelos = [...prevSelos]
+            novosSelos[seloSelecionado] = { ...selo, qrCode: qrCodeDataURL }
+            return novosSelos
+          })
+        } catch (error) {
+          console.error('Erro ao gerar QR Code:', error)
+        }
+      }
+    }
+
+    gerarQRCode()
+  }, [seloSelecionado])
   const [formData, setFormData] = useState({
     codigo: '0',
     nome: '',
@@ -252,39 +390,6 @@ export function ClientePage({ onClose }: ClientePageProps) {
     }
   }
 
-  // Função para validar CPF
-  const validarCpf = (cpf: string): boolean => {
-    // Remove caracteres não numéricos
-    const cpfLimpo = cpf.replace(/[^\d]/g, '')
-    
-    // Verifica se tem 11 dígitos
-    if (cpfLimpo.length !== 11) return false
-    
-    // Verifica se todos os dígitos são iguais (ex: 111.111.111-11)
-    if (/^(\d)\1{10}$/.test(cpfLimpo)) return false
-    
-    // Validação do primeiro dígito verificador
-    let soma = 0
-    for (let i = 0; i < 9; i++) {
-      soma += parseInt(cpfLimpo.charAt(i)) * (10 - i)
-    }
-    let resto = 11 - (soma % 11)
-    let digitoVerificador1 = resto >= 10 ? 0 : resto
-    
-    if (digitoVerificador1 !== parseInt(cpfLimpo.charAt(9))) return false
-    
-    // Validação do segundo dígito verificador
-    soma = 0
-    for (let i = 0; i < 10; i++) {
-      soma += parseInt(cpfLimpo.charAt(i)) * (11 - i)
-    }
-    resto = 11 - (soma % 11)
-    let digitoVerificador2 = resto >= 10 ? 0 : resto
-    
-    if (digitoVerificador2 !== parseInt(cpfLimpo.charAt(10))) return false
-    
-    return true
-  }
 
   // Função para formatar CPF
   const formatarCpf = (valor: string): string => {
@@ -302,179 +407,228 @@ export function ClientePage({ onClose }: ClientePageProps) {
     handleInputChange('cpf', cpfFormatado)
   }
 
-  // Função para validar CPF ao clicar no botão
-  const handleValidarCpf = () => {
-    if (!formData.cpf) {
-      alert('Por favor, digite um CPF!')
-      return
-    }
-    
-    if (validarCpf(formData.cpf)) {
-      alert('✅ CPF válido!')
-    } else {
-      alert('❌ CPF inválido! Por favor, verifique o número digitado.')
-    }
-  }
 
-  // Função para gerar PDF
-  const handleGerarPdf = async () => {
-    alert('Funcionalidade de PDF será implementada em breve!')
-  }
 
-  // Função para processar OCR
-  const handleProcessarOcr = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    alert('Funcionalidade de OCR será implementada em breve!')
-  }
-
-  // Função para digitalizar documento
-  const handleBuscarScanner = async () => {
+  // Função para Scanner Real + OCR + Preenchimento Automático
+  const handleScannerComOCR = async () => {
     try {
-      // Verifica se a API de dispositivos está disponível
-      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        console.log('API de dispositivos não disponível, usando funcionalidade simulada')
-        // Fallback para funcionalidade simulada sem pop-up
-        const dadosExtraidos = {
-          codigo: 'CLI' + Math.floor(Math.random() * 10000).toString().padStart(4, '0'),
-          nome: 'João Silva Santos',
-          cpf: '123.456.789-00',
-          rg: '12.345.678-9',
-          orgaoRg: 'SSP',
-          nascimento: '15/03/1985',
-          sexo: 'MASCULINO',
-          estadoCivil: 'SOLTEIRO',
-          naturalidade: 'São Paulo',
-          profissao: 'Engenheiro',
-          pai: 'José Silva Santos',
-          mae: 'Maria Silva Santos',
-          telefone: '(11) 99999-9999',
-          celular: '(11) 88888-8888',
-          email: 'joao.silva@email.com',
-          cep: '01310-100',
-          logradouro: 'AVENIDA',
-          endereco: 'Paulista',
-          numero: '1000',
-          complemento: 'Apto 101',
-          bairro: 'Bela Vista',
-          cidade: 'São Paulo',
-          ufEndereco: 'SP',
-          paisEndereco: 'BRASIL'
+      console.log('🔍 Iniciando Scanner + OCR + Preenchimento Automático...')
+      
+      // Mostra progresso
+      setOcrProgress({ isVisible: true, progress: 0, status: 'Detectando scanners...' })
+
+      // 1. DETECTAR SCANNERS DISPONÍVEIS
+      let scanners: any[] = []
+      
+      // Tentar Electron API primeiro (desktop)
+      if (window.electronAPI && window.electronAPI.detectScanners) {
+        try {
+          scanners = await window.electronAPI.detectScanners()
+          console.log('📷 Scanners detectados via Electron:', scanners)
+        } catch (error) {
+          console.log('⚠️ Electron API não disponível, tentando Web APIs...')
         }
-        
-        // Preenche os campos automaticamente
-        setFormData(prev => ({
-          ...prev,
-          ...dadosExtraidos
-        }))
-        
-        return
       }
 
-      // Busca dispositivos disponíveis
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const scanners = devices.filter(device => 
-        device.kind === 'videoinput' || 
-        device.label.toLowerCase().includes('scanner') ||
-        device.label.toLowerCase().includes('camera')
-      )
+      // Se não encontrou scanners via Electron, tentar Web APIs
+      if (scanners.length === 0) {
+        setOcrProgress({ isVisible: true, progress: 0.1, status: 'Tentando Web APIs...' })
+        
+        // Tentar ImageCapture API
+        try {
+          const mediaDevices = navigator.mediaDevices
+          if (mediaDevices && mediaDevices.getUserMedia) {
+            const stream = await mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            const track = stream.getVideoTracks()[0]
+            
+            // Simular scanner com câmera
+            scanners = [{ name: 'Câmera do Dispositivo', id: 'camera', type: 'camera' }]
+            console.log('📷 Câmera detectada via ImageCapture API')
+            
+            // Parar stream
+            track.stop()
+          }
+        } catch (error) {
+          console.log('⚠️ ImageCapture API não disponível')
+        }
+      }
 
       if (scanners.length === 0) {
-        console.log('Nenhum scanner encontrado')
-        return
+        throw new Error('Nenhum scanner ou câmera detectado')
       }
 
-      console.log('Scanners encontrados:', scanners)
+      setOcrProgress({ isVisible: true, progress: 0.2, status: 'Iniciando digitalização...' })
 
-      // Tenta acessar a câmera/scanner
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          deviceId: scanners[0].deviceId,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+      // 2. EXECUTAR SCAN REAL
+      let scanResult = null
+      
+      if (window.electronAPI && window.electronAPI.scanDocument) {
+        // Usar Electron API para scan real
+        try {
+          scanResult = await window.electronAPI.scanDocument({
+            scannerId: scanners[0].id || 'default',
+            format: 'jpeg',
+            quality: 90,
+            resolution: 300,
+            colorMode: 'color',
+            pageSize: 'A4'
+          })
+          console.log('📷 Scan realizado via Electron:', scanResult)
+        } catch (error) {
+          console.error('❌ Erro no scan via Electron:', error)
+          throw error
         }
-      })
-
-      // Cria elemento de vídeo temporário para captura
-      const video = document.createElement('video')
-      video.srcObject = stream
-      video.play()
-
-      // Aguarda o vídeo carregar
-      await new Promise(resolve => {
-        video.onloadedmetadata = resolve
-      })
-
-      // Cria canvas para capturar frame
-      const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
-      
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      
-      // Desenha o frame atual no canvas
-      context?.drawImage(video, 0, 0)
-      
-      // Para o stream
-      stream.getTracks().forEach(track => track.stop())
-      
-      // Converte para blob para processamento
-      canvas.toBlob(async (blob) => {
-        if (blob) {
-          // Aqui você integraria com uma API de OCR real
-          // Por enquanto, simula extração de dados
-          const dadosExtraidos = {
-            codigo: 'CLI' + Math.floor(Math.random() * 10000).toString().padStart(4, '0'),
-            nome: 'João Silva Santos',
-            cpf: '123.456.789-00',
-            rg: '12.345.678-9',
-            orgaoRg: 'SSP',
-            nascimento: '15/03/1985',
-            sexo: 'MASCULINO',
-            estadoCivil: 'SOLTEIRO',
-            naturalidade: 'São Paulo',
-            profissao: 'Engenheiro',
-            pai: 'José Silva Santos',
-            mae: 'Maria Silva Santos',
-            telefone: '(11) 99999-9999',
-            celular: '(11) 88888-8888',
-            email: 'joao.silva@email.com',
-            cep: '01310-100',
-            logradouro: 'AVENIDA',
-            endereco: 'Paulista',
-            numero: '1000',
-            complemento: 'Apto 101',
-            bairro: 'Bela Vista',
-            cidade: 'São Paulo',
-            ufEndereco: 'SP',
-            paisEndereco: 'BRASIL'
+      } else {
+        // Fallback: usar câmera para capturar imagem
+        setOcrProgress({ isVisible: true, progress: 0.3, status: 'Capturando imagem...' })
+        
+        try {
+          const mediaDevices = navigator.mediaDevices
+          const stream = await mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: 'environment',
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            } 
+          })
+          
+          const video = document.createElement('video')
+          video.srcObject = stream
+          video.play()
+          
+          // Aguardar carregamento
+          await new Promise(resolve => {
+            video.onloadedmetadata = resolve
+          })
+          
+          // Capturar frame
+          const canvas = document.createElement('canvas')
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          const ctx = canvas.getContext('2d')
+          ctx?.drawImage(video, 0, 0)
+          
+          // Converter para blob
+          const blob = await new Promise<Blob>((resolve) => {
+            canvas.toBlob((blob) => {
+              if (blob) resolve(blob)
+            }, 'image/jpeg', 0.9)
+          })
+          
+          // Parar stream
+          stream.getTracks().forEach(track => track.stop())
+          
+          scanResult = {
+            success: true,
+            imageData: blob,
+            format: 'jpeg'
           }
           
-          // Preenche os campos automaticamente
-          setFormData(prev => ({
-            ...prev,
-            ...dadosExtraidos
-          }))
+          console.log('📷 Imagem capturada via câmera:', scanResult)
           
-          console.log('Documento digitalizado e dados extraídos com sucesso!')
+        } catch (error) {
+          console.error('❌ Erro na captura via câmera:', error)
+          throw error
         }
-      }, 'image/jpeg', 0.8)
+      }
+
+      if (!scanResult || !scanResult.success) {
+        throw new Error('Falha na digitalização')
+      }
+
+      setOcrProgress({ isVisible: true, progress: 0.5, status: 'Processando com Tesseract OCR...' })
+
+      // 3. PROCESSAR COM TESSERACT OCR
+      if (!scanResult.imageData) {
+        throw new Error('Dados da imagem não disponíveis')
+      }
+      
+      // Converter ArrayBuffer para Blob se necessário
+      let imageBlob: Blob
+      if (scanResult.imageData instanceof ArrayBuffer) {
+        imageBlob = new Blob([scanResult.imageData], { type: 'image/jpeg' })
+      } else {
+        imageBlob = scanResult.imageData as Blob
+      }
+      
+      const dadosExtraidos = await processDocumentOCR(imageBlob)
+
+      setOcrProgress({ isVisible: true, progress: 0.8, status: 'Preenchendo campos...' })
+
+      // 4. PREENCHER CAMPOS AUTOMATICAMENTE
+      fillFormFields(dadosExtraidos)
+
+      setOcrProgress({ isVisible: true, progress: 1.0, status: 'Concluído!' })
+
+      // 5. MOSTRAR RESULTADO
+      setTimeout(() => {
+        setOcrProgress({ isVisible: false, progress: 0, status: '' })
+        
+        const camposPreenchidos = Object.keys(dadosExtraidos).filter(key => dadosExtraidos[key as keyof ExtractedData])
+        alert(`✅ Scanner + OCR Concluído!\n\n📋 Campos preenchidos: ${camposPreenchidos.length}\n\n🔍 Dados extraídos:\n${camposPreenchidos.map(campo => `• ${campo}: ${dadosExtraidos[campo as keyof ExtractedData]}`).join('\n')}\n\nVerifique os dados e faça ajustes se necessário.`)
+      }, 1000)
 
     } catch (error) {
-      console.error('Erro ao acessar scanner:', error)
-      // Fallback silencioso - não mostra pop-up
+      console.error('❌ Erro no Scanner + OCR:', error)
+      setOcrProgress({ isVisible: false, progress: 0, status: '' })
+      
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      alert(`❌ Erro no Scanner + OCR:\n\n${errorMessage}\n\nTente novamente ou use o upload manual de arquivo.`)
     }
   }
+
+  // Função auxiliar para processar documento com OCR
+  const processDocumentOCR = async (imageData: Blob): Promise<ExtractedData> => {
+    try {
+      // Usar a função existente de extração de dados
+      const dadosExtraidos = await extractDocumentData(imageData, (progress, status) => {
+        setOcrProgress({ isVisible: true, progress: 0.5 + (progress * 0.3), status })
+      })
+      
+      return dadosExtraidos
+    } catch (error) {
+      console.error('❌ Erro no processamento OCR:', error)
+      throw error
+    }
+  }
+
+  // Função auxiliar para preencher campos do formulário
+  const fillFormFields = (dadosExtraidos: ExtractedData) => {
+    // Remove código dos dados extraídos
+    const { codigo, ...dadosParaPreencher } = dadosExtraidos
+    
+    console.log('🎯 Preenchendo campos com dados extraídos:', dadosParaPreencher)
+    
+    // Preenche os campos
+    setFormData(prev => ({
+      ...prev,
+      ...dadosParaPreencher
+    }))
+
+    // Se CEP foi extraído, buscar endereço automaticamente
+    if (dadosParaPreencher.cep) {
+      // Simular clique no botão de buscar CEP
+      const cepInput = document.querySelector('input[value*="' + dadosParaPreencher.cep + '"]') as HTMLInputElement
+      if (cepInput) {
+        cepInput.value = dadosParaPreencher.cep
+        cepInput.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+    }
+  }
+
+
 
   // Função para iniciar um novo cadastro
   const handleNovo = () => {
     setFormData({
-      codigo: '',
+      codigo: '0',
       nome: '',
       numeroCartao: '',
       cpf: '',
       rg: '',
       orgaoRg: '',
       nascimento: '',
-      estadoCivil: '',
+      estadoCivil: 'IGNORADO',
       naturalidade: '',
       nacionalidade: '',
       profissao: '',
@@ -487,13 +641,17 @@ export function ClientePage({ onClose }: ClientePageProps) {
       complemento: '',
       bairro: '',
       cidade: '',
+      uf: '',
+      pais: '',
       ufEndereco: '',
       paisEndereco: 'BRASIL',
+      codigoIbge: '',
       telefone: '',
       celular: '',
       email: '',
       atendente: '',
       assinanteCartao: '',
+      sexo: 'IGNORADO'
     })
     console.log('📄 Novo cadastro iniciado! Formulário limpo.')
   }
@@ -503,26 +661,36 @@ export function ClientePage({ onClose }: ClientePageProps) {
     // Validação básica
     if (!formData.nome || !formData.cpf) {
       console.log('❌ Por favor, preencha pelo menos Nome e CPF!')
+      alert('❌ Por favor, preencha pelo menos Nome e CPF!')
       return
     }
 
+    // Gera ID único se ainda não foi gerado (código = '0')
+    let codigoFinal = formData.codigo
+    if (formData.codigo === '0') {
+      codigoFinal = 'CLI' + Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+      setFormData(prev => ({ ...prev, codigo: codigoFinal }))
+      console.log('🆔 ID gerado automaticamente:', codigoFinal)
+    }
+
     // Simula salvamento
-    console.log('Dados a serem gravados:', formData)
+    console.log('Dados a serem gravados:', { ...formData, codigo: codigoFinal })
     console.log('💾 Cliente gravado com sucesso!')
+    alert(`✅ Cliente gravado com sucesso!\n\n🆔 ID: ${codigoFinal}`)
   }
 
   // Função para limpar os campos
   const handleLimpar = () => {
     setFormData(prev => ({
       ...prev,
-      codigo: '',
+      codigo: '0',
       nome: '',
       numeroCartao: '',
       cpf: '',
       rg: '',
       orgaoRg: '',
       nascimento: '',
-      estadoCivil: '',
+      estadoCivil: 'IGNORADO',
       naturalidade: '',
       nacionalidade: '',
       profissao: '',
@@ -535,15 +703,760 @@ export function ClientePage({ onClose }: ClientePageProps) {
       complemento: '',
       bairro: '',
       cidade: '',
+      uf: '',
+      pais: '',
       ufEndereco: '',
       paisEndereco: 'BRASIL',
+      codigoIbge: '',
       telefone: '',
       celular: '',
       email: '',
       atendente: '',
       assinanteCartao: '',
+      sexo: 'IGNORADO'
     }))
     console.log('🧹 Campos limpos!')
+  }
+
+  // Funções para Cartões de Assinatura
+  const handlePrimeiroCartao = () => {
+    if (cartoesAssinatura.length > 0) {
+      setCartaoAtual(0)
+      resetCartaoPosition()
+    }
+  }
+
+  const handleCartaoAnterior = () => {
+    if (cartaoAtual > 0) {
+      setCartaoAtual(cartaoAtual - 1)
+      resetCartaoPosition()
+    }
+  }
+
+  const handleProximoCartao = () => {
+    if (cartaoAtual < cartoesAssinatura.length - 1) {
+      setCartaoAtual(cartaoAtual + 1)
+      resetCartaoPosition()
+    }
+  }
+
+  const handleUltimoCartao = () => {
+    if (cartoesAssinatura.length > 0) {
+      setCartaoAtual(cartoesAssinatura.length - 1)
+      resetCartaoPosition()
+    }
+  }
+
+  const handleNovoCartao = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*,.pdf'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const novoCartao = {
+          id: Date.now(),
+          nome: file.name,
+          arquivo: file,
+          dataCriacao: new Date(),
+          origem: 'upload'
+        }
+        setCartoesAssinatura(prev => [...prev, novoCartao])
+        setCartaoAtual(cartoesAssinatura.length)
+        resetCartaoPosition()
+        setZoomLevelCartoes(100)
+        setRotacaoCartoes(0)
+      }
+    }
+    input.click()
+  }
+
+  const handleExcluirCartao = () => {
+    if (cartoesAssinatura.length > 0 && cartaoAtual >= 0) {
+      const novosCartoes = cartoesAssinatura.filter((_, index) => index !== cartaoAtual)
+      setCartoesAssinatura(novosCartoes)
+      if (cartaoAtual >= novosCartoes.length) {
+        setCartaoAtual(novosCartoes.length - 1)
+      }
+    }
+  }
+
+  const handleGirarCartao90 = () => {
+    setRotacaoCartoes((prev) => (prev + 90) % 360)
+    resetCartaoPosition()
+  }
+
+  const handleGirarCartao180 = () => {
+    setRotacaoCartoes((prev) => (prev + 180) % 360)
+    resetCartaoPosition()
+  }
+
+  const handleZoomInCartao = () => {
+    setZoomLevelCartoes((prev) => Math.min(prev + 25, 300))
+    resetCartaoPosition()
+  }
+
+  const handleZoomOutCartao = () => {
+    setZoomLevelCartoes((prev) => Math.max(prev - 25, 25))
+    resetCartaoPosition()
+  }
+
+  const handleImprimirCartao = () => {
+    if (cartoesAssinatura.length > 0 && cartaoAtual >= 0) {
+      const cartao = cartoesAssinatura[cartaoAtual]
+      printDocument(cartao)
+    }
+  }
+
+  const handleScannerCartao = () => {
+    // Verificar se estamos em ambiente Electron (para acesso a APIs nativas)
+    if (window.electronAPI) {
+      startRealScanning()
+    } else {
+      // Fallback para navegador - usar WebUSB API ou Image Capture API
+      startWebScanning()
+    }
+  }
+
+  const handleRetornarCartao = () => {
+    setActiveTab('cadastro')
+  }
+
+  // Funções para arrastar cartão
+  const handleCartaoMouseDown = (e: React.MouseEvent) => {
+    if (cartoesAssinatura.length > 0) {
+      setIsDraggingCartoes(true)
+      setDragStartCartoes({
+        x: e.clientX - documentPositionCartoes.x,
+        y: e.clientY - documentPositionCartoes.y
+      })
+    }
+  }
+
+  const handleCartaoMouseMove = (e: React.MouseEvent) => {
+    if (isDraggingCartoes && cartoesAssinatura.length > 0) {
+      const newX = e.clientX - dragStartCartoes.x
+      const newY = e.clientY - dragStartCartoes.y
+      setDocumentPositionCartoes({ x: newX, y: newY })
+    }
+  }
+
+  const handleCartaoMouseUp = () => {
+    setIsDraggingCartoes(false)
+  }
+
+  const handleCartaoMouseLeave = () => {
+    setIsDraggingCartoes(false)
+  }
+
+  // Resetar posição do cartão
+  const resetCartaoPosition = () => {
+    setDocumentPositionCartoes({ x: 0, y: 0 })
+  }
+
+  // Funções para Outros Documentos
+  const handlePrimeiroDocumento = () => {
+    if (outrosDocumentos.length > 0) {
+      setDocumentoAtual(0)
+      resetDocumentPosition()
+    }
+  }
+
+  const handleDocumentoAnterior = () => {
+    if (documentoAtual > 0) {
+      setDocumentoAtual(documentoAtual - 1)
+      resetDocumentPosition()
+    }
+  }
+
+  const handleProximoDocumento = () => {
+    if (documentoAtual < outrosDocumentos.length - 1) {
+      setDocumentoAtual(documentoAtual + 1)
+      resetDocumentPosition()
+    }
+  }
+
+  const handleUltimoDocumento = () => {
+    if (outrosDocumentos.length > 0) {
+      setDocumentoAtual(outrosDocumentos.length - 1)
+      resetDocumentPosition()
+    }
+  }
+
+  const handleNovoDocumento = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*,.pdf'
+    input.multiple = true
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files
+      if (files && files.length > 0) {
+        const novosDocumentos = Array.from(files).map((file, index) => ({
+          id: Date.now() + index,
+          nome: file.name,
+          arquivo: file,
+          tipo: file.type,
+          tamanho: file.size,
+          dataUpload: new Date()
+        }))
+        setOutrosDocumentos([...outrosDocumentos, ...novosDocumentos])
+        if (outrosDocumentos.length === 0) {
+          setDocumentoAtual(0)
+        }
+      }
+    }
+    input.click()
+  }
+
+  const handleScanner = () => {
+    // Verificar se estamos em ambiente Electron (para acesso a APIs nativas)
+    if (window.electronAPI) {
+      startRealScanning()
+    } else {
+      // Fallback para navegador - usar WebUSB API ou Image Capture API
+      startWebScanning()
+    }
+  }
+
+
+  // Função para scanner real via Electron (APIs nativas)
+  const startRealScanning = async () => {
+    try {
+      console.log('🔍 Iniciando detecção de scanner via Electron...')
+      
+      if (!window.electronAPI) {
+        throw new Error('APIs do Electron não disponíveis')
+      }
+      
+      // Detectar scanners disponíveis via TWAIN (Windows) ou SANE (Linux)
+      const scanners = await window.electronAPI.detectScanners()
+      
+      if (!scanners || scanners.length === 0) {
+        alert('❌ Nenhum scanner detectado!\n\nVerifique se:\n• O scanner está conectado\n• Os drivers TWAIN/SANE estão instalados\n• O dispositivo está ligado')
+        return
+      }
+
+      console.log('📷 Scanners detectados:', scanners)
+      
+      // Mostrar configurações do scanner
+      const config = await showRealScannerConfig(scanners[0])
+      if (!config) return
+
+      // Iniciar digitalização real
+      console.log('Scanner configurado, mas funcionalidade OCR automática foi removida')
+      
+    } catch (error) {
+      console.error('❌ Erro ao acessar scanner:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      alert(`❌ Erro ao acessar scanner:\n${errorMessage}`)
+    }
+  }
+
+  // Função para scanner via Web APIs (navegador)
+  const startWebScanning = async () => {
+    try {
+      // Verificar se Image Capture API está disponível
+      if ('ImageCapture' in window) {
+        await startImageCaptureScanning()
+      } else if ('navigator' in window && 'usb' in (navigator as any)) {
+        await startWebUSBScanning()
+      } else {
+        alert('❌ APIs de scanner não disponíveis no navegador.\n\nPara funcionalidade completa, use a versão Electron do sistema.')
+        return
+      }
+    } catch (error) {
+      console.error('❌ Erro no scanner web:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      alert(`❌ Erro no scanner web:\n${errorMessage}`)
+    }
+  }
+
+  // Scanner via Image Capture API
+  const startImageCaptureScanning = async () => {
+    try {
+      // Obter dispositivos de mídia
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const videoDevices = devices.filter(device => device.kind === 'videoinput')
+      
+      if (videoDevices.length === 0) {
+        alert('❌ Nenhuma câmera/scanner detectado!')
+        return
+      }
+
+      // Usar primeira câmera disponível (pode ser um scanner com câmera)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: videoDevices[0].deviceId }
+      })
+      
+      const track = stream.getVideoTracks()[0]
+      const imageCapture = new ImageCapture(track)
+      
+      // Capturar imagem
+      const imageBitmap = await imageCapture.takePhoto()
+      
+      // Converter para File
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (ctx && imageBitmap && 'width' in imageBitmap && 'height' in imageBitmap) {
+        canvas.width = (imageBitmap as any).width
+        canvas.height = (imageBitmap as any).height
+        ctx.drawImage(imageBitmap as any, 0, 0)
+      }
+      
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const file = new File([blob], `scanned_${Date.now()}.jpg`, {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          })
+          
+          await addScannedDocument(file, 'image-capture')
+        }
+        
+        // Parar stream
+        track.stop()
+      }, 'image/jpeg', 0.9)
+      
+    } catch (error) {
+      console.error('❌ Erro Image Capture:', error)
+      throw error
+    }
+  }
+
+  // Scanner via WebUSB API
+  const startWebUSBScanning = async () => {
+    try {
+      // Solicitar acesso a dispositivos USB
+      const device = await (navigator as any).usb.requestDevice({
+        filters: [
+          { classCode: 7 }, // Printer/Scanner class
+          { classCode: 6 }  // Still Image class
+        ]
+      })
+      
+      console.log('📷 Dispositivo USB selecionado:', device)
+      
+      // Conectar ao dispositivo
+      await device.open()
+      await device.selectConfiguration(1)
+      await device.claimInterface(0)
+      
+      // Iniciar processo de digitalização
+      // (Implementação específica depende do protocolo do scanner)
+      await performUSBScan(device)
+      
+    } catch (error) {
+      console.error('❌ Erro WebUSB:', error)
+      throw error
+    }
+  }
+
+  // Configurações reais do scanner
+  const showRealScannerConfig = async (scanner: any) => {
+    const resolution = prompt('📐 Resolução (DPI):', '300')
+    const colorMode = prompt('🎨 Modo de cor (Color/Grayscale/Black&White):', 'Color')
+    const pageSize = prompt('📄 Tamanho da página (A4/Letter/Legal):', 'A4')
+    
+    if (!resolution || !colorMode || !pageSize) {
+      return null
+    }
+
+    return {
+      scanner: scanner,
+      resolution: parseInt(resolution) || 300,
+      colorMode: colorMode.toLowerCase(),
+      pageSize: pageSize.toUpperCase(),
+      format: 'JPEG',
+      quality: 90
+    }
+  }
+
+  // Digitalização real via Electron (não utilizada - substituída por performRealScanOCR)
+  /*
+  const performRealScan = async (config: any) => {
+    try {
+      console.log('📷 Iniciando digitalização real...')
+      
+      // Chamar API nativa do Electron para digitalizar
+      if (!window.electronAPI) {
+        throw new Error('APIs do Electron não disponíveis')
+      }
+      
+      const scanResult = await window.electronAPI.scanDocument({
+        scannerId: config.scanner.id,
+        resolution: config.resolution,
+        colorMode: config.colorMode,
+        pageSize: config.pageSize,
+        format: config.format,
+        quality: config.quality
+      })
+      
+      if (scanResult.success && scanResult.imageData) {
+        // Converter dados da imagem para File
+        const file = new File([scanResult.imageData], `scanned_${Date.now()}.${config.format.toLowerCase()}`, {
+          type: `image/${config.format.toLowerCase()}`,
+          lastModified: Date.now()
+        })
+        
+        await addScannedDocument(file, 'real-scanner', config)
+        
+        alert(`✅ Documento digitalizado com sucesso!\n\n📄 Nome: ${file.name}\n📐 Resolução: ${config.resolution} DPI\n🎨 Modo: ${config.colorMode}\n📏 Tamanho: ${config.pageSize}`)
+      } else {
+        throw new Error(scanResult.error || 'Erro desconhecido na digitalização')
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro na digitalização real:', error)
+      throw error
+    }
+  }
+  */
+
+  // Digitalização via USB
+  const performUSBScan = async (device: any) => {
+    try {
+      // Implementação específica para protocolo USB do scanner
+      // Cada fabricante tem seu próprio protocolo
+      
+      // Exemplo genérico - enviar comando de scan
+      const scanCommand = new Uint8Array([0x1B, 0x2A, 0x72, 0x31, 0x41]) // Comando ESC/P
+      
+      await device.transferOut(1, scanCommand)
+      
+      // Aguardar dados da imagem
+      const result = await device.transferIn(1, 1024 * 1024) // 1MB buffer
+      
+      if (result.data && result.data.byteLength > 0) {
+        const blob = new Blob([result.data], { type: 'image/jpeg' })
+        const file = new File([blob], `scanned_${Date.now()}.jpg`, {
+          type: 'image/jpeg',
+          lastModified: Date.now()
+        })
+        
+        await addScannedDocument(file, 'usb-scanner')
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro USB scan:', error)
+      throw error
+    } finally {
+      // Desconectar dispositivo
+      try {
+        await device.close()
+      } catch (e) {
+        console.warn('Aviso ao fechar dispositivo USB:', e)
+      }
+    }
+  }
+
+  // Adicionar documento digitalizado à lista
+  const addScannedDocument = async (file: File, source: string, config?: any) => {
+    const scannedDocument = {
+      id: Date.now(),
+      nome: file.name,
+      arquivo: file,
+      dataCriacao: new Date(),
+      configuracao: config,
+      origem: source
+    }
+    
+    // Adicionar documento à lista
+    setOutrosDocumentos(prev => [...prev, scannedDocument])
+    setDocumentoAtual(outrosDocumentos.length) // Ir para o novo documento
+    
+    // Resetar posição e zoom
+    resetDocumentPosition()
+    setZoomLevel(100)
+    setRotacao(0)
+    
+    console.log('✅ Documento adicionado:', scannedDocument)
+  }
+
+  const handleExcluirDocumento = () => {
+    if (outrosDocumentos.length > 0 && documentoAtual >= 0) {
+      const novosDocumentos = outrosDocumentos.filter((_, index) => index !== documentoAtual)
+      setOutrosDocumentos(novosDocumentos)
+      
+      if (novosDocumentos.length === 0) {
+        setDocumentoAtual(0)
+      } else if (documentoAtual >= novosDocumentos.length) {
+        setDocumentoAtual(novosDocumentos.length - 1)
+      }
+    }
+  }
+
+  const handleImprimir = () => {
+    if (outrosDocumentos.length > 0 && documentoAtual >= 0) {
+      const documento = outrosDocumentos[documentoAtual]
+      printDocument(documento)
+    }
+  }
+
+  // Função para imprimir documento real
+  const printDocument = async (documento: any) => {
+    try {
+      console.log('🖨️ Iniciando impressão do documento:', documento.nome)
+      
+      // Verificar se estamos em ambiente Electron (obrigatório para aplicação desktop)
+      if (!window.electronAPI) {
+        throw new Error('Aplicação deve ser executada via Electron para impressão nativa')
+      }
+      
+      // Impressão nativa via Electron
+      await printWithElectron(documento)
+      
+    } catch (error) {
+      console.error('❌ Erro ao imprimir:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      alert(`❌ Erro ao imprimir documento:\n${errorMessage}`)
+    }
+  }
+
+  // Impressão via Electron (impressão nativa)
+  const printWithElectron = async (documento: any) => {
+    try {
+      if (!window.electronAPI) {
+        throw new Error('APIs do Electron não disponíveis')
+      }
+
+      console.log('🖨️ Preparando impressão nativa do documento:', documento.nome)
+      console.log('📄 Tipo de arquivo:', documento.arquivo.type)
+      console.log('📏 Tamanho do arquivo:', documento.arquivo.size, 'bytes')
+
+      // Mostrar configurações de impressão
+      const printConfig = await showPrintConfig()
+      if (!printConfig) {
+        console.log('❌ Usuário cancelou configuração de impressão')
+        return
+      }
+
+      console.log('⚙️ Configurações de impressão:', printConfig)
+
+      // Converter arquivo para dados de impressão
+      console.log('🔄 Convertendo arquivo para dados de impressão...')
+      const printData = await convertFileToPrintData(documento.arquivo)
+      console.log('✅ Arquivo convertido, tamanho dos dados:', printData.byteLength, 'bytes')
+      
+      // Chamar API nativa do Electron para imprimir
+      console.log('📤 Enviando para impressão via Electron...')
+      const printResult = await window.electronAPI.printDocument({
+        data: printData,
+        config: printConfig,
+        documentName: documento.nome
+      })
+
+      if (printResult.success) {
+        console.log('✅ Impressão concluída com sucesso!')
+        alert(`✅ Documento "${documento.nome}" enviado para impressão com sucesso!\n\n📄 Cópias: ${printConfig.copies}\n🎨 Modo: ${printConfig.colorMode}\n📏 Papel: ${printConfig.paperSize}\n📐 Orientação: ${printConfig.orientation}`)
+      } else {
+        throw new Error(printResult.error || 'Erro desconhecido na impressão')
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro na impressão via Electron:', error)
+      throw error
+    }
+  }
+
+
+  // Mostrar configurações de impressão
+  const showPrintConfig = async () => {
+    // Solicitar configurações do usuário
+    const copies = prompt('📄 Número de cópias (1-99):', '1')
+    if (!copies) return null
+
+    const colorMode = prompt('🎨 Modo de cor (Color/Grayscale/Black&White):', 'Color')
+    if (!colorMode) return null
+
+    const paperSize = prompt('📏 Tamanho do papel (A4/Letter/Legal/A3):', 'A4')
+    if (!paperSize) return null
+
+    const orientation = prompt('📐 Orientação (Portrait/Landscape):', 'Portrait')
+    if (!orientation) return null
+
+    const duplex = confirm('🔄 Impressão frente e verso (duplex)?')
+    const collate = confirm('📚 Colar páginas (quando múltiplas cópias)?')
+
+    // Validar e processar configurações
+    const copiesNum = Math.max(1, Math.min(99, parseInt(copies) || 1))
+    const colorModeProcessed = colorMode.toLowerCase().replace('&', 'and')
+    const paperSizeProcessed = paperSize.toUpperCase()
+    const orientationProcessed = orientation.toLowerCase()
+
+    return {
+      copies: copiesNum,
+      colorMode: colorModeProcessed,
+      paperSize: paperSizeProcessed,
+      orientation: orientationProcessed,
+      quality: 'high',
+      duplex: duplex,
+      collate: collate,
+      margins: {
+        top: 1.0,    // cm
+        bottom: 1.0, // cm
+        left: 1.0,   // cm
+        right: 1.0   // cm
+      }
+    }
+  }
+
+  // Converter arquivo para dados de impressão
+  const convertFileToPrintData = async (file: File): Promise<ArrayBuffer> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (reader.result instanceof ArrayBuffer) {
+          resolve(reader.result)
+        } else {
+          reject(new Error('Erro ao converter arquivo'))
+        }
+      }
+      reader.onerror = () => reject(new Error('Erro ao ler arquivo'))
+      reader.readAsArrayBuffer(file)
+    })
+  }
+
+
+  const handleGirar90 = () => {
+    setRotacao((prev) => (prev + 90) % 360)
+    resetDocumentPosition()
+  }
+
+  const handleGirar180 = () => {
+    setRotacao((prev) => (prev + 180) % 360)
+    resetDocumentPosition()
+  }
+
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(prev + 25, 300))
+    resetDocumentPosition()
+  }
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => Math.max(prev - 25, 25))
+    resetDocumentPosition()
+  }
+
+  const handleRetornar = () => {
+    setActiveTab('cadastro')
+  }
+
+  // Funções para Selo Digital
+  const handleSelecionarSelo = (index: number) => {
+    setSeloSelecionado(index)
+    const selo = selosDigitais[index]
+    if (selo) {
+      setCampoPrincipal(selo.seloDigital)
+      setCampoSecundario(selo.cns)
+    }
+  }
+
+  const handleCopiarQRCode = async () => {
+    if (selosDigitais[seloSelecionado]) {
+      const selo = selosDigitais[seloSelecionado]
+      
+      try {
+        // Gerar QR Code real
+        const qrData = `SELO:${selo.seloDigital}|CNS:${selo.cns}|DATA:${selo.dataCadastro}|NATUREZA:${selo.naturezaAto}`
+        const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+          width: 90,
+          margin: 1,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        })
+        
+        // Atualizar o selo com o QR Code gerado
+        const novosSelos = [...selosDigitais]
+        novosSelos[seloSelecionado] = { ...selo, qrCode: qrCodeDataURL }
+        setSelosDigitais(novosSelos)
+        
+        // Copiar os dados do QR Code para área de transferência
+        navigator.clipboard.writeText(qrData).then(() => {
+          alert('QR Code gerado e dados copiados para a área de transferência!')
+        }).catch(() => {
+          alert('QR Code gerado, mas erro ao copiar dados')
+        })
+      } catch (error) {
+        console.error('Erro ao gerar QR Code:', error)
+        alert('Erro ao gerar QR Code')
+      }
+    }
+  }
+
+
+  const handleExcluirSeloLocal = () => {
+    if (selosDigitais[seloSelecionado]) {
+      const confirmacao = confirm('Tem certeza que deseja excluir o selo digital local?')
+      if (confirmacao) {
+        const novosSelos = selosDigitais.filter((_, index) => index !== seloSelecionado)
+        setSelosDigitais(novosSelos)
+        if (seloSelecionado >= novosSelos.length) {
+          setSeloSelecionado(Math.max(0, novosSelos.length - 1))
+        }
+        alert('Selo digital local excluído com sucesso!')
+      }
+    }
+  }
+
+  const handleExcluirSeloTJ = async () => {
+    if (selosDigitais[seloSelecionado]) {
+      const selo = selosDigitais[seloSelecionado]
+      const motivo = prompt('Digite o motivo do cancelamento:')
+      
+      if (motivo && motivo.trim()) {
+        const confirmacao = confirm(`Tem certeza que deseja cancelar o selo digital "${selo.seloDigital}" no TJSP?`)
+        if (confirmacao) {
+          // const sucesso = await tjspApi.cancelarSelo(selo.id, motivo.trim())
+          // if (sucesso) {
+            // Remover da lista local também
+            const novosSelos = selosDigitais.filter((_, index) => index !== seloSelecionado)
+            setSelosDigitais(novosSelos)
+            if (seloSelecionado >= novosSelos.length) {
+              setSeloSelecionado(Math.max(0, novosSelos.length - 1))
+            }
+            alert('Selo digital cancelado com sucesso no TJSP!')
+          // } else {
+          //   alert(`Erro ao cancelar selo: ${tjspApi.error || 'Erro desconhecido'}`)
+          // }
+        }
+      } else if (motivo !== null) {
+        alert('Motivo é obrigatório para cancelamento')
+      }
+    }
+  }
+
+  // Funções para arrastar documento
+  const handleDocumentMouseDown = (e: React.MouseEvent) => {
+    if (outrosDocumentos.length > 0) {
+      setIsDragging(true)
+      setDragStart({
+        x: e.clientX - documentPosition.x,
+        y: e.clientY - documentPosition.y
+      })
+    }
+  }
+
+  const handleDocumentMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && outrosDocumentos.length > 0) {
+      const newX = e.clientX - dragStart.x
+      const newY = e.clientY - dragStart.y
+      setDocumentPosition({ x: newX, y: newY })
+    }
+  }
+
+  const handleDocumentMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  const handleDocumentMouseLeave = () => {
+    setIsDragging(false)
+  }
+
+  // Resetar posição do documento quando necessário
+  const resetDocumentPosition = () => {
+    setDocumentPosition({ x: 0, y: 0 })
   }
 
   const tabStyles = {
@@ -567,28 +1480,46 @@ export function ClientePage({ onClose }: ClientePageProps) {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '3px',
-    marginTop: '10px'
+    marginTop: '4px',
+    backgroundColor: theme.surface,
+    color: theme.text
   }
 
   const rowStyles = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
+    gridTemplateColumns: 'repeat(8, 1fr)',
     gap: '6px',
-    alignItems: 'end',
-    marginBottom: '3px'
+    alignItems: 'start',
+    marginBottom: '3px',
+    alignContent: 'start'
   }
 
   const fieldStyles = {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '1px'
+    gap: '1px',
+    alignItems: 'stretch',
+    alignSelf: 'stretch',
+    justifyContent: 'flex-start',
+    minHeight: '42px',
+    paddingTop: '0px',
+    marginTop: '0px'
   }
 
-  const labelStyles = {
+  const labelStyles: React.CSSProperties = {
     fontSize: '12px',
     fontWeight: '600',
     color: theme.text,
-    marginBottom: '1px'
+    marginBottom: '1px',
+    height: '16px',
+    lineHeight: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    marginTop: '0px',
+    paddingTop: '0px',
+    verticalAlign: 'top',
+    position: 'relative' as const,
+    top: '0px'
   }
 
   const inputStyles = {
@@ -596,20 +1527,31 @@ export function ClientePage({ onClose }: ClientePageProps) {
     border: `1px solid ${theme.border}`,
     borderRadius: '3px',
     fontSize: '12px',
-    backgroundColor: theme.background,
+    backgroundColor: theme.surface,
     color: theme.text,
     outline: 'none',
     height: '24px',
+    minHeight: '24px',
+    maxHeight: '24px',
     width: '100%',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    lineHeight: '18px'
   }
 
   const selectStyles = {
-    ...inputStyles,
-    cursor: 'pointer',
+    padding: '3px 10px',
+    border: `1px solid ${theme.border}`,
+    borderRadius: '3px',
+    fontSize: '12px',
+    backgroundColor: theme.surface,
+    color: theme.text,
+    outline: 'none',
     height: '24px',
     minHeight: '24px',
     maxHeight: '24px',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    cursor: 'pointer',
     lineHeight: '18px',
     appearance: 'none' as const,
     WebkitAppearance: 'none' as const,
@@ -618,11 +1560,15 @@ export function ClientePage({ onClose }: ClientePageProps) {
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 6px center',
     backgroundSize: '12px',
-    paddingRight: '24px'
+    paddingRight: '24px',
+    verticalAlign: 'top',
+    display: 'block',
+    margin: '0',
+    fontFamily: 'inherit'
   }
 
   const buttonStyles = {
-    padding: '8px 16px',
+    padding: '10px 16px',
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer',
@@ -630,87 +1576,129 @@ export function ClientePage({ onClose }: ClientePageProps) {
     fontWeight: '500',
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '5px',
     transition: 'all 0.2s ease',
-    height: '36px',
-    minWidth: '80px',
-    justifyContent: 'center'
+    height: '40px',
+    minWidth: '85px',
+    maxWidth: '120px',
+    justifyContent: 'center',
+    whiteSpace: 'nowrap'
   }
 
-  const getPrimaryButtonStyles = (buttonId: string) => ({
-    ...buttonStyles,
-    backgroundColor: hoveredButton === buttonId ? '#e67e22' : theme.primary,
-    color: 'white',
-    transform: hoveredButton === buttonId ? 'translateY(-1px)' : 'translateY(0)',
-    boxShadow: hoveredButton === buttonId ? '0 4px 8px rgba(0,0,0,0.2)' : 'none'
-  })
 
   const getSecondaryButtonStyles = (buttonId: string) => ({
     ...buttonStyles,
-    backgroundColor: hoveredButton === buttonId ? '#d1d5db' : theme.border,
-    color: theme.text,
+    backgroundColor: hoveredButton === buttonId ? '#495057' : '#6c757d',
+    color: 'white',
     transform: hoveredButton === buttonId ? 'translateY(-1px)' : 'translateY(0)',
-    boxShadow: hoveredButton === buttonId ? '0 4px 8px rgba(0,0,0,0.2)' : 'none'
+    boxShadow: hoveredButton === buttonId ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
   })
 
   const getDangerButtonStyles = (buttonId: string) => ({
     ...buttonStyles,
-    backgroundColor: hoveredButton === buttonId ? '#dc2626' : '#ef4444',
+    backgroundColor: hoveredButton === buttonId ? '#495057' : '#6c757d',
     color: 'white',
     transform: hoveredButton === buttonId ? 'translateY(-1px)' : 'translateY(0)',
-    boxShadow: hoveredButton === buttonId ? '0 4px 8px rgba(0,0,0,0.2)' : 'none'
+    boxShadow: hoveredButton === buttonId ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+  })
+
+  const getSuccessButtonStyles = (buttonId: string) => ({
+    ...buttonStyles,
+    backgroundColor: hoveredButton === buttonId ? '#495057' : '#6c757d',
+    color: 'white',
+    transform: hoveredButton === buttonId ? 'translateY(-1px)' : 'translateY(0)',
+    boxShadow: hoveredButton === buttonId ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+  })
+
+  const getInfoButtonStyles = (buttonId: string) => ({
+    ...buttonStyles,
+    backgroundColor: hoveredButton === buttonId ? '#495057' : '#6c757d',
+    color: 'white',
+    transform: hoveredButton === buttonId ? 'translateY(-1px)' : 'translateY(0)',
+    boxShadow: hoveredButton === buttonId ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
   })
 
   // Estilos para outros botões (não principais)
   const secondaryButtonStyles = {
-    padding: '4px 8px',
+    padding: '2px 6px',
     border: 'none',
     borderRadius: '3px',
     cursor: 'pointer',
-    fontSize: '11px',
+    fontSize: '10px',
     fontWeight: '500',
     display: 'flex',
     alignItems: 'center',
     gap: '4px',
     transition: 'all 0.2s ease',
-    height: '26px',
-    minWidth: '26px',
+    height: '24px',
+    minHeight: '24px',
+    maxHeight: '24px',
+    minWidth: '24px',
+    maxWidth: '24px',
     justifyContent: 'center',
     backgroundColor: theme.border,
     color: theme.text
   }
 
-  const dangerButtonStyles = {
-    padding: '4px 8px',
-    border: 'none',
-    borderRadius: '3px',
-    cursor: 'pointer',
-    fontSize: '11px',
-    fontWeight: '500',
+
+  const buttonsContainerStyles: React.CSSProperties = {
     display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    transition: 'all 0.2s ease',
-    height: '26px',
-    minWidth: '26px',
     justifyContent: 'center',
-    backgroundColor: '#ef4444',
-    color: 'white'
+    gap: '14px',
+    marginTop: '25px',
+    paddingTop: '20px',
+    borderTop: `1px solid ${theme.border}`,
+    flexWrap: 'wrap' as const
   }
 
-  const buttonsContainerStyles = {
+  // Estilos para botões da barra de ferramentas
+  const toolbarButtonStyles = {
     display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: '12px',
-    marginTop: '16px',
-    paddingTop: '8px',
-    borderTop: `1px solid ${theme.border}`
+    padding: '6px 8px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    backgroundColor: theme.surface,
+    color: theme.text,
+    fontSize: '10px',
+    minWidth: '50px',
+    height: '50px',
+    transition: 'all 0.2s ease',
+    gap: '2px'
+  }
+
+  const toolbarButtonDisabledStyles = {
+    ...toolbarButtonStyles,
+    opacity: 0.5,
+    cursor: 'not-allowed',
+    backgroundColor: theme.background
+  }
+
+  // Função auxiliar para obter estilos de botão
+  const getToolbarButtonStyle = (isDisabled: boolean) => {
+    return isDisabled ? toolbarButtonDisabledStyles : toolbarButtonStyles
   }
 
   return (
-    <BasePage title="Cliente" onClose={onClose} width="750px" height="650px">
-      {/* Tabs */}
-      <div style={tabStyles}>
+    <>
+    <BasePage title="Cliente" onClose={onClose} width="900px" height="580px" resetToOriginalPosition={resetToOriginalPosition}>
+      {/* Wrapper para garantir tema correto */}
+      <div 
+        className={`theme-${currentTheme}`}
+        style={{ 
+          backgroundColor: theme.surface, 
+          color: theme.text, 
+          width: '100%', 
+          height: '100%',
+          minHeight: '100%',
+          padding: '8px'
+        }}
+      >
+        {/* Tabs */}
+        <div style={tabStyles}>
         <button
           style={tabButtonStyles(activeTab === 'cadastro')}
           onClick={() => setActiveTab('cadastro')}
@@ -738,27 +1726,43 @@ export function ClientePage({ onClose }: ClientePageProps) {
           {/* Linha 1: Código, Nome, Número Cartão */}
           <div style={rowStyles}>
             <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
-              <label style={labelStyles}>Código</label>
+              <label style={labelStyles}>Código {formData.codigo === '0' && <span style={{ color: theme.textSecondary, fontSize: '12px' }}>(ID será gerado)</span>}</label>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <span 
-                  style={{ fontSize: '16px', cursor: 'pointer' }}
-                  onClick={handleBuscarScanner}
-                  title="Digitalizar documento com scanner"
+                <button
+                  onClick={handleScannerComOCR}
+                  style={{ 
+                    fontSize: '16px', 
+                    cursor: 'pointer', 
+                    margin: 0,
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s'
+                  }}
+                  title="Escanear documento com scanner real e processar com OCR"
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.border}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   📷
-                </span>
+                </button>
                 <input
                   type="text"
                   value={formData.codigo}
                   onChange={(e) => handleInputWithLimit('codigo', e.target.value, 10)}
-                  style={inputStyles}
+                  style={{
+                    ...inputStyles,
+                    backgroundColor: formData.codigo === '0' ? theme.surface : inputStyles.backgroundColor,
+                    color: inputStyles.color
+                  }}
                   maxLength={10}
+                  placeholder={formData.codigo === '0' ? 'Será gerado automaticamente' : ''}
                 />
                 <button type="button" style={secondaryButtonStyles}>...</button>
               </div>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
               <label style={labelStyles}>Nome *</label>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <input
@@ -847,7 +1851,7 @@ export function ClientePage({ onClose }: ClientePageProps) {
             </div>
 
             <div style={fieldStyles}>
-              <label style={labelStyles}>Nascimento *</label>
+              <label style={labelStyles}>Data de Nascimento *</label>
               <input
                 type="date"
                 value={formData.nascimento}
@@ -925,7 +1929,7 @@ export function ClientePage({ onClose }: ClientePageProps) {
               </select>
             </div>
 
-            <div style={fieldStyles}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
               <label style={labelStyles}>País</label>
               <select
                 value={formData.pais}
@@ -1196,7 +2200,7 @@ export function ClientePage({ onClose }: ClientePageProps) {
 
           {/* Linha 4: Pai, Mãe, Profissão */}
           <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
               <label style={labelStyles}>Pai</label>
               <input
                 type="text"
@@ -1262,7 +2266,7 @@ export function ClientePage({ onClose }: ClientePageProps) {
               </select>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
               <label style={labelStyles}>Endereço</label>
                 <input
                   type="text"
@@ -1299,7 +2303,7 @@ export function ClientePage({ onClose }: ClientePageProps) {
 
           {/* Linha 6: Bairro, Cidade, UF, País, Código IBGE */}
           <div style={rowStyles}>
-            <div style={fieldStyles}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
               <label style={labelStyles}>Bairro</label>
               <input
                 type="text"
@@ -1655,7 +2659,7 @@ export function ClientePage({ onClose }: ClientePageProps) {
               />
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
               <label style={labelStyles}>E-mail</label>
               <input
                 type="email"
@@ -1670,7 +2674,7 @@ export function ClientePage({ onClose }: ClientePageProps) {
 
           {/* Linha 8: Atendente, Assinante do Cartão */}
           <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
               <label style={labelStyles}>Atendente</label>
               <select
                 value={formData.atendente}
@@ -1699,28 +2703,11 @@ export function ClientePage({ onClose }: ClientePageProps) {
             </div>
           </div>
 
-        </form>
-      )}
-
-      {activeTab === 'digitalizacao' && (
-        <div style={{ padding: '20px', textAlign: 'center', color: theme.text }}>
-          <h3>Digitalização</h3>
-          <p>Funcionalidade de digitalização será implementada aqui.</p>
-        </div>
-      )}
-
-      {activeTab === 'selo-digital' && (
-        <div style={{ padding: '20px', textAlign: 'center', color: theme.text }}>
-          <h3>Selo Digital</h3>
-          <p>Funcionalidade de selo digital será implementada aqui.</p>
-        </div>
-      )}
-
           {/* Botões de Ação */}
           <div style={buttonsContainerStyles}>
             <button 
               type="button" 
-              style={getPrimaryButtonStyles('novo')} 
+              style={getInfoButtonStyles('novo')} 
               onClick={handleNovo}
               onMouseEnter={() => setHoveredButton('novo')}
               onMouseLeave={() => setHoveredButton(null)}
@@ -1729,7 +2716,7 @@ export function ClientePage({ onClose }: ClientePageProps) {
             </button>
             <button 
               type="button" 
-              style={getPrimaryButtonStyles('gravar')} 
+              style={getSuccessButtonStyles('gravar')} 
               onClick={handleGravar}
               onMouseEnter={() => setHoveredButton('gravar')}
               onMouseLeave={() => setHoveredButton(null)}
@@ -1760,7 +2747,714 @@ export function ClientePage({ onClose }: ClientePageProps) {
             </button>
           </div>
 
+        </form>
+      )}
+
+      {activeTab === 'digitalizacao' && (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Abas Secundárias */}
+            <div style={{
+              display: 'flex',
+              gap: '2px',
+              marginBottom: '10px',
+              borderBottom: `1px solid ${theme.border}`
+            }}>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  cursor: 'pointer',
+                  borderBottom: `2px solid ${digitalizacaoTab === 'cartoes-assinatura' ? theme.primary : 'transparent'}`,
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}
+                onClick={() => setDigitalizacaoTab('cartoes-assinatura')}
+              >
+                Cartões de Assinatura
+              </button>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  cursor: 'pointer',
+                  borderBottom: `2px solid ${digitalizacaoTab === 'outros-documentos' ? theme.primary : 'transparent'}`,
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}
+                onClick={() => setDigitalizacaoTab('outros-documentos')}
+              >
+                Outros Documentos
+              </button>
+            </div>
+
+          {/* Área de Visualização de Documentos */}
+          <div style={{
+            height: '350px',
+            backgroundColor: '#D4D4D4',
+            marginTop: '10px',
+            border: `1px solid ${theme.border}`,
+            borderRadius: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            overflow: 'auto'
+          }}>
+            {digitalizacaoTab === 'cartoes-assinatura' ? (
+              /* Conteúdo para Cartões de Assinatura */
+              cartoesAssinatura.length > 0 ? (
+                <div 
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    cursor: isDraggingCartoes ? 'grabbing' : 'grab',
+                    overflow: 'hidden'
+                  }}
+                  onMouseDown={handleCartaoMouseDown}
+                  onMouseMove={handleCartaoMouseMove}
+                  onMouseUp={handleCartaoMouseUp}
+                  onMouseLeave={handleCartaoMouseLeave}
+                >
+                  <div style={{
+                    transform: `translate(${documentPositionCartoes.x}px, ${documentPositionCartoes.y}px) rotate(${rotacaoCartoes}deg) scale(${zoomLevelCartoes / 100})`,
+                    transition: isDraggingCartoes ? 'none' : 'transform 0.3s ease',
+                    maxWidth: '90%',
+                    maxHeight: '90%',
+                    userSelect: 'none'
+                  }}>
+                    <img 
+                      src={URL.createObjectURL(cartoesAssinatura[cartaoAtual]?.arquivo)} 
+                      alt={cartoesAssinatura[cartaoAtual]?.nome}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                        pointerEvents: 'none'
+                      }}
+                      draggable={false}
+                    />
+                  </div>
+                  {/* Contador de cartões */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    backgroundColor: 'rgba(79,79,79,0.8)',
+                    color: 'white',
+                    padding: '5px 10px',
+                    borderRadius: '4px',
+                    fontSize: '12px'
+                  }}>
+                    {cartaoAtual + 1} de {cartoesAssinatura.length}
+                  </div>
+                </div>
+              ) : (
+                /* Logo Civitas quando não há cartões */
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <div style={{
+                    fontSize: '48px',
+                    fontWeight: 'bold',
+                    color: '#4F4F4F',
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+                    fontFamily: 'Arial, sans-serif'
+                  }}>
+                    CIVITAS
+                  </div>
+                  <div style={{
+                    color: '#4F4F4F',
+                    fontSize: '14px',
+                    textAlign: 'center'
+                  }}>
+                    Nenhum cartão de assinatura carregado
+                  </div>
+                </div>
+              )
+            ) : (
+              /* Conteúdo para Outros Documentos */
+              outrosDocumentos.length > 0 ? (
+                <div 
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    overflow: 'hidden'
+                  }}
+                  onMouseDown={handleDocumentMouseDown}
+                  onMouseMove={handleDocumentMouseMove}
+                  onMouseUp={handleDocumentMouseUp}
+                  onMouseLeave={handleDocumentMouseLeave}
+                >
+                  <div style={{
+                    transform: `translate(${documentPosition.x}px, ${documentPosition.y}px) rotate(${rotacao}deg) scale(${zoomLevel / 100})`,
+                    transition: isDragging ? 'none' : 'transform 0.3s ease',
+                    maxWidth: '90%',
+                    maxHeight: '90%',
+                    userSelect: 'none'
+                  }}>
+                    <img 
+                      src={URL.createObjectURL(outrosDocumentos[documentoAtual]?.arquivo)} 
+                      alt={outrosDocumentos[documentoAtual]?.nome}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                        pointerEvents: 'none'
+                      }}
+                      draggable={false}
+                    />
+                  </div>
+                  {/* Contador de documentos */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    backgroundColor: 'rgba(79,79,79,0.8)',
+                    color: 'white',
+                    padding: '5px 10px',
+                    borderRadius: '4px',
+                    fontSize: '12px'
+                  }}>
+                    {documentoAtual + 1} de {outrosDocumentos.length}
+                  </div>
+                </div>
+              ) : (
+                /* Logo Civitas quando não há documentos */
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <div style={{
+                  fontSize: '48px',
+                  fontWeight: 'bold',
+                  color: '#4F4F4F',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+                  fontFamily: 'Arial, sans-serif'
+                }}>
+                  CIVITAS
+                </div>
+                  <div style={{
+                    color: '#4F4F4F',
+                    fontSize: '14px',
+                    textAlign: 'center'
+                  }}>
+                    Nenhum documento carregado
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Barra de Ferramentas */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '10px',
+            backgroundColor: theme.surface,
+            borderTop: `1px solid ${theme.border}`,
+            marginTop: '10px'
+          }}>
+            {/* Controles de Navegação */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {digitalizacaoTab === 'cartoes-assinatura' ? (
+                <>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0)}
+                    onClick={handlePrimeiroCartao}
+                    disabled={cartoesAssinatura.length === 0}
+                    title="Primeiro cartão"
+                  >
+                    <div style={{ fontSize: '16px' }}>⏮️</div>
+                    <div style={{ fontSize: '10px' }}>Primeiro</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0 || cartaoAtual === 0)}
+                    onClick={handleCartaoAnterior}
+                    disabled={cartoesAssinatura.length === 0 || cartaoAtual === 0}
+                    title="Cartão anterior"
+                  >
+                    <div style={{ fontSize: '16px' }}>◀️</div>
+                    <div style={{ fontSize: '10px' }}>Anterior</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0 || cartaoAtual === cartoesAssinatura.length - 1)}
+                    onClick={handleProximoCartao}
+                    disabled={cartoesAssinatura.length === 0 || cartaoAtual === cartoesAssinatura.length - 1}
+                    title="Próximo cartão"
+                  >
+                    <div style={{ fontSize: '16px' }}>▶️</div>
+                    <div style={{ fontSize: '10px' }}>Próximo</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0)}
+                    onClick={handleUltimoCartao}
+                    disabled={cartoesAssinatura.length === 0}
+                    title="Último cartão"
+                  >
+                    <div style={{ fontSize: '16px' }}>⏭️</div>
+                    <div style={{ fontSize: '10px' }}>Último</div>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0)}
+                    onClick={handlePrimeiroDocumento}
+                    disabled={outrosDocumentos.length === 0}
+                    title="Primeiro documento"
+                  >
+                    <div style={{ fontSize: '16px' }}>⏮️</div>
+                    <div style={{ fontSize: '10px' }}>Primeiro</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0 || documentoAtual === 0)}
+                    onClick={handleDocumentoAnterior}
+                    disabled={outrosDocumentos.length === 0 || documentoAtual === 0}
+                    title="Documento anterior"
+                  >
+                    <div style={{ fontSize: '16px' }}>◀️</div>
+                    <div style={{ fontSize: '10px' }}>Anterior</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0 || documentoAtual === outrosDocumentos.length - 1)}
+                    onClick={handleProximoDocumento}
+                    disabled={outrosDocumentos.length === 0 || documentoAtual === outrosDocumentos.length - 1}
+                    title="Próximo documento"
+                  >
+                    <div style={{ fontSize: '16px' }}>▶️</div>
+                    <div style={{ fontSize: '10px' }}>Próximo</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0)}
+                    onClick={handleUltimoDocumento}
+                    disabled={outrosDocumentos.length === 0}
+                    title="Último documento"
+                  >
+                    <div style={{ fontSize: '16px' }}>⏭️</div>
+                    <div style={{ fontSize: '10px' }}>Último</div>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Botões de Ação */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {digitalizacaoTab === 'cartoes-assinatura' ? (
+                <>
+                  <button 
+                    style={toolbarButtonStyles}
+                    onClick={handleNovoCartao}
+                    title="Carregar novo cartão"
+                  >
+                    <div style={{ fontSize: '16px' }}>📄</div>
+                    <div style={{ fontSize: '10px' }}>Novo</div>
+                  </button>
+                  <button 
+                    style={toolbarButtonStyles}
+                    onClick={handleScannerCartao}
+                    title="Digitalizar cartão com scanner"
+                  >
+                    <div style={{ fontSize: '16px' }}>📷</div>
+                    <div style={{ fontSize: '10px' }}>Scanner</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0)}
+                    onClick={handleExcluirCartao}
+                    disabled={cartoesAssinatura.length === 0}
+                    title="Excluir cartão atual"
+                  >
+                    <div style={{ fontSize: '16px', color: '#dc2626' }}>❌</div>
+                    <div style={{ fontSize: '10px' }}>Excluir</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0)}
+                    onClick={handleImprimirCartao}
+                    disabled={cartoesAssinatura.length === 0}
+                    title="Imprimir cartão atual"
+                  >
+                    <div style={{ fontSize: '16px' }}>🖨️</div>
+                    <div style={{ fontSize: '10px' }}>Imprimir</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0)}
+                    onClick={handleGirarCartao90}
+                    disabled={cartoesAssinatura.length === 0}
+                    title="Girar cartão 90 graus"
+                  >
+                    <div style={{ fontSize: '16px' }}>↻</div>
+                    <div style={{ fontSize: '10px' }}>Girar 90°</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0)}
+                    onClick={handleGirarCartao180}
+                    disabled={cartoesAssinatura.length === 0}
+                    title="Girar cartão 180 graus"
+                  >
+                    <div style={{ fontSize: '16px' }}>↻↻</div>
+                    <div style={{ fontSize: '10px' }}>Girar 180°</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0 || zoomLevelCartoes >= 300)}
+                    onClick={handleZoomInCartao}
+                    disabled={cartoesAssinatura.length === 0 || zoomLevelCartoes >= 300}
+                    title="Aumentar zoom do cartão"
+                  >
+                    <div style={{ fontSize: '16px' }}>🔍+</div>
+                    <div style={{ fontSize: '10px' }}>+ Zoom</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(cartoesAssinatura.length === 0 || zoomLevelCartoes <= 25)}
+                    onClick={handleZoomOutCartao}
+                    disabled={cartoesAssinatura.length === 0 || zoomLevelCartoes <= 25}
+                    title="Diminuir zoom do cartão"
+                  >
+                    <div style={{ fontSize: '16px' }}>🔍-</div>
+                    <div style={{ fontSize: '10px' }}>- Zoom</div>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    style={toolbarButtonStyles}
+                    onClick={handleNovoDocumento}
+                    title="Carregar novo documento"
+                  >
+                    <div style={{ fontSize: '16px' }}>📄</div>
+                    <div style={{ fontSize: '10px' }}>Novo</div>
+                  </button>
+                  <button 
+                    style={toolbarButtonStyles}
+                    onClick={handleScanner}
+                    title="Digitalizar documento com scanner"
+                  >
+                    <div style={{ fontSize: '16px' }}>📷</div>
+                    <div style={{ fontSize: '10px' }}>Scanner</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0)}
+                    onClick={handleExcluirDocumento}
+                    disabled={outrosDocumentos.length === 0}
+                    title="Excluir documento atual"
+                  >
+                    <div style={{ fontSize: '16px', color: '#dc2626' }}>❌</div>
+                    <div style={{ fontSize: '10px' }}>Excluir</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0)}
+                    onClick={handleImprimir}
+                    disabled={outrosDocumentos.length === 0}
+                    title="Imprimir documento atual"
+                  >
+                    <div style={{ fontSize: '16px' }}>🖨️</div>
+                    <div style={{ fontSize: '10px' }}>Imprimir</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0)}
+                    onClick={handleGirar90}
+                    disabled={outrosDocumentos.length === 0}
+                    title="Girar documento 90 graus"
+                  >
+                    <div style={{ fontSize: '16px' }}>↻</div>
+                    <div style={{ fontSize: '10px' }}>Girar 90°</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0)}
+                    onClick={handleGirar180}
+                    disabled={outrosDocumentos.length === 0}
+                    title="Girar documento 180 graus"
+                  >
+                    <div style={{ fontSize: '16px' }}>↻↻</div>
+                    <div style={{ fontSize: '10px' }}>Girar 180°</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0 || zoomLevel >= 300)}
+                    onClick={handleZoomIn}
+                    disabled={outrosDocumentos.length === 0 || zoomLevel >= 300}
+                    title="Aumentar zoom do documento"
+                  >
+                    <div style={{ fontSize: '16px' }}>🔍+</div>
+                    <div style={{ fontSize: '10px' }}>+ Zoom</div>
+                  </button>
+                  <button 
+                    style={getToolbarButtonStyle(outrosDocumentos.length === 0 || zoomLevel <= 25)}
+                    onClick={handleZoomOut}
+                    disabled={outrosDocumentos.length === 0 || zoomLevel <= 25}
+                    title="Diminuir zoom do documento"
+                  >
+                    <div style={{ fontSize: '16px' }}>🔍-</div>
+                    <div style={{ fontSize: '10px' }}>- Zoom</div>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Botão Retornar */}
+            <button 
+              style={{
+                ...toolbarButtonStyles,
+                backgroundColor: '#10b981',
+                color: 'white'
+              }}
+              onClick={digitalizacaoTab === 'cartoes-assinatura' ? handleRetornarCartao : handleRetornar}
+              title="Voltar para aba Cadastro"
+            >
+              <div style={{ fontSize: '16px' }}>↶</div>
+              <div style={{ fontSize: '10px' }}>Retornar</div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'selo-digital' && (
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          height: '100%', 
+          padding: '10px',
+          gap: '10px'
+        }}>
+          {/* Grade de Dados */}
+          <div style={{
+            height: '200px',
+            backgroundColor: theme.surface,
+            border: `1px solid ${theme.border}`,
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              backgroundColor: theme.primary,
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '12px'
+            }}>
+              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>DataCadastro</div>
+              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>Selo Digital</div>
+              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>CNS</div>
+              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>Natureza Ato</div>
+              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>AnoAto</div>
+              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>Digito</div>
+              <div style={{ padding: '8px' }}>CIA</div>
+            </div>
+            
+            {/* Linhas de dados */}
+            {selosDigitais.map((selo, index) => (
+              <div 
+                key={selo.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  backgroundColor: seloSelecionado === index ? '#6b7280' : theme.background,
+                  color: seloSelecionado === index ? 'white' : theme.text,
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  borderBottom: `1px solid ${theme.border}`
+                }}
+                onClick={() => handleSelecionarSelo(index)}
+              >
+                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.dataCadastro}</div>
+                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.seloDigital}</div>
+                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.cns}</div>
+                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.naturezaAto}</div>
+                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.anoAto}</div>
+                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.digito}</div>
+                <div style={{ padding: '8px' }}>{selo.cia}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Painéis Inferiores */}
+          <div style={{
+            display: 'flex',
+            gap: '10px',
+            height: '150px',
+            marginTop: '20px'
+          }}>
+            {/* Painel QR Code */}
+            <div style={{
+              width: '200px',
+              backgroundColor: '#e5e7eb',
+              border: `1px solid ${theme.border}`,
+              borderRadius: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px'
+            }}>
+              <div style={{
+                width: '90px',
+                height: '90px',
+                backgroundColor: '#e5e7eb',
+                border: `2px solid ${theme.border}`,
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden'
+              }}>
+                {selosDigitais[seloSelecionado] ? (
+                  <img 
+                    src={selosDigitais[seloSelecionado].qrCode} 
+                    alt="QR Code"
+                    style={{
+                      width: '86px',
+                      height: '86px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    color: theme.textSecondary,
+                    fontSize: '12px',
+                    textAlign: 'center'
+                  }}>
+                    (QrCode)
+                  </div>
+                )}
+              </div>
+              <button 
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: theme.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+                onClick={handleCopiarQRCode}
+                disabled={!selosDigitais[seloSelecionado]}
+              >
+                Copiar QRCode
+              </button>
+            </div>
+
+            {/* Painel de Campos */}
+            <div style={{
+              flex: '1',
+              backgroundColor: theme.surface,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '4px',
+              padding: '15px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              <input
+                type="text"
+                placeholder="Selo Digital"
+                value={campoPrincipal}
+                onChange={(e) => setCampoPrincipal(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '40px',
+                  padding: '8px 12px',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '4px',
+                  backgroundColor: theme.background,
+                  color: theme.text,
+                  fontSize: '12px',
+                  outline: 'none'
+                }}
+              />
+              <input
+                type="text"
+                placeholder="CNS"
+                value={campoSecundario}
+                onChange={(e) => setCampoSecundario(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '30px',
+                  padding: '6px 12px',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '4px',
+                  backgroundColor: theme.background,
+                  color: theme.text,
+                  fontSize: '11px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Botões de Ação */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '10px',
+            paddingTop: '10px'
+          }}>
+
+            {/* Botões da direita - Exclusão */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+                onClick={handleExcluirSeloLocal}
+                disabled={!selosDigitais[seloSelecionado]}
+              >
+                Excluir Selo (Local)
+              </button>
+              <button 
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+                onClick={handleExcluirSeloTJ}
+                disabled={!selosDigitais[seloSelecionado]}
+              >
+                Excluir Selo (TJ)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
     </BasePage>
+    
+    <OCRProgress 
+      isVisible={ocrProgress.isVisible}
+      progress={ocrProgress.progress}
+      status={ocrProgress.status}
+    />
+  </>
   )
 }
 

@@ -17,11 +17,14 @@ import { ClientePage } from './pages/ClientePage'
 import { FirmasPage } from './pages/FirmasPage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
+import { SystemStatus } from './components/SystemStatus'
+import { InstanceNotification } from './components/InstanceNotification'
 import { useAccessibility } from './hooks/useAccessibility'
 import { useWindowState } from './hooks/useWindowState'
 import { getRelativeFontSize } from './utils/fontUtils'
 import { announcementService } from './services/AnnouncementService'
 import { WindowProvider, useWindowManager } from './contexts/WindowContext'
+import { singleInstanceService } from './services/SingleInstanceService'
 
 interface User {
   id: string
@@ -87,11 +90,11 @@ function AppContent() {
   // Agora usando WindowManager para múltiplas janelas
 
   // Sistema de múltiplas janelas implementado
-  
 
   // Hooks de acessibilidade e responsividade
   const accessibility = useAccessibility()
   const windowState = useWindowState()
+  
   
   // Sincronizar isDarkMode com o tema do hook de acessibilidade
   useEffect(() => {
@@ -112,8 +115,31 @@ function AppContent() {
       console.log('=== NAVEGAÇÃO INICIADA ===')
       console.log('Página:', pageId)
       console.log('Props:', props)
-      setCurrentPage(pageId)
-      setPageProps(props)
+      
+      // Verificar se a página já está aberta
+      if (singleInstanceService.isOpen(pageId)) {
+        console.log(`🔄 Página ${pageId} já está aberta, fechando e reabrindo na posição original...`)
+        
+        // Fechar a página existente e reabrir na posição original
+        singleInstanceService.close(pageId)
+        
+        // Aguardar um momento para garantir que a página foi fechada
+        setTimeout(() => {
+          setCurrentPage(pageId)
+          setPageProps({ 
+            ...props, 
+            resetToOriginalPosition: true,
+            refreshTrigger: Date.now()
+          })
+        }, 100)
+        
+        // Mostrar notificação
+        announcementService.announce(`Página ${pageId} foi reaberta na posição original`, { priority: 'normal' })
+      } else {
+        console.log(`🆕 Abrindo nova página ${pageId}...`)
+        setCurrentPage(pageId)
+        setPageProps(props)
+      }
     } catch (error) {
       console.error('Erro na navegação:', error)
     }
@@ -122,12 +148,18 @@ function AppContent() {
   const closeCurrentPage = useCallback(() => {
     try {
       console.log('=== FECHANDO PÁGINA ===')
+      
+      if (currentPage) {
+        // Fechar a instância única
+        singleInstanceService.close(currentPage)
+      }
+      
       setCurrentPage(null)
       setPageProps({})
     } catch (error) {
       console.error('Erro ao fechar página:', error)
     }
-  }, [])
+  }, [currentPage])
 
   // Expor funções de navegação globalmente
   useEffect(() => {
@@ -150,6 +182,64 @@ function AppContent() {
       }
     }
   }, [navigateToPage, closeCurrentPage])
+
+  // Função de login simplificada
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+
+    try {
+      // Simular autenticação
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      if (email === 'admin@cartorio.com' && password === 'admin123') {
+        setUser({
+          id: '1',
+          email: 'admin@cartorio.com',
+          name: 'Administrador',
+          role: 'admin'
+        })
+        setIsLoggedIn(true)
+      } else if (email === 'funcionario@cartorio.com' && password === 'func123') {
+        setUser({
+          id: '2',
+          email: 'funcionario@cartorio.com',
+          name: 'Funcionário',
+          role: 'employee'
+        })
+        setIsLoggedIn(true)
+      } else {
+        setError('Credenciais inválidas')
+      }
+    } catch (error) {
+      setError('Erro ao fazer login')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Função de logout
+  const handleLogout = () => {
+    setUser(null)
+    setIsLoggedIn(false)
+    setCurrentPage(null)
+    setPageProps({})
+  }
+
+  // Funções para MovableTabs
+
+  const handleTabClose = (tabId: string) => {
+    setMovableTabs(tabs => tabs.filter(tab => tab.id !== tabId))
+  }
+
+  const handleTabMinimize = (tabId: string) => {
+    setMovableTabs(tabs => 
+      tabs.map(tab => 
+        tab.id === tabId ? { ...tab, isMinimized: !tab.isMinimized } : tab
+      )
+    )
+  }
 
   // Inicializar serviço de anúncios
   useEffect(() => {
@@ -182,7 +272,6 @@ function AppContent() {
     // Definir tema inicial
     if (savedTheme) {
       const isDark = savedTheme === 'dark'
-      setIsDarkMode(isDark)
       document.body.style.background = isDark 
         ? '#121212'
         : '#E1E1E1'
@@ -191,79 +280,13 @@ function AppContent() {
 
   // Monitorar mudanças no tema
 
-  const handleLogin = async () => {
-    setIsLoading(true)
-    setError('')
-    
-    try {
-      // Simular delay de login
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-      // Validação simples
-      if (email === 'admin@cartorio.com' && password === 'admin123') {
-    const userData = {
-      id: '1',
-          email: email,
-          name: 'Administrador',
-          role: 'admin'
-        }
-    
-    setUser(userData)
-    setIsLoggedIn(true)
-        localStorage.setItem('user', JSON.stringify(userData))
-        localStorage.setItem('token', 'fake-jwt-token')
-        
-        console.log('Login realizado com sucesso:', userData)
-      } else if (email === 'funcionario@cartorio.com' && password === 'func123') {
-        const userData = {
-          id: '2',
-          email: email,
-          name: 'Funcionário',
-          role: 'funcionario'
-        }
-        
-        setUser(userData)
-        setIsLoggedIn(true)
-        localStorage.setItem('user', JSON.stringify(userData))
-        localStorage.setItem('token', 'fake-jwt-token')
-        
-        console.log('Login realizado com sucesso:', userData)
-    } else {
-        setError('Credenciais inválidas')
-      }
-    } catch (err) {
-      setError('Erro ao fazer login')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
-  const handleLogout = () => {
-    setUser(null)
-    setIsLoggedIn(false)
-    localStorage.removeItem('user')
-  }
 
   // Funções para gerenciar abas móveis
   const handleTabUpdate = (updatedTabs: any[]) => {
     setMovableTabs(updatedTabs)
   }
 
-  const handleTabClose = (tabId: string) => {
-    setMovableTabs(tabs => tabs.filter(tab => tab.id !== tabId))
-  }
-
-  const handleTabMinimize = (tabId: string) => {
-    setMovableTabs(tabs => 
-      tabs.map(tab => 
-        tab.id === tabId 
-          ? { ...tab, isMinimized: !tab.isMinimized }
-          : tab
-      )
-    )
-    localStorage.removeItem('token')
-    console.log('Logout realizado')
-  }
 
   const navigateToMaternidade = () => {
     setShowPasswordPrompt(true)
@@ -289,6 +312,16 @@ function AppContent() {
   function MainSystem() {
     const accessibilityTheme = accessibility.getTheme()
     const isDark = accessibility.currentTheme === 'dark'
+    
+    
+    // Aguardar o tema estar carregado
+    if (!accessibility.isThemeLoaded || !accessibilityTheme || !accessibility.currentTheme) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-lg">Carregando sistema...</div>
+        </div>
+      )
+    }
     const theme = {
       background: accessibilityTheme.background,
       cardBg: accessibilityTheme.surface,
@@ -315,17 +348,18 @@ function AppContent() {
         label: 'Cadastros',
         icon: '',
         submenu: [
-          { id: 'cliente', label: 'Cliente', icon: '', onClick: () => {
-            console.log('✅ CLIENTE CLICADO! Abrindo janela...')
-            const windowId = `cliente-${Date.now()}`
-            openWindow({
-              id: windowId,
-              title: 'Cliente',
-              component: ClientePage,
-              props: {}
-            })
-            console.log('✅ Janela de Cliente aberta!')
-          } },
+            { id: 'cliente', label: 'Cliente', icon: '', onClick: () => {
+              console.log('✅ CLIENTE CLICADO! Abrindo janela...')
+              const windowId = `cliente-${Date.now()}`
+              openWindow({
+                id: windowId,
+                type: 'cliente',
+                title: 'Cliente',
+                component: ClientePage,
+                props: {}
+              })
+              console.log('✅ Janela de Cliente aberta!')
+            } },
           { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => (window as any).navigateToPage?.('cartorio-seade') },
           { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => (window as any).navigateToPage?.('dnv-bloqueadas') },
           { id: 'oficios-mandados', label: 'Ofícios e Mandados', icon: '', onClick: () => (window as any).navigateToPage?.('oficios-mandados') },
@@ -725,21 +759,23 @@ function AppContent() {
 
     // Configuração do Menu de Ícones (Menu 2) - Ícones de acesso rápido
     const iconMenuItems = [
-      { id: 'cadastro-cliente', label: 'Cadastro de Cliente', icon: '👤', onClick: () => {
-        console.log('✅ ÍCONE CADASTRO CLIENTE CLICADO! Abrindo janela...')
-        const windowId = `cliente-${Date.now()}`
-        openWindow({
-          id: windowId,
-          title: 'Cliente',
-          component: ClientePage,
-          props: {}
-        })
-        console.log('✅ Janela de Cliente aberta!')
-      } },
+        { id: 'cadastro-cliente', label: 'Cadastro de Cliente', icon: '👤', onClick: () => {
+          console.log('✅ ÍCONE CADASTRO CLIENTE CLICADO! Abrindo janela...')
+          const windowId = `cliente-${Date.now()}`
+          openWindow({
+            id: windowId,
+            type: 'cliente',
+            title: 'Cliente',
+            component: ClientePage,
+            props: {}
+          })
+          console.log('✅ Janela de Cliente aberta!')
+        } },
       { id: 'firmas', label: 'Firmas', icon: '✍️', onClick: () => {
         console.log('✅ FIRMAS CLICADO! Abrindo janela...')
         openWindow({
           id: `firmas-${Date.now()}`,
+          type: 'firmas',
           title: 'Firmas',
           component: FirmasPage,
           props: { onClose: () => {} }
@@ -882,7 +918,7 @@ function AppContent() {
         {showAccessibilitySettings && (
           <AccessibilitySettingsPage 
             onClose={() => setShowAccessibilitySettings(false)}
-            isDarkMode={isDarkMode}
+            isDarkMode={isDark}
           />
         )}
 
@@ -1204,7 +1240,7 @@ function AppContent() {
           </div>
         )}
         
-        <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+        <form onSubmit={(e) => { e.preventDefault(); handleLogin(e); }}>
         <div style={{ marginBottom: '24px' }}>
           <label 
             htmlFor="email-input"
@@ -1337,6 +1373,8 @@ function App() {
   return (
     <WindowProvider>
       <AppContent />
+      <SystemStatus showDetails={false} position="bottom-left" />
+      <InstanceNotification position="top-left" />
     </WindowProvider>
   )
 }

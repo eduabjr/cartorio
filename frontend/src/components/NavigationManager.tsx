@@ -6,6 +6,8 @@ import { ConfiguracoesPage } from '../pages/ConfiguracoesPage'
 import { ConfiguracaoSistemaPage } from '../pages/ConfiguracaoSistemaPage'
 import { RecepcaoArquivoMaternidade } from './RecepcaoArquivoMaternidade'
 import { GenericModulePage } from '../pages/GenericModulePage'
+import { SingleInstanceWindow } from './SingleInstanceWindow'
+import { singleInstanceService } from '../services/SingleInstanceService'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useResponsive } from '../hooks/useResponsive'
 
@@ -227,7 +229,18 @@ export function NavigationManager({ isDarkMode, user, currentPage, pageProps, on
       ...config.props
     }
 
-    return <Component {...commonProps} />
+    // Usar sistema de instância única
+    return (
+      <SingleInstanceWindow
+        type={currentPage}
+        component={Component}
+        props={commonProps}
+        onClose={onClosePage}
+        onRefresh={() => {
+          console.log(`🔄 Página ${currentPage} foi atualizada`)
+        }}
+      />
+    )
   }
 
   return (

@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react'
 export interface WindowInstance {
   id: string
   title: string
+  type: string // Tipo da janela para controle de instância única
   component: React.ComponentType<any>
   props: any
   position: { x: number; y: number }
@@ -15,12 +16,14 @@ interface WindowContextType {
   windows: WindowInstance[]
   openWindow: (window: Omit<WindowInstance, 'position' | 'zIndex' | 'isMinimized' | 'isMaximized'>) => void
   closeWindow: (id: string) => void
+  closeWindowByType: (type: string) => void
   bringToFront: (id: string) => void
   updateWindowPosition: (id: string, position: { x: number; y: number }) => void
   toggleMinimize: (id: string) => void
   toggleMaximize: (id: string) => void
   getNextZIndex: () => number
   getNextPosition: () => { x: number; y: number }
+  isWindowTypeOpen: (type: string) => boolean
 }
 
 const WindowContext = createContext<WindowContextType | undefined>(undefined)
@@ -52,23 +55,60 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
   }, [windowCounter])
 
   const openWindow = useCallback((windowData: Omit<WindowInstance, 'position' | 'zIndex' | 'isMinimized' | 'isMaximized'>) => {
-    const position = getNextPosition()
-    const zIndex = getNextZIndex()
+    // Verificar se já existe uma janela do mesmo tipo
+    const existingWindow = windows.find(w => w.type === windowData.type)
     
-    const newWindow: WindowInstance = {
-      ...windowData,
-      position,
-      zIndex,
-      isMinimized: false,
-      isMaximized: false
-    }
+    if (existingWindow) {
+      console.log(`🔄 Janela do tipo '${windowData.type}' já está aberta, fechando e reabrindo na posição original...`)
+      
+      // Fechar a janela existente
+      setWindows(prev => prev.filter(w => w.id !== existingWindow.id))
+      
+      // Aguardar um momento e abrir nova janela na posição original
+      setTimeout(() => {
+        const originalPosition = { x: 100, y: 150 } // Posição original
+        const zIndex = getNextZIndex()
+        
+        const newWindow: WindowInstance = {
+          ...windowData,
+          position: originalPosition,
+          zIndex,
+          isMinimized: false,
+          isMaximized: false
+        }
 
-    setWindows(prev => [...prev, newWindow])
-  }, [getNextPosition, getNextZIndex])
+        setWindows(prev => [...prev, newWindow])
+        console.log(`✅ Nova janela '${windowData.type}' aberta na posição original`)
+      }, 100)
+    } else {
+      // Nova janela - usar posição sequencial
+      const position = getNextPosition()
+      const zIndex = getNextZIndex()
+      
+      const newWindow: WindowInstance = {
+        ...windowData,
+        position,
+        zIndex,
+        isMinimized: false,
+        isMaximized: false
+      }
+
+      setWindows(prev => [...prev, newWindow])
+      console.log(`🆕 Nova janela '${windowData.type}' aberta`)
+    }
+  }, [windows, getNextPosition, getNextZIndex])
 
   const closeWindow = useCallback((id: string) => {
     setWindows(prev => prev.filter(window => window.id !== id))
   }, [])
+
+  const closeWindowByType = useCallback((type: string) => {
+    setWindows(prev => prev.filter(window => window.type !== type))
+  }, [])
+
+  const isWindowTypeOpen = useCallback((type: string) => {
+    return windows.some(window => window.type === type)
+  }, [windows])
 
   const bringToFront = useCallback((id: string) => {
     const newZIndex = getNextZIndex()
@@ -116,12 +156,14 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
       windows,
       openWindow,
       closeWindow,
+      closeWindowByType,
       bringToFront,
       updateWindowPosition,
       toggleMinimize,
       toggleMaximize,
       getNextZIndex,
-      getNextPosition
+      getNextPosition,
+      isWindowTypeOpen
     }}>
       {children}
     </WindowContext.Provider>

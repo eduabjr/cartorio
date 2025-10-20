@@ -7,32 +7,81 @@ interface Props {
 interface State {
   hasError: boolean
   error?: Error
+  retryCount: number
 }
 
 class ProtectedApp extends Component<Props, State> {
+  private maxRetries = 3
+  private retryTimeout: NodeJS.Timeout | null = null
+
   public state: State = {
-    hasError: false
+    hasError: false,
+    retryCount: 0
   }
 
   public static getDerivedStateFromError(error: Error): State {
     // Atualiza o state para mostrar a UI de fallback na próxima renderização
-    return { hasError: true, error }
+    return { hasError: true, error, retryCount: 0 }
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Sistema capturou um erro:', error, errorInfo)
+    console.error('🚨 Sistema capturou um erro:', error, errorInfo)
     
     // Salvar erro no localStorage para debug
     localStorage.setItem('lastError', JSON.stringify({
       message: error.message,
       stack: error.stack,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      retryCount: this.state.retryCount
     }))
+
+    // Tentar recuperação automática para erros não críticos
+    this.attemptRecovery(error)
+  }
+
+  private attemptRecovery = (error: Error) => {
+    // Não tenta recuperar erros críticos
+    if (this.isCriticalError(error)) {
+      console.error('🚨 Erro crítico detectado, não tentando recuperação automática')
+      return
+    }
+
+    if (this.state.retryCount < this.maxRetries) {
+      this.retryTimeout = setTimeout(() => {
+        console.log(`🔄 Tentativa de recuperação do sistema ${this.state.retryCount + 1}/${this.maxRetries}`)
+        this.setState(prevState => ({
+          hasError: false,
+          error: undefined,
+          retryCount: prevState.retryCount + 1
+        }))
+      }, 2000 * (this.state.retryCount + 1)) // Delay crescente
+    }
+  }
+
+  private isCriticalError = (error: Error): boolean => {
+    const criticalErrors = [
+      'ChunkLoadError',
+      'TypeError',
+      'ReferenceError',
+      'SyntaxError'
+    ]
+    
+    return criticalErrors.some(errorType => 
+      error.name === errorType || error.message.includes(errorType)
+    )
   }
 
   private handleRestore = () => {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout)
+    }
+    
     // Tentar restaurar o sistema
-    this.setState({ hasError: false, error: undefined })
+    this.setState({ 
+      hasError: false, 
+      error: undefined,
+      retryCount: 0
+    })
     
     // Limpar erro salvo
     localStorage.removeItem('lastError')
@@ -43,7 +92,14 @@ class ProtectedApp extends Component<Props, State> {
     window.location.reload()
   }
 
+  componentWillUnmount() {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout)
+    }
+  }
+
   public render() {
+    
     if (this.state.hasError) {
       return (
         <div style={{
@@ -91,13 +147,28 @@ class ProtectedApp extends Component<Props, State> {
             
             <p style={{ 
               fontSize: '16px', 
-              margin: '0 0 24px 0', 
+              margin: '0 0 16px 0', 
               color: '#94a3b8',
               lineHeight: '1.6'
             }}>
               O sistema detectou um erro e foi protegido automaticamente.
               Isso evita que o sistema trave completamente.
             </p>
+
+            {this.state.retryCount > 0 && (
+              <p style={{ 
+                fontSize: '14px', 
+                margin: '0 0 24px 0', 
+                color: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: '8px',
+                padding: '12px',
+                textAlign: 'center'
+              }}>
+                🔄 Tentativa de recuperação: {this.state.retryCount}/{this.maxRetries}
+              </p>
+            )}
 
             {this.state.error && (
               <div style={{
