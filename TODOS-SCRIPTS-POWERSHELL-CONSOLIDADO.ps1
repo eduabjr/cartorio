@@ -226,26 +226,16 @@ do {
             Write-Host "========================================" -ForegroundColor Green
             Write-Host ""
             
-            $message = Read-Host "Digite a mensagem do commit (ou Enter para automático)"
-            if ([string]::IsNullOrWhiteSpace($message)) {
-                $message = "Update automático - $(Get-Date -Format 'dd/MM/yyyy HH:mm')"
-            }
+            Write-Host "Executando push automatico usando npm run push:quick..." -ForegroundColor Yellow
+            Write-Host ""
+            
+            # Executa o comando npm run push:quick
+            npm run push:quick
             
             Write-Host ""
-            Write-Host "Adicionando arquivos..." -ForegroundColor Yellow
-            git add .
-            
-            Write-Host "Fazendo commit: $message" -ForegroundColor Yellow
-            git commit -m $message
-            
-            Write-Host "Enviando para GitHub..." -ForegroundColor Yellow
-            git push origin master
-            
             if ($LASTEXITCODE -eq 0) {
-                Write-Host ""
                 Write-Host "✅ Push realizado com sucesso!" -ForegroundColor Green
             } else {
-                Write-Host ""
                 Write-Host "❌ Erro no push!" -ForegroundColor Red
             }
             
