@@ -235,17 +235,27 @@ export function useAccessibility() {
     const savedSettings = localStorage.getItem('accessibility-settings')
     const savedTheme = localStorage.getItem('theme')
     
+    console.log('🔍 useAccessibility - Carregando configurações:', {
+      savedSettings,
+      savedTheme,
+      currentTheme: currentTheme
+    })
+    
     if (savedSettings) {
       try {
         const parsed = JSON.parse(savedSettings)
         setSettings(prev => ({ ...prev, ...parsed }))
+        console.log('✅ Configurações de acessibilidade carregadas:', parsed)
       } catch (e) {
-        console.warn('Erro ao carregar configurações de acessibilidade')
+        console.warn('❌ Erro ao carregar configurações de acessibilidade:', e)
       }
     }
     
     if (savedTheme && ['light', 'dark', 'highContrast'].includes(savedTheme)) {
       setCurrentTheme(savedTheme as 'light' | 'dark' | 'highContrast')
+      console.log('✅ Tema carregado do localStorage:', savedTheme)
+    } else {
+      console.log('⚠️ Nenhum tema salvo encontrado, usando padrão: light')
     }
     
     setIsThemeLoaded(true)
@@ -256,6 +266,12 @@ export function useAccessibility() {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     const prefersHighContrast = window.matchMedia('(prefers-contrast: high)')
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
+
+    console.log('🔍 useAccessibility - Detectando preferências do sistema:', {
+      prefersDark: prefersDark.matches,
+      prefersHighContrast: prefersHighContrast.matches,
+      reducedMotion: mediaQuery.matches
+    })
 
     // Só aplicar preferências do sistema se não houver configurações salvas
     const savedSettings = localStorage.getItem('accessibility-settings')
@@ -268,9 +284,15 @@ export function useAccessibility() {
 
       if (prefersHighContrast.matches) {
         setCurrentTheme('highContrast')
+        console.log('✅ Aplicando tema highContrast baseado nas preferências do sistema')
       } else if (prefersDark.matches) {
         setCurrentTheme('dark')
+        console.log('✅ Aplicando tema dark baseado nas preferências do sistema')
+      } else {
+        console.log('✅ Usando tema light (padrão)')
       }
+    } else {
+      console.log('⚠️ Configurações salvas encontradas, não aplicando preferências do sistema')
     }
 
     // Listeners para mudanças
@@ -493,7 +515,10 @@ export function useAccessibility() {
   const getTheme = () => {
     // Se o tema for highContrast, usar o tema light como base
     const themeKey = currentTheme === 'highContrast' ? 'light' : currentTheme
-    return professionalThemes[themeKey as keyof typeof professionalThemes]
+    const themeColors = professionalThemes[themeKey as keyof typeof professionalThemes]
+    
+    // Retornar uma cópia do objeto para garantir que React detecte mudanças
+    return { ...themeColors }
   }
 
   const getFontSize = () => {

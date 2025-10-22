@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
 import { announcementService } from '../services/AnnouncementService'
@@ -18,7 +18,7 @@ interface IconMenuProps {
 
 export function IconMenu({ items, onOpenSideMenu }: IconMenuProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
-  const { getTheme } = useAccessibility()
+  const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   const { getProtectedStyles } = useMenuProtection('ICON_MENU')
 

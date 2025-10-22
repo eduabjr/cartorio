@@ -30,7 +30,7 @@ export function TextualMenu({ items }: TextualMenuProps) {
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const { getTheme } = useAccessibility()
+  const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   const { getProtectedStyles, validateAndCorrectZIndex } = useMenuProtection('TEXTUAL_MENU')
 

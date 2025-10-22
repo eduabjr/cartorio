@@ -1839,7 +1839,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </div>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 1.5' }}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
               <label style={labelStyles}>Órgão RG</label>
               <input
                 type="text"
@@ -2621,13 +2621,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             <div style={fieldStyles}>
-              <label style={labelStyles}>Código IBGE</label>
+              <label style={labelStyles}>Código País/IBGE</label>
               <input
                 type="text"
                 value={formData.codigoIbge}
                 onChange={(e) => handleInputWithLimit('codigoIbge', e.target.value, 10)}
                 style={inputStyles}
                 maxLength={10}
+                placeholder="Código do país ou IBGE"
               />
             </div>
 

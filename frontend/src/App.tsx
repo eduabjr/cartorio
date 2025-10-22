@@ -1139,7 +1139,9 @@ function AppContent() {
           tabIndex={0}
           onClick={() => {
             const newTheme = accessibility.currentTheme === 'dark' ? 'light' : 'dark'
+            console.log('🔄 Botão de tema clicado - Mudando de', accessibility.currentTheme, 'para', newTheme)
             accessibility.setTheme(newTheme)
+            
             // Anunciar apenas se leitor de tela estiver ativo
             if (accessibility.settings.screenReader && window.speechSynthesis) {
               const utterance = new SpeechSynthesisUtterance(
@@ -1189,13 +1191,25 @@ function AppContent() {
           textAlign: 'center',
           marginBottom: '32px'
         }}>
-          <div style={{
-            marginBottom: '16px',
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-            display: 'flex',
-            justifyContent: 'center'
+        <div style={{
+          marginBottom: '16px',
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          <CivitasLogo size={80} color="#2D5A5A" theme={accessibility.currentTheme === 'highContrast' ? 'dark' : accessibility.currentTheme} />
+          {/* Logo baseado no tema */}
+          <img 
+            src={accessibility.currentTheme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+            alt="Logo CIVITAS"
+            width={80}
+            height={80}
+            style={{
+              objectFit: 'contain',
+              marginBottom: '16px'
+            }}
+          />
           <span style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}>
             Logo do sistema CIVITAS - Balança de justiça com documento e silhueta de cidade
           </span>
@@ -1205,7 +1219,7 @@ function AppContent() {
           fontSize: getRelativeFontSize(32), 
           fontWeight: '700',
             margin: '0 0 8px 0',
-          color: '#00515c',
+          color: accessibility.currentTheme === 'dark' ? '#ffffff' : '#2D5A5A',
           letterSpacing: '1px',
           textTransform: 'uppercase'
         }}>
