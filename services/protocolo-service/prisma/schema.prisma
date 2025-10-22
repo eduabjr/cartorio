@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Protocolo {
+  id          String   @id @default(uuid())
+  numero      String   @unique
+  data        DateTime @default(now())
+  tipo        String   // lancamento, baixa, cancelamento
+  status      String   // ativo, baixado, cancelado
+  descricao   String?  @db.Text
+  valor       Decimal? @db.Decimal(10, 2)
+  
+  // Dados do protocolo
+  natureza          String?
+  complementoAto    String?
+  comparecente      String?
+  numeroDocumento   String?
+  telefone          String?
+  parteA            String?
+  parteB            String?
+  responsavel       String?
+  previsaoEntrega   DateTime?
+  
+  // Dados do livro
+  termo   String?
+  livro   String?
+  folhas  String?
+  
+  // Valores
+  quantidade       Int?     @default(1)
+  analfabetos      Int?     @default(0)
+  totalAtos        Decimal? @db.Decimal(10, 2)
+  outrosServicos   Decimal? @db.Decimal(10, 2)
+  total            Decimal? @db.Decimal(10, 2)
+  totalPago        Decimal? @db.Decimal(10, 2)
+  
+  // Recibo
+  reciboNome    String?
+  reciboNumero  String?
+  fichaBalcao   String?
+  
+  // Auditoria
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+  criadoPor     String?
+  atualizadoPor String?
+  
+  @@index([numero])
+  @@index([tipo])
+  @@index([status])
+  @@index([data])
+  @@map("protocolos")
+}
+
+model OutroServico {
+  id           String   @id @default(uuid())
+  protocoloId  String?
+  quantidade   Int
+  descricao    String
+  valor        Decimal  @db.Decimal(10, 2)
+  criadoEm     DateTime @default(now())
+  
+  @@map("outros_servicos")
+}
+
+model HistoricoProtocolo {
+  id           String   @id @default(uuid())
+  protocoloId  String
+  acao         String   // criado, atualizado, baixado, cancelado
+  descricao    String?  @db.Text
+  usuario      String?
+  criadoEm     DateTime @default(now())
+  
+  @@index([protocoloId])
+  @@map("historico_protocolos")
+}
+

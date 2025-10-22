@@ -1,0 +1,64 @@
+# Docker Compose para Ambiente de Desenvolvimento
+version: '3.8'
+
+services:
+  # Banco de dados MySQL para desenvolvimento
+  mysql:
+    image: mysql:8.0
+    container_name: cartorio-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: dev123
+      MYSQL_DATABASE: cartorio_dev
+      MYSQL_USER: cartorio_dev
+      MYSQL_PASSWORD: dev123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - cartorio-dev-network
+
+  # Redis para desenvolvimento
+  redis:
+    image: redis:7-alpine
+    container_name: cartorio-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - cartorio-dev-network
+
+  # Serviços com hot-reload para desenvolvimento
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: cartorio-auth-service-dev
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=mysql://cartorio_dev:dev123@mysql:3306/cartorio_dev
+      - PORT=3001
+      - JWT_SECRET=dev-jwt-secret-key
+    volumes:
+      - ./services/auth-service/src:/app/src
+      - ./services/auth-service/package.json:/app/package.json
+    depends_on:
+      - mysql
+    networks:
+      - cartorio-dev-network
+    command: npm run start:dev
+
+volumes:
+  mysql_dev_data:
+  redis_dev_data:
+
+networks:
+  cartorio-dev-network:
+    driver: bridge

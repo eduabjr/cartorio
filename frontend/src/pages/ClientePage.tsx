@@ -1839,7 +1839,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </div>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 0.5' }}>
+            <div style={{ ...fieldStyles, gridColumn: 'span 1.5' }}>
               <label style={labelStyles}>Órgão RG</label>
               <input
                 type="text"

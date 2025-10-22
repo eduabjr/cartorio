@@ -1,0 +1,65 @@
+groups:
+  - name: cartorio-alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Serviço {{ $labels.job }} está inativo"
+          description: "O serviço {{ $labels.job }} está inativo há mais de 1 minuto"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alta taxa de erro no serviço {{ $labels.job }}"
+          description: "Taxa de erro de 5xx maior que 10% por 2 minutos"
+
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo de resposta alto no serviço {{ $labels.job }}"
+          description: "95º percentil do tempo de resposta maior que 1 segundo"
+
+      - alert: DatabaseConnectionFailed
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Conexão com MySQL falhou"
+          description: "Não é possível conectar ao banco de dados MySQL"
+
+      - alert: RedisConnectionFailed
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Conexão com Redis falhou"
+          description: "Não é possível conectar ao Redis"
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Uso alto de memória"
+          description: "Uso de memória maior que 90%"
+
+      - alert: HighCPUUsage
+        expr: rate(node_cpu_seconds_total{mode="idle"}[5m]) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Uso alto de CPU"
+          description: "Uso de CPU maior que 90%"

@@ -1,0 +1,100 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * 1' # Executa toda segunda-feira às 2h
+
+jobs:
+  # Análise de vulnerabilidades do código
+  code-scan:
+    name: Análise de Segurança do Código
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Instalar dependências
+      run: |
+        npm ci
+        cd services/api-gateway && npm ci
+        cd ../auth-service && npm ci
+        cd ../user-service && npm ci
+
+    - name: Executar audit de segurança
+      run: |
+        npm audit --audit-level=moderate
+        cd services/api-gateway && npm audit --audit-level=moderate
+        cd ../auth-service && npm audit --audit-level=moderate
+        cd ../user-service && npm audit --audit-level=moderate
+
+    - name: Executar CodeQL Analysis
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+
+  # Análise de vulnerabilidades das imagens Docker
+  docker-scan:
+    name: Análise de Segurança das Imagens Docker
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    strategy:
+      matrix:
+        service: [api-gateway, auth-service, user-service]
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Build da imagem
+      run: |
+        cd services/${{ matrix.service }}
+        docker build -t ${{ matrix.service }}:latest .
+
+    - name: Executar Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ matrix.service }}:latest'
+        format: 'sarif'
+        output: 'trivy-results-${{ matrix.service }}.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+
+  # Análise de secrets no código
+  secret-scan:
+    name: Análise de Secrets
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Executar TruffleHog
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified

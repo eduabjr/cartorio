@@ -36,13 +36,15 @@ export function LoginPage() {
         <div className="flex items-center justify-center mb-6">
           <div className="flex items-center space-x-3">
             {currentTheme === 'dark' ? (
-              // No modo dark, mostrar apenas o texto CIVITAS em branco
-              <div>
-                <h1 className="text-2xl font-bold text-white">CIVITAS</h1>
-                <p className="text-sm text-gray-300">Sistema Cartório</p>
-              </div>
+              // No modo dark, usar logo-dark com texto branco
+              <CivitasLogo 
+                size={48} 
+                theme="dark" 
+                showText={true}
+                textColor="#ffffff"
+              />
             ) : (
-              // No modo light, usar o logo-light
+              // No modo light, usar logo-light com texto verde
               <CivitasLogo 
                 size={48} 
                 theme="light" 

@@ -1,0 +1,43 @@
+# Docker Compose Override - Configurações para desenvolvimento
+version: '3.8'
+
+services:
+  # Configurações específicas para desenvolvimento
+  auth-service:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./services/auth-service/src:/app/src
+    command: npm run start:dev
+
+  user-service:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./services/user-service/src:/app/src
+    command: npm run start:dev
+
+  protocolo-service:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./services/protocolo-service/src:/app/src
+    command: npm run start:dev
+
+  cliente-service:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./services/cliente-service/src:/app/src
+    command: npm run start:dev
+
+  api-gateway:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./services/api-gateway/src:/app/src
+    command: npm run start:dev
+
+  nginx:
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro

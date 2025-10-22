@@ -1,0 +1,45 @@
+# Dockerfile para executar testes
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    mysql-client \
+    curl \
+    wget
+
+# Copiar package files
+COPY package*.json ./
+COPY services/api-gateway/package*.json ./services/api-gateway/
+COPY services/auth-service/package*.json ./services/auth-service/
+COPY services/user-service/package*.json ./services/user-service/
+
+# Instalar dependências
+RUN npm ci
+RUN cd services/api-gateway && npm ci
+RUN cd services/auth-service && npm ci
+RUN cd services/user-service && npm ci
+
+# Copiar código fonte
+COPY . .
+
+# Build dos serviços
+RUN cd services/api-gateway && npm run build
+RUN cd services/auth-service && npm run build
+RUN cd services/user-service && npm run build
+
+# Criar usuário para testes
+RUN addgroup -g 1001 -S testuser
+RUN adduser -S testuser -u 1001
+
+# Mudar ownership
+RUN chown -R testuser:testuser /app
+USER testuser
+
+# Script para aguardar serviços estarem prontos
+COPY scripts/wait-for-services.sh /wait-for-services.sh
+RUN chmod +x /wait-for-services.sh
+
+# Comando padrão
+CMD ["npm", "run", "test:ci"]
