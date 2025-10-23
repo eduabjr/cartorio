@@ -2,7 +2,7 @@ FROM node:18-alpine
 WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm ci --only=production
+RUN npm install --omit=dev
 COPY . .
 RUN npx prisma generate
 RUN npm run build

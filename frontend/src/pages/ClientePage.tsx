@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { OCRProgress } from '../components/OCRProgress'
+import { ScannerConfig } from '../components/ScannerConfig'
+import { WebScannerConfig } from '../components/WebScannerConfig'
 import { extractDocumentData, ExtractedData } from '../utils/ocrUtils'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { scannerService } from '../services/ScannerService'
+import { ocrService } from '../services/OCRService'
 import QRCode from 'qrcode'
 // import { useTJSPApi } from '../hooks/useTJSPApi'
 
@@ -83,6 +87,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const [activeTab, setActiveTab] = useState('cadastro')
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState({ isVisible: false, progress: 0, status: '' })
+  const [showScannerConfig, setShowScannerConfig] = useState(false)
+  const [isWebEnvironment, setIsWebEnvironment] = useState(false)
+  
+  // Detectar ambiente (web vs desktop)
+  useEffect(() => {
+    const isElectron = !!(window as any).electronAPI
+    setIsWebEnvironment(!isElectron)
+  }, [])
   
   // Estados para Digitalização
   const [digitalizacaoTab, setDigitalizacaoTab] = useState('cartoes-assinatura')
@@ -415,157 +427,81 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       console.log('🔍 Iniciando Scanner + OCR + Preenchimento Automático...')
       
       // Mostra progresso
-      setOcrProgress({ isVisible: true, progress: 0, status: 'Detectando scanners...' })
+      setOcrProgress({ isVisible: true, progress: 0, status: 'Inicializando scanner...' })
 
-      // 1. DETECTAR SCANNERS DISPONÍVEIS
-      let scanners: any[] = []
+      // 1. INICIALIZAR SERVIÇOS
+      await scannerService.initialize()
+      const scanners = scannerService.getAvailableScanners()
       
-      // Tentar Electron API primeiro (desktop)
-      if (window.electronAPI && window.electronAPI.detectScanners) {
-        try {
-          scanners = await window.electronAPI.detectScanners()
-          console.log('📷 Scanners detectados via Electron:', scanners)
-        } catch (error) {
-          console.log('⚠️ Electron API não disponível, tentando Web APIs...')
-        }
-      }
-
-      // Se não encontrou scanners via Electron, tentar Web APIs
       if (scanners.length === 0) {
-        setOcrProgress({ isVisible: true, progress: 0.1, status: 'Tentando Web APIs...' })
-        
-        // Tentar ImageCapture API
-        try {
-          const mediaDevices = navigator.mediaDevices
-          if (mediaDevices && mediaDevices.getUserMedia) {
-            const stream = await mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            const track = stream.getVideoTracks()[0]
-            
-            // Simular scanner com câmera
-            scanners = [{ name: 'Câmera do Dispositivo', id: 'camera', type: 'camera' }]
-            console.log('📷 Câmera detectada via ImageCapture API')
-            
-            // Parar stream
-            track.stop()
-          }
-        } catch (error) {
-          console.log('⚠️ ImageCapture API não disponível')
-        }
+        throw new Error('Nenhum scanner detectado. Verifique se:\n• O scanner está conectado\n• Os drivers estão instalados\n• O dispositivo está ligado')
       }
 
-      if (scanners.length === 0) {
-        throw new Error('Nenhum scanner ou câmera detectado')
+      setOcrProgress({ isVisible: true, progress: 0.2, status: 'Configurando scanner...' })
+
+      // 2. CONFIGURAR E EXECUTAR SCAN
+      const scanConfig = {
+        resolution: 300,
+        colorMode: 'color' as const,
+        pageSize: 'A4',
+        quality: 90,
+        autoCrop: true,
+        autoDeskew: true,
+        autoRotate: true
       }
 
-      setOcrProgress({ isVisible: true, progress: 0.2, status: 'Iniciando digitalização...' })
-
-      // 2. EXECUTAR SCAN REAL
-      let scanResult = null
+      const scanResult = await scannerService.scanDocument(scanners[0].id, scanConfig)
       
-      if (window.electronAPI && window.electronAPI.scanDocument) {
-        // Usar Electron API para scan real
-        try {
-          scanResult = await window.electronAPI.scanDocument({
-            scannerId: scanners[0].id || 'default',
-            format: 'jpeg',
-            quality: 90,
-            resolution: 300,
-            colorMode: 'color',
-            pageSize: 'A4'
-          })
-          console.log('📷 Scan realizado via Electron:', scanResult)
-        } catch (error) {
-          console.error('❌ Erro no scan via Electron:', error)
-          throw error
-        }
-      } else {
-        // Fallback: usar câmera para capturar imagem
-        setOcrProgress({ isVisible: true, progress: 0.3, status: 'Capturando imagem...' })
-        
-        try {
-          const mediaDevices = navigator.mediaDevices
-          const stream = await mediaDevices.getUserMedia({ 
-            video: { 
-              facingMode: 'environment',
-              width: { ideal: 1920 },
-              height: { ideal: 1080 }
-            } 
-          })
-          
-          const video = document.createElement('video')
-          video.srcObject = stream
-          video.play()
-          
-          // Aguardar carregamento
-          await new Promise(resolve => {
-            video.onloadedmetadata = resolve
-          })
-          
-          // Capturar frame
-          const canvas = document.createElement('canvas')
-          canvas.width = video.videoWidth
-          canvas.height = video.videoHeight
-          const ctx = canvas.getContext('2d')
-          ctx?.drawImage(video, 0, 0)
-          
-          // Converter para blob
-          const blob = await new Promise<Blob>((resolve) => {
-            canvas.toBlob((blob) => {
-              if (blob) resolve(blob)
-            }, 'image/jpeg', 0.9)
-          })
-          
-          // Parar stream
-          stream.getTracks().forEach(track => track.stop())
-          
-          scanResult = {
-            success: true,
-            imageData: blob,
-            format: 'jpeg'
-          }
-          
-          console.log('📷 Imagem capturada via câmera:', scanResult)
-          
-        } catch (error) {
-          console.error('❌ Erro na captura via câmera:', error)
-          throw error
-        }
+      if (!scanResult.success) {
+        throw new Error(scanResult.error || 'Falha na digitalização')
       }
 
-      if (!scanResult || !scanResult.success) {
-        throw new Error('Falha na digitalização')
-      }
+      setOcrProgress({ isVisible: true, progress: 0.5, status: 'Processando com OCR...' })
 
-      setOcrProgress({ isVisible: true, progress: 0.5, status: 'Processando com Tesseract OCR...' })
-
-      // 3. PROCESSAR COM TESSERACT OCR
+      // 3. PROCESSAR COM OCR
       if (!scanResult.imageData) {
         throw new Error('Dados da imagem não disponíveis')
       }
-      
-      // Converter ArrayBuffer para Blob se necessário
-      let imageBlob: Blob
-      if (scanResult.imageData instanceof ArrayBuffer) {
-        imageBlob = new Blob([scanResult.imageData], { type: 'image/jpeg' })
-      } else {
-        imageBlob = scanResult.imageData as Blob
+
+      const ocrResult = await ocrService.processDocument(
+        scanResult.imageData,
+        (progress, status) => {
+          setOcrProgress({ isVisible: true, progress: 0.5 + (progress * 0.3), status })
+        }
+      )
+
+      if (!ocrResult.success) {
+        throw new Error(ocrResult.error || 'Erro no processamento OCR')
       }
-      
-      const dadosExtraidos = await processDocumentOCR(imageBlob)
 
-      setOcrProgress({ isVisible: true, progress: 0.8, status: 'Preenchendo campos...' })
+      setOcrProgress({ isVisible: true, progress: 0.8, status: 'Validando dados...' })
 
-      // 4. PREENCHER CAMPOS AUTOMATICAMENTE
-      fillFormFields(dadosExtraidos)
+      // 4. VALIDAR E FORMATAR DADOS
+      const validation = await ocrService.validateExtractedData(ocrResult.data)
+      const formattedData = ocrService.formatExtractedData(ocrResult.data)
+
+      setOcrProgress({ isVisible: true, progress: 0.9, status: 'Preenchendo campos...' })
+
+      // 5. PREENCHER CAMPOS AUTOMATICAMENTE
+      fillFormFields(formattedData)
 
       setOcrProgress({ isVisible: true, progress: 1.0, status: 'Concluído!' })
 
-      // 5. MOSTRAR RESULTADO
+      // 6. MOSTRAR RESULTADO
       setTimeout(() => {
         setOcrProgress({ isVisible: false, progress: 0, status: '' })
         
-        const camposPreenchidos = Object.keys(dadosExtraidos).filter(key => dadosExtraidos[key as keyof ExtractedData])
-        alert(`✅ Scanner + OCR Concluído!\n\n📋 Campos preenchidos: ${camposPreenchidos.length}\n\n🔍 Dados extraídos:\n${camposPreenchidos.map(campo => `• ${campo}: ${dadosExtraidos[campo as keyof ExtractedData]}`).join('\n')}\n\nVerifique os dados e faça ajustes se necessário.`)
+        const camposPreenchidos = Object.keys(formattedData).filter(key => formattedData[key as keyof ExtractedData])
+        
+        let message = `✅ Scanner + OCR Concluído!\n\n📋 Campos preenchidos: ${camposPreenchidos.length}\n🔍 Confiança: ${ocrResult.confidence}%\n\n`
+        
+        if (validation.warnings.length > 0) {
+          message += `⚠️ Avisos:\n${validation.warnings.map(w => `• ${w}`).join('\n')}\n\n`
+        }
+        
+        message += `📄 Dados extraídos:\n${camposPreenchidos.map(campo => `• ${campo}: ${formattedData[campo as keyof ExtractedData]}`).join('\n')}\n\nVerifique os dados e faça ajustes se necessário.`
+        
+        alert(message)
       }, 1000)
 
     } catch (error) {
@@ -577,20 +513,6 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     }
   }
 
-  // Função auxiliar para processar documento com OCR
-  const processDocumentOCR = async (imageData: Blob): Promise<ExtractedData> => {
-    try {
-      // Usar a função existente de extração de dados
-      const dadosExtraidos = await extractDocumentData(imageData, (progress, status) => {
-        setOcrProgress({ isVisible: true, progress: 0.5 + (progress * 0.3), status })
-      })
-      
-      return dadosExtraidos
-    } catch (error) {
-      console.error('❌ Erro no processamento OCR:', error)
-      throw error
-    }
-  }
 
   // Função auxiliar para preencher campos do formulário
   const fillFormFields = (dadosExtraidos: ExtractedData) => {
@@ -1729,7 +1651,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               <label style={labelStyles}>Código {formData.codigo === '0' && <span style={{ color: theme.textSecondary, fontSize: '12px' }}>(ID será gerado)</span>}</label>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <button
-                  onClick={handleScannerComOCR}
+                  onClick={() => setShowScannerConfig(true)}
                   style={{ 
                     fontSize: '16px', 
                     cursor: 'pointer', 
@@ -3449,6 +3371,26 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       )}
       </div>
     </BasePage>
+    
+    {showScannerConfig && (
+      isWebEnvironment ? (
+        <WebScannerConfig
+          onScan={async (config) => {
+            setShowScannerConfig(false)
+            await handleScannerComOCR()
+          }}
+          onClose={() => setShowScannerConfig(false)}
+        />
+      ) : (
+        <ScannerConfig
+          onScan={async (config) => {
+            setShowScannerConfig(false)
+            await handleScannerComOCR()
+          }}
+          onClose={() => setShowScannerConfig(false)}
+        />
+      )
+    )}
     
     <OCRProgress 
       isVisible={ocrProgress.isVisible}
