@@ -132,6 +132,29 @@ services:
       timeout: 5s
       retries: 3
 
+  # Serviço de Funcionários
+  funcionario-service:
+    build:
+      context: ./services/funcionario-service
+      dockerfile: Dockerfile
+    container_name: cartorio-funcionario-service
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://${MYSQL_USER:-cartorio}:${MYSQL_PASSWORD:-cartorio123}@mysql:3306/${MYSQL_DATABASE:-cartorio}
+      - PORT=3005
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - cartorio-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3005/health"]
+      timeout: 5s
+      retries: 3
+
   # API Gateway
   api-gateway:
     build:
@@ -141,19 +164,21 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - AUTH_SERVICE_URL=http://auth-service:3001
-      - USER_SERVICE_URL=http://user-service:3002
-      - PROTOCOLO_SERVICE_URL=http://protocolo-service:3003
-      - CLIENTE_SERVICE_URL=http://cliente-service:3004
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - auth-service
-      - user-service
-      - protocolo-service
-      - cliente-service
-      - redis
+        environment:
+          - NODE_ENV=production
+          - AUTH_SERVICE_URL=http://auth-service:3001
+          - USER_SERVICE_URL=http://user-service:3002
+          - PROTOCOLO_SERVICE_URL=http://protocolo-service:3003
+          - CLIENTE_SERVICE_URL=http://cliente-service:3004
+          - FUNCIONARIO_SERVICE_URL=http://funcionario-service:3005
+          - REDIS_URL=redis://redis:6379
+        depends_on:
+          - auth-service
+          - user-service
+          - protocolo-service
+          - cliente-service
+          - funcionario-service
+          - redis
     networks:
       - cartorio-network
     healthcheck:

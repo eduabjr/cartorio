@@ -10,6 +10,7 @@ export class GatewayService {
   private readonly userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:3002';
   private readonly protocoloServiceUrl = process.env.PROTOCOLO_SERVICE_URL || 'http://protocolo-service:3003';
   private readonly clienteServiceUrl = process.env.CLIENTE_SERVICE_URL || 'http://cliente-service:3004';
+  private readonly funcionarioServiceUrl = process.env.FUNCIONARIO_SERVICE_URL || 'http://funcionario-service:3005';
 
   constructor(
     private readonly circuitBreaker: CircuitBreakerService,
@@ -100,12 +101,34 @@ export class GatewayService {
     );
   }
 
+  async proxyToFuncionarioService(path: string, method: string = 'GET', data?: any) {
+    return this.circuitBreaker.execute(
+      'funcionario-service',
+      () => this.retryService.execute(async () => {
+        this.logger.log(`Proxying to funcionario-service: ${path}`);
+        const response = await axios({
+          method,
+          url: `${this.funcionarioServiceUrl}${path}`,
+          data,
+          timeout: 5000,
+        });
+        return response.data;
+      }),
+      {
+        failureThreshold: 3,
+        timeout: 8000,
+        resetTimeout: 30000,
+      }
+    );
+  }
+
   getServiceHealth() {
     return {
       'auth-service': this.circuitBreaker.getCircuitState('auth-service'),
       'user-service': this.circuitBreaker.getCircuitState('user-service'),
       'protocolo-service': this.circuitBreaker.getCircuitState('protocolo-service'),
       'cliente-service': this.circuitBreaker.getCircuitState('cliente-service'),
+      'funcionario-service': this.circuitBreaker.getCircuitState('funcionario-service'),
     };
   }
 

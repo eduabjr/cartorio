@@ -14,6 +14,7 @@ import { ConfigOverlay } from './components/ConfigOverlay'
 import { PasswordPrompt } from './components/PasswordPrompt'
 import { MovableTabs } from './components/MovableTabs'
 import { ClientePage } from './pages/ClientePage'
+import { FuncionarioPage } from './pages/FuncionarioPage'
 import { FirmasPage } from './pages/FirmasPage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
@@ -359,6 +360,18 @@ function AppContent() {
                 props: {}
               })
               console.log('✅ Janela de Cliente aberta!')
+            } },
+            { id: 'funcionario', label: 'Funcionário', icon: '', onClick: () => {
+              console.log('✅ FUNCIONÁRIO CLICADO! Abrindo janela...')
+              const windowId = `funcionario-${Date.now()}`
+              openWindow({
+                id: windowId,
+                type: 'funcionario',
+                title: 'Funcionário',
+                component: FuncionarioPage,
+                props: {}
+              })
+              console.log('✅ Janela de Funcionário aberta!')
             } },
           { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => (window as any).navigateToPage?.('cartorio-seade') },
           { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => (window as any).navigateToPage?.('dnv-bloqueadas') },

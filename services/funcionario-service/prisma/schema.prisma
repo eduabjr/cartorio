@@ -1,0 +1,50 @@
+// schema.prisma
+// Schema do banco de dados para funcionários
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Funcionario {
+  id                String   @id @default(cuid())
+  codigo            String   @unique
+  ordemSinalPublico String   @default("99")
+  emAtividade       Boolean  @default(true)
+  nome              String
+  nomeMin           String?
+  prenome           String?
+  endereco          String?
+  bairro            String?
+  cidade            String?
+  cep               String?
+  telefone          String?
+  uf                String?
+  email             String?
+  celular           String?
+  nascimento        DateTime?
+  rg                String?
+  mae               String?
+  cpf               String   @unique
+  pai               String?
+  cargo             String?
+  assinante         Boolean  @default(false)
+  cargoMin          String?
+  cargoCivil        String?
+  cargoMin2         String?
+  salario           Decimal? @db.Decimal(10, 2)
+  comissao          Decimal? @db.Decimal(5, 2)
+  admissao          DateTime?
+  demissao          DateTime?
+  login             String?  @unique
+  senha             String?
+  observacao        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("funcionarios")
+}

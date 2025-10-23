@@ -1606,7 +1606,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
   return (
     <>
-    <BasePage title="Cliente" onClose={onClose} width="900px" height="580px" resetToOriginalPosition={resetToOriginalPosition}>
+    <BasePage title="Cliente" onClose={onClose} width="900px" height="580px" resetToOriginalPosition={resetToOriginalPosition} headerColor="#FF8C00">
       {/* Wrapper para garantir tema correto */}
       <div 
         className={`theme-${currentTheme}`}

@@ -73,6 +73,47 @@ export class GatewayController {
     return this.gatewayService.proxyToClienteService('/clientes', 'POST', data);
   }
 
+  // Rotas de Funcionários
+  @Get('funcionarios')
+  async getFuncionarios(@Req() req: any) {
+    const queryString = req.url.split('?')[1] || '';
+    return this.gatewayService.proxyToFuncionarioService(`/funcionarios?${queryString}`);
+  }
+
+  @Get('funcionarios/:id')
+  async getFuncionario(@Req() req: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToFuncionarioService(`/funcionarios/${id}`);
+  }
+
+  @Post('funcionarios')
+  async createFuncionario(@Body() data: any) {
+    return this.gatewayService.proxyToFuncionarioService('/funcionarios', 'POST', data);
+  }
+
+  @Patch('funcionarios/:id')
+  async updateFuncionario(@Req() req: any, @Body() data: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToFuncionarioService(`/funcionarios/${id}`, 'PATCH', data);
+  }
+
+  @Delete('funcionarios/:id')
+  async deleteFuncionario(@Req() req: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToFuncionarioService(`/funcionarios/${id}`, 'DELETE');
+  }
+
+  @Get('funcionarios/search')
+  async searchFuncionarios(@Req() req: any) {
+    const queryString = req.url.split('?')[1] || '';
+    return this.gatewayService.proxyToFuncionarioService(`/funcionarios/search?${queryString}`);
+  }
+
+  @Get('funcionarios/stats')
+  async getFuncionarioStats() {
+    return this.gatewayService.proxyToFuncionarioService('/funcionarios/stats');
+  }
+
   // Health Check
   @Get('health')
   async health() {

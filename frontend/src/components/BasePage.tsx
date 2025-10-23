@@ -15,21 +15,23 @@ interface BasePageProps {
   isMinimized?: boolean
   isMaximized?: boolean
   resetToOriginalPosition?: boolean
+  headerColor?: string
 }
 
 export function BasePage({ 
   title, 
   onClose, 
   children, 
-  width = '900px', 
-  height = '700px',
+  width = '1000px', 
+  height = '600px',
   draggable = true,
   windowId,
   initialPosition = { x: 100, y: 150 },
   initialZIndex = 50,
   isMinimized = false,
   isMaximized = false,
-  resetToOriginalPosition = false
+  resetToOriginalPosition = false,
+  headerColor
 }: BasePageProps) {
   const { getTheme } = useAccessibility()
   const theme = getTheme()
@@ -149,7 +151,7 @@ export function BasePage({
   }
 
   const headerStyles = {
-    backgroundColor: theme.primary,
+    backgroundColor: headerColor || theme.primary,
     color: 'white',
     padding: '2px 12px',
     display: 'flex',
