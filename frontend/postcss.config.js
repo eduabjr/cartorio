@@ -1,7 +1,7 @@
 export default {
   plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
+    // tailwindcss removido - causava erros
+    // autoprefixer: {},
   },
 }
 

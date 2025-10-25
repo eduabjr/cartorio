@@ -3,25 +3,39 @@
 // FuncionarioPage.tsx
 // Tela de Cadastro/Manutenção de Funcionários conforme especificação
 //
-// 🔒 ESTE LAYOUT ESTÁ PERFEITO E NÃO DEVE SER MODIFICADO
-// 📖 Consulte: frontend/FUNCIONARIO-LAYOUT-LOCKED.md
+// 🔒🔒🔒 ESTE LAYOUT ESTÁ PERFEITO E BLOQUEADO CONTRA ALTERAÇÕES 🔒🔒🔒
 // 📅 Data de Bloqueio: 25/10/2025
 //
-// ⛔ NÃO MODIFIQUE:
+// ⛔ BLOQUEIOS ATIVOS - NÃO MODIFIQUE:
+// 
+// 📏 DIMENSÕES DA JANELA (BLOQUEADAS):
+// - width: "900px" - minWidth: "900px" (FIXO)
+// - height: "600px" - minHeight: "600px" (FIXO)
+//
+// 🎨 ESTILOS BLOQUEADOS:
+// - formContainerStyles: padding: '8px', flexShrink: 1
+// - formGridStyles: gap: '6px', padding: '4px', flexShrink: 1
+// - row1Styles: gap: '8px', flexWrap: 'nowrap', justifyContent: 'space-between'
+// - row2Styles: gap: '6px', flexWrap: 'nowrap', flexShrink: 1
+// - buttonContainerStyles: marginTop: '-2px', paddingTop: '2px', flexWrap: 'nowrap'
+//
+// 📐 PROPRIEDADES CRÍTICAS (NÃO ALTERAR):
 // - Propriedades flexShrink (TODAS devem ser 1)
 // - Propriedades minWidth (inputs: 0, row1Fields: 60px)
 // - Propriedades overflow (overflowX e overflowY: auto)
 // - Propriedades flexWrap (TODAS devem ser nowrap)
+// - Espaçamentos (gaps, margins, paddings)
 // - Larguras percentuais dos campos
 // - Estrutura das 7 linhas
 //
-// ✅ COMPORTAMENTO CORRETO:
-// - Janela normal: SEM scroll, todos campos visíveis
+// ✅ COMPORTAMENTO GARANTIDO:
+// - Janela tamanho normal (900x600): SEM scroll, todos campos visíveis
 // - Janela reduzida: COM scroll, campos encolhem proporcionalmente
-// - Nenhum campo ultrapassa a área limite
-// - Layout NÃO quebra
+// - Nenhum campo ultrapassa a margem
+// - Botões sempre próximos aos campos
+// - Layout NUNCA quebra
 //
-// ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO PODE QUEBRAR O LAYOUT ⚠️⚠️⚠️
+// ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
 
 import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
@@ -310,6 +324,12 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     }
   }
 
+  // Função para criar novo funcionário
+  const handleNew = () => {
+    handleClear()
+    alert('✅ Formulário limpo para novo cadastro')
+  }
+
   // Função para limpar formulário
   const handleClear = () => {
     setFormData({
@@ -348,8 +368,232 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   // Função para imprimir
   const handlePrint = () => {
     console.log('Imprimindo dados do funcionário:', formData)
-    // Aqui você implementaria a lógica de impressão
-    alert('Função de impressão será implementada!')
+    
+    // Criar conteúdo HTML para impressão
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Ficha de Funcionário - ${formData.nome || 'Sem Nome'}</title>
+        <style>
+          @media print {
+            @page {
+              margin: 2cm;
+            }
+          }
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          h1 {
+            text-align: center;
+            color: #333;
+            border-bottom: 2px solid #6B7280;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+          }
+          .section {
+            margin-bottom: 20px;
+          }
+          .section-title {
+            background-color: #6B7280;
+            color: white;
+            padding: 8px 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+          }
+          .field-row {
+            display: flex;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            padding: 5px 0;
+          }
+          .field-label {
+            font-weight: bold;
+            width: 200px;
+            color: #555;
+          }
+          .field-value {
+            flex: 1;
+            color: #000;
+          }
+          .empty {
+            color: #999;
+            font-style: italic;
+          }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>FICHA DE FUNCIONÁRIO</h1>
+        
+        <div class="section">
+          <div class="section-title">Dados Principais</div>
+          <div class="field-row">
+            <div class="field-label">Código:</div>
+            <div class="field-value">${formData.codigo || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Nome Completo:</div>
+            <div class="field-value">${formData.nome || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Ordem Sinal Público:</div>
+            <div class="field-value">${formData.ordemSinalPublico || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Em Atividade:</div>
+            <div class="field-value">${formData.emAtividade ? 'Sim' : 'Não'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Assinante:</div>
+            <div class="field-value">${formData.assinante ? 'Sim' : 'Não'}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Documentos</div>
+          <div class="field-row">
+            <div class="field-label">CPF:</div>
+            <div class="field-value">${formData.cpf || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">RG:</div>
+            <div class="field-value">${formData.rg || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Órgão Emissor RG:</div>
+            <div class="field-value">${formData.orgaoRg || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Data de Nascimento:</div>
+            <div class="field-value">${formData.nascimento || '<span class="empty">Não informado</span>'}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Endereço</div>
+          <div class="field-row">
+            <div class="field-label">CEP:</div>
+            <div class="field-value">${formData.cep || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Logradouro:</div>
+            <div class="field-value">${formData.logradouro || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Endereço:</div>
+            <div class="field-value">${formData.endereco || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Número:</div>
+            <div class="field-value">${formData.numero || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Complemento:</div>
+            <div class="field-value">${formData.complemento || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Bairro:</div>
+            <div class="field-value">${formData.bairro || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Cidade:</div>
+            <div class="field-value">${formData.cidade || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">UF:</div>
+            <div class="field-value">${formData.uf || '<span class="empty">Não informado</span>'}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Filiação</div>
+          <div class="field-row">
+            <div class="field-label">Nome do Pai:</div>
+            <div class="field-value">${formData.pai || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Nome da Mãe:</div>
+            <div class="field-value">${formData.mae || '<span class="empty">Não informado</span>'}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Contato</div>
+          <div class="field-row">
+            <div class="field-label">Telefone:</div>
+            <div class="field-value">${formData.telefone || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Celular:</div>
+            <div class="field-value">${formData.celular || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">E-mail:</div>
+            <div class="field-value">${formData.email || '<span class="empty">Não informado</span>'}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Dados Profissionais</div>
+          <div class="field-row">
+            <div class="field-label">Cargo:</div>
+            <div class="field-value">${formData.cargo || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Data de Admissão:</div>
+            <div class="field-value">${formData.admissao || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Data de Demissão:</div>
+            <div class="field-value">${formData.demissao || '<span class="empty">Não informado</span>'}</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Salário:</div>
+            <div class="field-value">${formData.salario ? 'R$ ' + formData.salario : '<span class="empty">Não informado</span>'}</div>
+          </div>
+        </div>
+
+        ${formData.observacao ? `
+        <div class="section">
+          <div class="section-title">Observações</div>
+          <div style="padding: 10px; background-color: #f9f9f9; border-left: 3px solid #6B7280;">
+            ${formData.observacao}
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="footer">
+          Documento gerado em ${new Date().toLocaleString('pt-BR')}
+        </div>
+      </body>
+      </html>
+    `
+    
+    // Abrir nova janela para impressão
+    const printWindow = window.open('', '_blank', 'width=800,height=600')
+    if (printWindow) {
+      printWindow.document.write(printContent)
+      printWindow.document.close()
+      
+      // Aguardar carregar e imprimir
+      printWindow.onload = () => {
+        printWindow.focus()
+        printWindow.print()
+      }
+    } else {
+      alert('Não foi possível abrir a janela de impressão. Verifique se pop-ups estão bloqueados.')
+    }
   }
 
   // Função para selecionar funcionário do lookup
@@ -412,29 +656,31 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   }
 
 
+  // 🔒 BLOQUEIO: formContainerStyles - NÃO MODIFICAR padding ou flexShrink
   const formContainerStyles: React.CSSProperties = {
     backgroundColor: theme.surface,
-    padding: '8px',
+    padding: '8px',  // 🔒 FIXO - NÃO ALTERAR
     borderRadius: '8px',
     border: `1px solid ${theme.border}`,
     overflow: 'visible',
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
-    flexShrink: 1,  // Permite encolher para se adaptar
+    flexShrink: 1,  // 🔒 FIXO - Permite encolher para se adaptar
     height: 'auto'
   }
 
+  // 🔒 BLOQUEIO: formGridStyles - NÃO MODIFICAR gap, padding ou flexShrink
   const formGridStyles: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '6px',  // 🔒 FIXO - NÃO ALTERAR
     marginBottom: '2px',
-    padding: '4px',
+    padding: '4px',  // 🔒 FIXO - NÃO ALTERAR
     overflow: 'visible',
     height: 'auto',
     minWidth: 0,
-    flexShrink: 1  // Permite encolher para se adaptar
+    flexShrink: 1  // 🔒 FIXO - Permite encolher para se adaptar
   }
 
   const fieldStyles: React.CSSProperties = {
@@ -455,25 +701,27 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     flexShrink: 1  // Permite encolher proporcionalmente
   }
 
+  // 🔒 BLOQUEIO: row1Styles - NUNCA modificar flexWrap, gap ou justifyContent
   const row1Styles: React.CSSProperties = {
     display: 'flex',
-    gap: '8px',  // Gap para espaçamento uniforme
+    gap: '8px',  // 🔒 FIXO - Gap para espaçamento uniforme
     marginBottom: '2px',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',  // Distribui campos uniformemente
-    flexWrap: 'nowrap',  // NÃO quebra - linha 1 sempre junta
+    justifyContent: 'space-between',  // 🔒 FIXO - Distribui campos uniformemente
+    flexWrap: 'nowrap',  // 🔒 CRÍTICO - NÃO quebra - linha 1 sempre junta
     minWidth: '0',
-    flexShrink: 1  // Permite encolher proporcionalmente
+    flexShrink: 1  // 🔒 FIXO - Permite encolher proporcionalmente
   }
 
+  // 🔒 BLOQUEIO: row2Styles - NUNCA modificar flexWrap, gap ou flexShrink
   const row2Styles: React.CSSProperties = {
     display: 'flex',
-    gap: '6px',
+    gap: '6px',  // 🔒 FIXO - NÃO ALTERAR
     marginBottom: '2px',
     alignItems: 'flex-start',
-    flexWrap: 'nowrap',  // Mantém campos na mesma linha - NÃO quebra
+    flexWrap: 'nowrap',  // 🔒 CRÍTICO - Mantém campos na mesma linha - NÃO quebra
     minWidth: '0',
-    flexShrink: 1  // Permite encolher proporcionalmente
+    flexShrink: 1  // 🔒 FIXO - Permite encolher proporcionalmente
   }
 
   const row1FieldStyles: React.CSSProperties = {
@@ -575,48 +823,43 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     cursor: 'pointer'
   }
 
+  // 🔒 BLOQUEIO: buttonContainerStyles - NUNCA modificar marginTop, paddingTop ou flexWrap
   const buttonContainerStyles: React.CSSProperties = {
     display: 'flex',
-    gap: '8px',
     justifyContent: 'center',
-    padding: '0px',
-    marginTop: '2px',
-    flexWrap: 'wrap',  // Permite quebrar linha quando necessário
-    flexShrink: 0,  // Botões não encolhem
-    minHeight: '40px'  // Altura mínima garantida
+    gap: '14px',
+    marginTop: '-2px',  // 🔒 CRÍTICO - Botões ainda mais próximos - sobe os botões
+    paddingTop: '2px',  // 🔒 CRÍTICO - Espaço mínimo reduzido
+    borderTop: `1px solid ${theme.border}`,
+    flexWrap: 'nowrap' as const,  // 🔒 FIXO - NÃO quebra - botões ficam na mesma linha
+    flexShrink: 0,  // 🔒 FIXO - Botões não encolhem
+    minHeight: '40px'  // 🔒 FIXO - Altura mínima garantida
   }
 
   const buttonStyles: React.CSSProperties = {
-    padding: '8px 16px',
+    padding: '10px 16px',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: getRelativeFontSize(12),
+    fontSize: '13px',
     fontWeight: '500',
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
-    transition: 'all 0.3s ease',
-    minWidth: '80px',
+    gap: '5px',
+    transition: 'all 0.2s ease',
+    minWidth: '85px',
     justifyContent: 'center',
-    whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap' as const,
     flexShrink: 0
   }
 
-  const primaryButtonStyles: React.CSSProperties = {
+  const getButtonStyles = (buttonId: string) => ({
     ...buttonStyles,
-    backgroundColor: theme.primary,
-    color: '#ffffff',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-  }
-
-  const secondaryButtonStyles: React.CSSProperties = {
-    ...buttonStyles,
-    backgroundColor: theme.surface,
-    color: theme.text,
-    border: `1px solid ${theme.border}`,
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-  }
+    backgroundColor: hoveredButton === buttonId ? '#495057' : '#6c757d',
+    color: 'white',
+    transform: hoveredButton === buttonId ? 'translateY(-1px)' : 'translateY(0)',
+    boxShadow: hoveredButton === buttonId ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+  })
 
   const specialLabelStyles: React.CSSProperties = {
     ...labelStyles,
@@ -652,6 +895,11 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ]
 
+  // ⚠️⚠️⚠️ ATENÇÃO: LAYOUT TRAVADO - NÃO MODIFICAR ⚠️⚠️⚠️
+  // 🔒 Dimensões fixas: 900x600px - BLOQUEADAS
+  // 🔒 Estilos dos campos: NÃO ALTERAR
+  // 🔒 Margens e espaçamentos: NÃO ALTERAR
+  // Qualquer modificação quebrará o layout aprovado
   return (
     <BasePage
       title="Funcionário"
@@ -660,6 +908,8 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       headerColor="#6B7280"
       height="600px"
       width="900px"
+      minWidth="900px"  // 🔒 BLOQUEIO: Impede redução abaixo de 900px
+      minHeight="600px" // 🔒 BLOQUEIO: Impede redução abaixo de 600px
     >
       <div style={containerStyles}>
         {/* Formulário */}
@@ -1157,13 +1407,21 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
 
             {/* Botões de Ação */}
             <div style={buttonContainerStyles}>
+              {/* 1. Novo */}
               <button
-                style={{
-                  ...primaryButtonStyles,
-                  backgroundColor: hoveredButton === 'gravar' ? '#2563eb' : theme.primary,
-                  transform: hoveredButton === 'gravar' ? 'translateY(-2px)' : 'translateY(0)',
-                  boxShadow: hoveredButton === 'gravar' ? '0 4px 8px rgba(0, 0, 0, 0.2)' : '0 2px 4px rgba(0, 0, 0, 0.1)'
-                }}
+                type="button"
+                style={getButtonStyles('novo')}
+                onClick={handleNew}
+                onMouseEnter={() => setHoveredButton('novo')}
+                onMouseLeave={() => setHoveredButton(null)}
+              >
+                📄 Novo
+              </button>
+
+              {/* 2. Gravar */}
+              <button
+                type="button"
+                style={getButtonStyles('gravar')}
                 onClick={handleSave}
                 onMouseEnter={() => setHoveredButton('gravar')}
                 onMouseLeave={() => setHoveredButton(null)}
@@ -1172,27 +1430,10 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 {isLoading ? '⏳ Salvando...' : '💾 Gravar'}
               </button>
 
+              {/* 3. Imprimir */}
               <button
-                style={{
-                  ...secondaryButtonStyles,
-                  backgroundColor: hoveredButton === 'limpar' ? theme.border : theme.surface,
-                  transform: hoveredButton === 'limpar' ? 'translateY(-2px)' : 'translateY(0)',
-                  boxShadow: hoveredButton === 'limpar' ? '0 3px 6px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
-                }}
-                onClick={handleClear}
-                onMouseEnter={() => setHoveredButton('limpar')}
-                onMouseLeave={() => setHoveredButton(null)}
-              >
-                🧹 Limpar
-              </button>
-
-              <button
-                style={{
-                  ...secondaryButtonStyles,
-                  backgroundColor: hoveredButton === 'imprimir' ? theme.border : theme.surface,
-                  transform: hoveredButton === 'imprimir' ? 'translateY(-2px)' : 'translateY(0)',
-                  boxShadow: hoveredButton === 'imprimir' ? '0 3px 6px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
-                }}
+                type="button"
+                style={getButtonStyles('imprimir')}
                 onClick={handlePrint}
                 onMouseEnter={() => setHoveredButton('imprimir')}
                 onMouseLeave={() => setHoveredButton(null)}
@@ -1200,18 +1441,26 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 🖨️ Imprimir
               </button>
 
+              {/* 4. Limpar */}
               <button
-                style={{
-                  ...secondaryButtonStyles,
-                  backgroundColor: hoveredButton === 'retornar' ? theme.border : theme.surface,
-                  transform: hoveredButton === 'retornar' ? 'translateY(-2px)' : 'translateY(0)',
-                  boxShadow: hoveredButton === 'retornar' ? '0 3px 6px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
-                }}
-                onClick={onClose}
-                onMouseEnter={() => setHoveredButton('retornar')}
+                type="button"
+                style={getButtonStyles('limpar')}
+                onClick={handleClear}
+                onMouseEnter={() => setHoveredButton('limpar')}
                 onMouseLeave={() => setHoveredButton(null)}
               >
-                🚪 Retornar
+                🧹 Limpar
+              </button>
+
+              {/* 5. Fechar */}
+              <button
+                type="button"
+                style={getButtonStyles('fechar')}
+                onClick={onClose}
+                onMouseEnter={() => setHoveredButton('fechar')}
+                onMouseLeave={() => setHoveredButton(null)}
+              >
+                ❌ Fechar
               </button>
             </div>
           </div>

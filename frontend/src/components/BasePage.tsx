@@ -67,13 +67,18 @@ export function BasePage({
     }
   }, [resetToOriginalPosition, initialPosition, initialZIndex, windowId, updateWindowPosition, title])
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!draggable) return
-    
-    // Trazer janela para frente ao clicar
+  // Função para trazer janela para frente
+  const handleBringToFront = () => {
     if (windowId) {
       bringToFront(windowId)
+    } else {
+      // Se não tem windowId, incrementa zIndex localmente
+      setZIndex(prev => prev + 10)
     }
+  }
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!draggable) return
     
     // Só permite arrastar pelo header
     if ((e.target as HTMLElement).closest('[data-draggable-header]')) {
@@ -208,7 +213,13 @@ export function BasePage({
       <div 
         ref={windowRef}
         style={windowStyles}
-        onMouseDown={handleMouseDown}
+        onMouseDown={(e) => {
+          // Trazer janela para frente ao clicar em qualquer lugar
+          handleBringToFront()
+          
+          // Chamar handleMouseDown para arrastar (apenas se for no header)
+          handleMouseDown(e)
+        }}
       >
         {/* Header */}
         <div style={headerStyles} data-draggable-header>

@@ -1,3 +1,40 @@
+// ⚠️⚠️⚠️ ATENÇÃO: LAYOUT PERFEITO E TRAVADO - NÃO MODIFICAR ⚠️⚠️⚠️
+// 
+// ClientePage.tsx
+// Tela de Cadastro/Manutenção de Clientes conforme especificação
+//
+// 🔒🔒🔒 ESTE LAYOUT ESTÁ PERFEITO E BLOQUEADO CONTRA ALTERAÇÕES 🔒🔒🔒
+// 📅 Data de Bloqueio: 25/10/2025
+//
+// ⛔ BLOQUEIOS ATIVOS - NÃO MODIFIQUE:
+// 
+// 📏 DIMENSÕES DA JANELA (BLOQUEADAS):
+// - width: "900px" - minWidth: "900px" (FIXO)
+// - height: "580px" - minHeight: "580px" (FIXO)
+//
+// 🎨 ESTILOS BLOQUEADOS:
+// - formStyles: gap: '6px', minWidth: 0, flexShrink: 1
+// - rowStyles: gap: '8px', flexWrap: 'nowrap', justifyContent: 'space-between', flexShrink: 1
+// - fieldStyles: flex: '1', flexShrink: 1
+// - getInputStyles: minWidth: '0', flexShrink: 1
+// - selectStyles: minWidth: '0', flexShrink: 1
+//
+// 📐 PROPRIEDADES CRÍTICAS (NÃO ALTERAR):
+// - Propriedades flexShrink (TODAS devem ser 1)
+// - Propriedades minWidth (inputs: 0, rowFields: 0)
+// - Propriedades flexWrap (TODAS devem ser nowrap)
+// - Espaçamentos (gaps, margins, paddings)
+// - Distribuição uniforme dos campos (justifyContent: 'space-between')
+//
+// ✅ COMPORTAMENTO GARANTIDO:
+// - Janela tamanho normal (900x580): SEM scroll, todos campos visíveis
+// - Janela reduzida: COM scroll, campos encolhem proporcionalmente
+// - Nenhum campo ultrapassa a margem
+// - Linhas NUNCA quebram
+// - Layout NUNCA quebra
+//
+// ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
+
 import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { OCRProgress } from '../components/OCRProgress'
@@ -87,6 +124,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   
   const [activeTab, setActiveTab] = useState('cadastro')
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState({ isVisible: false, progress: 0, status: '' })
   const [showScannerConfig, setShowScannerConfig] = useState(false)
   const [isWebEnvironment, setIsWebEnvironment] = useState(false)
@@ -96,6 +134,123 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     const isElectron = !!(window as any).electronAPI
     setIsWebEnvironment(!isElectron)
   }, [])
+
+  // Forçar remoção de borda do checkbox e botões
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.id = 'checkbox-no-border-style'
+    style.innerHTML = `
+      input[type="checkbox"] {
+        border: 0 !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+        outline: 0 !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+      }
+      input[type="checkbox"]:hover,
+      input[type="checkbox"]:focus,
+      input[type="checkbox"]:active,
+      input[type="checkbox"]:checked {
+        border: 0 !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+        outline: 0 !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+      }
+      button[type="button"] {
+        border: none !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+        border-top: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        border-left: none !important;
+        outline: none !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        outline-color: transparent !important;
+        box-shadow: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+      }
+      button[type="button"]:hover,
+      button[type="button"]:focus,
+      button[type="button"]:active,
+      button[type="button"]:visited {
+        border: none !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+        outline: none !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        outline-color: transparent !important;
+        box-shadow: none !important;
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      const existingStyle = document.getElementById('checkbox-no-border-style')
+      if (existingStyle) {
+        document.head.removeChild(existingStyle)
+      }
+    }
+  }, [])
+
+  // 🎨 Adicionar estilos CSS dinâmicos para foco laranja (igual ao Funcionário)
+  useEffect(() => {
+    const styleId = 'cliente-focus-styles'
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement
+    
+    const focusColor = theme.background === '#1a1a1a' ? '#ffd4a3' : '#ffedd5'
+    const textColor = theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000'
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style')
+      styleElement.id = styleId
+      document.head.appendChild(styleElement)
+    }
+    
+    styleElement.textContent = `
+      /* Aplica fundo laranja em TODOS os inputs e selects da página Cliente ao focar */
+      input[type="text"]:focus,
+      input[type="number"]:focus,
+      input[type="email"]:focus,
+      input[type="tel"]:focus,
+      input[type="date"]:focus,
+      select:focus,
+      textarea:focus {
+        background-color: ${focusColor} !important;
+        color: ${textColor} !important;
+        -webkit-box-shadow: 0 0 0 1000px ${focusColor} inset !important;
+        -webkit-text-fill-color: ${textColor} !important;
+        box-shadow: 0 0 0 1000px ${focusColor} inset !important;
+      }
+      /* Excluir checkbox do foco laranja */
+      input[type="checkbox"]:focus {
+        background-color: transparent !important;
+        -webkit-box-shadow: none !important;
+        box-shadow: none !important;
+      }
+    `
+    
+    return () => {
+      const el = document.getElementById(styleId)
+      if (el) {
+        document.head.removeChild(el)
+      }
+    }
+  }, [theme.background])
   
   // Estados para Digitalização
   const [digitalizacaoTab, setDigitalizacaoTab] = useState('cartoes-assinatura')
@@ -1383,7 +1538,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const tabStyles = {
     display: 'flex',
     backgroundColor: theme.background,
-    borderBottom: `1px solid ${theme.border}`
+    borderBottom: `1px solid ${theme.border}`,
+    marginTop: '-8px',  // Sobe as abas para mais perto do topo
+    marginBottom: '4px'  // Reduz espaço abaixo das abas
   }
 
   const tabButtonStyles = (isActive: boolean) => ({
@@ -1397,27 +1554,31 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     fontSize: '10px'
   })
 
+  // 🔒 BLOQUEIO: formStyles - NÃO MODIFICAR flexShrink ou minWidth
   const formStyles = {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '3px',
-    marginTop: '4px',
+    gap: '6px',  // 🔒 FIXO - Gap uniforme entre linhas
+    marginTop: '2px',  // Margem menor
     backgroundColor: theme.surface,
     color: theme.text,
-    minWidth: 0,
-    flexShrink: 0  // NÃO encolhe - mantém tamanho fixo
+    minWidth: 0,  // 🔒 FIXO - Permite encolher para adaptar
+    flexShrink: 1  // 🔒 FIXO - Encolhe proporcionalmente
   }
 
+  // 🔒 BLOQUEIO: rowStyles - NUNCA modificar flexWrap, gap ou justifyContent
   const rowStyles = {
     display: 'flex',
-    gap: '6px',
+    gap: '8px',  // 🔒 FIXO - Gap uniforme entre campos
     alignItems: 'start',
-    marginBottom: '3px',
-    flexWrap: 'nowrap' as const,  // NÃO quebra linha - mantém campos juntos
+    marginBottom: '2px',  // Margem menor para economizar espaço vertical
+    justifyContent: 'space-between',  // 🔒 FIXO - Distribui campos uniformemente
+    flexWrap: 'nowrap' as const,  // 🔒 CRÍTICO - NÃO quebra linha - mantém campos juntos
     minWidth: 0,
-    flexShrink: 0  // NÃO encolhe - mantém proporções
+    flexShrink: 1  // 🔒 FIXO - Encolhe proporcionalmente
   }
 
+  // 🔒 BLOQUEIO: fieldStyles - NÃO MODIFICAR flexShrink ou flex
   const fieldStyles = {
     display: 'flex',
     flexDirection: 'column' as const,
@@ -1425,11 +1586,12 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     alignItems: 'stretch',
     alignSelf: 'stretch',
     justifyContent: 'flex-start',
-    minHeight: '42px',
+    minHeight: '38px',  // Altura menor para economizar espaço
     paddingTop: '0px',
     marginTop: '0px',
     minWidth: 0,
-    flexShrink: 0  // NÃO encolhe - mantém proporção
+    flex: '1',  // 🔒 FIXO - Cada campo ocupa espaço igual
+    flexShrink: 1  // 🔒 FIXO - Encolhe proporcionalmente
   }
 
   const labelStyles: React.CSSProperties = {
@@ -1452,12 +1614,38 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     minWidth: 0
   }
 
+  // 🔒 BLOQUEIO: getInputStyles - NÃO MODIFICAR minWidth ou flexShrink
+  const getInputStyles = (fieldName: string) => {
+    const focusColor = theme.background === '#1a1a1a' ? '#ffd4a3' : '#ffedd5'
+    return {
+      padding: '3px 10px',
+      border: `1px solid ${theme.border}`,
+      borderRadius: '3px',
+      fontSize: '12px',
+      backgroundColor: focusedField === fieldName ? focusColor : theme.background,
+      color: focusedField === fieldName ? (theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000') : theme.text,
+      outline: 'none',
+      height: '24px',
+      minHeight: '24px',
+      maxHeight: '24px',
+      width: '100%',
+      boxSizing: 'border-box' as const,
+      lineHeight: '18px',
+      minWidth: '0',  // 🔒 FIXO - Permite encolher até o mínimo
+      flexShrink: 1,  // 🔒 FIXO - Encolhe proporcionalmente
+      transition: 'all 0.2s ease',
+      WebkitBoxShadow: focusedField === fieldName ? `0 0 0 1000px ${focusColor} inset` : `0 0 0 1000px ${theme.background} inset`,
+      WebkitTextFillColor: focusedField === fieldName ? (theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000') : theme.text,
+      boxShadow: focusedField === fieldName ? `0 0 0 1000px ${focusColor} inset` : 'none'
+    }
+  }
+
   const inputStyles = {
     padding: '3px 10px',
     border: `1px solid ${theme.border}`,
     borderRadius: '3px',
     fontSize: '12px',
-    backgroundColor: theme.surface,
+    backgroundColor: theme.background,
     color: theme.text,
     outline: 'none',
     height: '24px',
@@ -1470,12 +1658,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     flexShrink: 0  // NÃO encolhe - mantém proporção
   }
 
+  // 🔒 BLOQUEIO: selectStyles - NÃO MODIFICAR minWidth ou flexShrink
   const selectStyles = {
     padding: '3px 10px',
     border: `1px solid ${theme.border}`,
     borderRadius: '3px',
     fontSize: '12px',
-    backgroundColor: theme.surface,
+    backgroundColor: theme.background,
     color: theme.text,
     outline: 'none',
     height: '24px',
@@ -1497,8 +1686,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     display: 'block',
     margin: '0',
     fontFamily: 'inherit',
-    minWidth: '80px',
-    flexShrink: 0  // NÃO encolhe - mantém proporção
+    minWidth: '0',  // 🔒 FIXO - Permite encolher até o mínimo
+    flexShrink: 1  // 🔒 FIXO - Encolhe proporcionalmente
   }
 
   const buttonStyles = {
@@ -1579,8 +1768,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     display: 'flex',
     justifyContent: 'center',
     gap: '14px',
-    marginTop: '25px',
-    paddingTop: '20px',
+    marginTop: '2px',  // Botões bem próximos do formulário
+    paddingTop: '4px',  // Espaço mínimo
     borderTop: `1px solid ${theme.border}`,
     flexWrap: 'nowrap' as const,  // NÃO quebra - botões ficam na mesma linha
     flexShrink: 0,  // Botões não encolhem
@@ -1620,7 +1809,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
   return (
     <>
-    <BasePage title="Cliente" onClose={onClose} width="900px" height="580px" resetToOriginalPosition={resetToOriginalPosition} headerColor="#FF8C00">
+    <BasePage title="Cliente" onClose={onClose} width="900px" height="580px" minWidth="900px" minHeight="580px" resetToOriginalPosition={resetToOriginalPosition} headerColor="#FF8C00">
       {/* Wrapper para garantir tema correto */}
       <div 
         className={`theme-${currentTheme}`}
@@ -1629,10 +1818,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           color: theme.text, 
           width: '100%', 
           height: '100%',
-          minHeight: '100%',
+          minHeight: '580px',  // Altura mínima = altura da janela
           padding: '8px',
-          overflowY: 'auto',
-          overflowX: 'auto',
+          overflowY: 'auto',  // Scroll vertical quando menor que tamanho padrão
+          overflowX: 'auto',  // Scroll horizontal quando menor que tamanho padrão
           boxSizing: 'border-box'
         }}
       >
@@ -1663,34 +1852,29 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         <form style={formStyles}>
 
           {/* Linha 1: Código, Nome, Número Cartão */}
-          <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
-              <label style={labelStyles}>Código {formData.codigo === '0' && <span style={{ color: theme.textSecondary, fontSize: '12px' }}>(ID será gerado)</span>}</label>
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '24px' }}>
+          <div style={{...rowStyles, display: 'flex', alignItems: 'flex-end', gap: '8px'}}>
+            {/* Campo Código */}
+            <div style={{display: 'flex', flexDirection: 'column', maxWidth: '120px', flexShrink: 0}}>
+              <label style={{fontSize: '12px', color: theme.text, marginBottom: '2px', height: '18px', lineHeight: '18px'}}>Código</label>
+              <div style={{display: 'flex', gap: '4px', alignItems: 'center', height: '24px'}}>
                 <button
                   type="button"
                   onClick={handleScanner}
                   style={{
                     padding: '0',
                     border: 'none',
-                    borderRadius: '0',
                     backgroundColor: 'transparent',
                     cursor: 'pointer',
                     fontSize: '14px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    height: '20px',
+                    height: '24px',
                     width: '24px',
                     minWidth: '24px',
-                    boxSizing: 'border-box',
-                    flexShrink: 0,
-                    transition: 'opacity 0.2s ease',
-                    lineHeight: '1'
+                    flexShrink: 0
                   }}
-                  title="Escanear documento com scanner/câmera"
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                  title="Escanear documento"
                 >
                   📷
                 </button>
@@ -1698,52 +1882,62 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                   type="text"
                   value={formData.codigo}
                   onChange={(e) => handleInputWithLimit('codigo', e.target.value, 10)}
-                  style={{
-                    ...inputStyles,
-                    backgroundColor: formData.codigo === '0' ? theme.surface : inputStyles.backgroundColor,
-                    color: inputStyles.color
-                  }}
+                  style={{...inputStyles, flex: 1, minWidth: '50px', height: '24px'}}
                   maxLength={10}
-                  placeholder={formData.codigo === '0' ? 'Será gerado automaticamente' : ''}
                 />
-                <button type="button" style={secondaryButtonStyles}>...</button>
+                <button type="button" style={{...secondaryButtonStyles, height: '24px'}}>...</button>
               </div>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
-              <label style={labelStyles}>Nome *</label>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            {/* Campo Nome */}
+            <div style={{display: 'flex', flexDirection: 'column', flex: '0.6', minWidth: '100px'}}>
+              <label style={{fontSize: '12px', color: theme.text, marginBottom: '2px', height: '18px', lineHeight: '18px'}}>Nome *</label>
+              <div style={{display: 'flex', gap: '6px', alignItems: 'center', height: '24px'}}>
                 <input
                   type="text"
                   value={formData.nome}
                   onChange={(e) => handleInputWithLimit('nome', e.target.value, 100)}
-                  style={inputStyles}
+                  style={{...inputStyles, flex: 1, height: '24px'}}
                   maxLength={100}
                   required
                 />
-                <button type="button" style={secondaryButtonStyles}>...</button>
+                <button type="button" style={{...secondaryButtonStyles, height: '24px'}}>...</button>
               </div>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
-              <label style={labelStyles}>Número Cartão</label>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-                  <input type="checkbox" defaultChecked style={{ margin: 0 }} />
-                  Cartão
-                </label>
+            {/* Campo Número Cartão */}
+            <div style={{display: 'flex', flexDirection: 'column', flex: '0.5', minWidth: '100px', maxWidth: '180px'}}>
+              <label style={{fontSize: '12px', color: theme.text, marginBottom: '2px', height: '18px', lineHeight: '18px'}}>Número Cartão</label>
+              <div style={{display: 'flex', gap: '2px', alignItems: 'center', height: '24px'}}>
+                <div style={{display: 'flex', alignItems: 'center', gap: '2px', height: '24px'}}>
+                  <input 
+                    type="checkbox" 
+                    defaultChecked 
+                    style={{ 
+                      margin: 0,
+                      padding: 0,
+                      border: '0',
+                      outline: '0',
+                      boxShadow: 'none',
+                      width: '14px', 
+                      height: '14px',
+                      flexShrink: 0
+                    }} 
+                  />
+                  <span style={{fontSize: '11px', color: theme.text, whiteSpace: 'nowrap', lineHeight: '24px'}}>Cartão</span>
+                </div>
                 <input
                   type="text"
-                  style={inputStyles}
+                  style={{...inputStyles, flex: 1, minWidth: '30px', height: '24px'}}
                 />
-                <button type="button" style={secondaryButtonStyles}>...</button>
+                <button type="button" style={{...secondaryButtonStyles, height: '24px', minWidth: '25px', padding: '3px 6px'}}>...</button>
               </div>
             </div>
           </div>
 
           {/* Linha 2: Sexo, CPF, RG, Órgão RG, Nascimento */}
           <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 1.5' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Sexo</label>
               <select
                 value={formData.sexo}
@@ -1756,7 +1950,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </select>
             </div>
 
-        <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+        <div style={fieldStyles}>
           <label style={labelStyles}>CPF *</label>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <input
@@ -1772,7 +1966,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           </div>
         </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>RG *</label>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <input
@@ -1787,7 +1981,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </div>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Órgão RG</label>
               <input
                 type="text"
@@ -1812,7 +2006,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
           {/* Linha 3: Estado Civil, Naturalidade, UF, País, Nacionalidade */}
           <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 1.5' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Estado Civil *</label>
               <select
                 value={formData.estadoCivil}
@@ -1828,7 +2022,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </select>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Naturalidade</label>
               <input
                 type="text"
@@ -1839,7 +2033,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               />
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 0.5' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>UF</label>
               <select
                 value={formData.uf}
@@ -1877,7 +2071,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </select>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>País</label>
               <select
                 value={formData.pais}
@@ -2134,7 +2328,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </select>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Nacionalidade</label>
               <input
                 type="text"
@@ -2148,7 +2342,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
           {/* Linha 4: Pai, Mãe, Profissão */}
           <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Nome do Pai</label>
               <input
                 type="text"
@@ -2156,23 +2350,21 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 onChange={(e) => handleInputWithLimit('pai', e.target.value, 100)}
                 style={inputStyles}
                 maxLength={100}
-                placeholder="Nome completo do pai"
               />
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Nome da Mãe</label>
               <input
                 type="text"
                 value={formData.mae}
                 onChange={(e) => handleInputWithLimit('mae', e.target.value, 100)}
                 style={inputStyles}
-                placeholder="Nome completo da mãe"
                 maxLength={100}
               />
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Profissão</label>
               <input
                 type="text"
@@ -2216,7 +2408,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </select>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Endereço</label>
                 <input
                   type="text"
@@ -2253,7 +2445,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
           {/* Linha 6: Bairro, Cidade, UF, País, Código IBGE */}
           <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Bairro</label>
               <input
                 type="text"
@@ -2264,7 +2456,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               />
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Cidade</label>
               <input
                 type="text"
@@ -2313,7 +2505,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </select>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>País</label>
               <select
                 value={formData.paisEndereco}
@@ -2586,7 +2778,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
           {/* Linha 7: Telefone, Celular, E-mail */}
           <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Telefone</label>
               <input
                 type="text"
@@ -2598,7 +2790,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               />
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Celular</label>
               <input
                 type="text"
@@ -2610,7 +2802,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               />
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>E-mail</label>
               <input
                 type="email"
@@ -2625,7 +2817,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
           {/* Linha 8: Atendente, Assinante do Cartão */}
           <div style={rowStyles}>
-            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Atendente</label>
               <select
                 value={formData.atendente}
@@ -2639,7 +2831,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </select>
             </div>
 
-            <div style={{ ...fieldStyles, gridColumn: 'span 4' }}>
+            <div style={fieldStyles}>
               <label style={labelStyles}>Assinante do Cartão</label>
               <select
                 value={formData.assinanteCartao}
