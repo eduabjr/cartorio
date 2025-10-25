@@ -129,7 +129,7 @@ export function TextualMenu({ items }: TextualMenuProps) {
   })
 
   const itemStyles = (itemId: string) => ({
-    padding: '8px 12px',
+    padding: '6px 12px',
     background: activeMenu === itemId 
       ? theme.surface 
       : hoveredItem === itemId 

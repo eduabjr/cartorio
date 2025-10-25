@@ -16,6 +16,11 @@ interface BasePageProps {
   isMaximized?: boolean
   resetToOriginalPosition?: boolean
   headerColor?: string
+  resizable?: boolean
+  minWidth?: string
+  minHeight?: string
+  maxWidth?: string
+  maxHeight?: string
 }
 
 export function BasePage({ 
@@ -31,7 +36,12 @@ export function BasePage({
   isMinimized = false,
   isMaximized = false,
   resetToOriginalPosition = false,
-  headerColor
+  headerColor,
+  resizable = true,
+  minWidth = '400px',
+  minHeight = '300px',
+  maxWidth,
+  maxHeight
 }: BasePageProps) {
   const { getTheme } = useAccessibility()
   const theme = getTheme()
@@ -80,9 +90,13 @@ export function BasePage({
       const newX = e.clientX - dragStart.x
       const newY = e.clientY - dragStart.y
       
+      // Obter tamanho ATUAL da janela (considerando redimensionamento)
+      const currentWidth = windowRef.current?.offsetWidth || parseInt(width)
+      const currentHeight = windowRef.current?.offsetHeight || parseInt(height)
+      
       // Limitar movimento dentro da tela, respeitando área dos menus
-      const maxX = window.innerWidth - parseInt(width)
-      const maxY = window.innerHeight - parseInt(height)
+      const maxX = window.innerWidth - currentWidth
+      const maxY = window.innerHeight - currentHeight
       
       // Área mínima Y para não invadir os menus (header + menu1 + menu2)
       const minY = 120 // Espaço para header (36px) + menu1 + menu2
@@ -138,6 +152,10 @@ export function BasePage({
     top: `${position.y}px`,
     width: isMaximized ? '100vw' : width,
     height: isMaximized ? '100vh' : (isMinimized ? '40px' : height),
+    minWidth: minWidth,
+    minHeight: minHeight,
+    maxWidth: maxWidth,
+    maxHeight: maxHeight,
     backgroundColor: theme.surface,
     border: `1px solid ${theme.border}`,
     borderRadius: isMaximized ? '0' : '8px',
@@ -147,17 +165,19 @@ export function BasePage({
     overflow: 'hidden',
     cursor: isDragging ? 'grabbing' : 'default',
     transition: isDragging ? 'none' : 'all 0.2s ease',
-    pointerEvents: 'auto' // Reabilita cliques na janela
+    pointerEvents: 'auto', // Reabilita cliques na janela
+    resize: resizable ? 'both' as const : 'none' as const
   }
 
   const headerStyles = {
     backgroundColor: headerColor || theme.primary,
     color: 'white',
-    padding: '2px 12px',
+    padding: '1px 8px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    cursor: draggable ? 'grab' : 'default'
+    cursor: draggable ? 'grab' : 'default',
+    minHeight: '22px'
   }
 
   const contentStyles = {
@@ -172,11 +192,15 @@ export function BasePage({
     background: 'none',
     border: 'none',
     color: 'white',
-    fontSize: '18px',
+    fontSize: '16px',
     cursor: 'pointer',
-    padding: '4px',
-    borderRadius: '4px',
-    transition: 'background-color 0.2s ease'
+    padding: '2px',
+    borderRadius: '3px',
+    transition: 'background-color 0.2s ease',
+    lineHeight: '1',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   }
 
   return (
@@ -188,7 +212,7 @@ export function BasePage({
       >
         {/* Header */}
         <div style={headerStyles} data-draggable-header>
-          <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '600' }}>
+          <h3 style={{ margin: 0, fontSize: '11px', fontWeight: '600', lineHeight: '1' }}>
             {title}
           </h3>
           <button

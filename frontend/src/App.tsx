@@ -25,6 +25,7 @@ import { useWindowState } from './hooks/useWindowState'
 import { getRelativeFontSize } from './utils/fontUtils'
 import { announcementService } from './services/AnnouncementService'
 import { WindowProvider, useWindowManager } from './contexts/WindowContext'
+import { FormDataProvider } from './contexts/FormDataContext'
 import { singleInstanceService } from './services/SingleInstanceService'
 
 interface User {
@@ -351,7 +352,7 @@ function AppContent() {
         submenu: [
             { id: 'cliente', label: 'Cliente', icon: '', onClick: () => {
               console.log('✅ CLIENTE CLICADO! Abrindo janela...')
-              const windowId = `cliente-${Date.now()}`
+              const windowId = 'cliente-window'
               openWindow({
                 id: windowId,
                 type: 'cliente',
@@ -363,7 +364,7 @@ function AppContent() {
             } },
             { id: 'funcionario', label: 'Funcionário', icon: '', onClick: () => {
               console.log('✅ FUNCIONÁRIO CLICADO! Abrindo janela...')
-              const windowId = `funcionario-${Date.now()}`
+              const windowId = 'funcionario-window'
               openWindow({
                 id: windowId,
                 type: 'funcionario',
@@ -774,7 +775,7 @@ function AppContent() {
     const iconMenuItems = [
         { id: 'cadastro-cliente', label: 'Cadastro de Cliente', icon: '👤', onClick: () => {
           console.log('✅ ÍCONE CADASTRO CLIENTE CLICADO! Abrindo janela...')
-          const windowId = `cliente-${Date.now()}`
+          const windowId = 'cliente-window'
           openWindow({
             id: windowId,
             type: 'cliente',
@@ -819,11 +820,11 @@ function AppContent() {
              <div style={{
                background: accessibility.currentTheme === 'dark' ? '#004D40' : '#00796B',
                backdropFilter: 'blur(20px)',
-               padding: '6px 16px',
+               padding: '4px 16px',
                borderBottom: `1px solid ${theme.border}`,
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-          height: '36px',
-          minHeight: '36px',
+          height: '32px',
+          minHeight: '32px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -1399,9 +1400,11 @@ function AppContent() {
 function App() {
   return (
     <WindowProvider>
-      <AppContent />
-      <SystemStatus showDetails={false} position="bottom-left" />
-      <InstanceNotification position="top-left" />
+      <FormDataProvider>
+        <AppContent />
+        <SystemStatus showDetails={false} position="bottom-left" />
+        <InstanceNotification position="top-left" />
+      </FormDataProvider>
     </WindowProvider>
   )
 }

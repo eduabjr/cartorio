@@ -8,6 +8,7 @@ import { funcionarioService, Funcionario } from '../services/FuncionarioService'
 import { CepService, CepData } from '../services/CepService'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
+import { useFieldValidation } from '../hooks/useFieldValidation'
 
 interface FuncionarioPageProps {
   onClose: () => void
@@ -24,7 +25,10 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     ordemSinalPublico: '99',
     emAtividade: true,
     nome: '',
+    logradouro: '',
     endereco: '',
+    numero: '',
+    complemento: '',
     bairro: '',
     cidade: '',
     cep: '',
@@ -34,13 +38,13 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     celular: '',
     nascimento: '',
     rg: '',
+    orgaoRg: '',
     mae: '',
     cpf: '',
     pai: '',
     assinante: false,
     cargoCivil: '',
     salario: '',
-    comissao: '',
     admissao: '',
     demissao: '',
     login: '',
@@ -52,13 +56,64 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   const [showLookup, setShowLookup] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingCep, setIsLoadingCep] = useState(false)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
 
-  // Função para lidar com mudanças nos campos
+  // 🎨 Adicionar estilos CSS dinâmicos para foco (mais robusto que inline)
+  useEffect(() => {
+    const styleId = 'funcionario-focus-styles'
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style')
+      styleElement.id = styleId
+      document.head.appendChild(styleElement)
+    }
+    
+    const focusColor = theme.background === '#1a1a1a' ? '#ffd4a3' : '#ffedd5'
+    const textColor = theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000'
+    
+    styleElement.textContent = `
+      .funcionario-input:focus {
+        background-color: ${focusColor} !important;
+        color: ${textColor} !important;
+        -webkit-box-shadow: 0 0 0 1000px ${focusColor} inset !important;
+        box-shadow: 0 0 0 1000px ${focusColor} inset !important;
+        -webkit-text-fill-color: ${textColor} !important;
+      }
+      .funcionario-input:focus::placeholder {
+        color: ${textColor} !important;
+        opacity: 0.5 !important;
+      }
+    `
+    
+    return () => {
+      const el = document.getElementById(styleId)
+      if (el) {
+        el.remove()
+      }
+    }
+  }, [theme.background])
+
+  // ✨ Hook de validação com regras globais
+  const { 
+    handleChange: handleFieldChange, 
+    getValue, 
+    getError,
+    loadingCEP 
+  } = useFieldValidation(formData, setFormData)
+
+  // Função para lidar com mudanças nos campos (mantida para compatibilidade com checkboxes)
   const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    if (typeof value === 'boolean') {
+      // Checkboxes não passam pelo hook de validação
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }))
+    } else {
+      // Campos de texto usam o hook de validação
+      handleFieldChange(field, value)
+    }
   }
 
   // Função para formatar CPF
@@ -240,7 +295,10 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       ordemSinalPublico: '99',
       emAtividade: true,
       nome: '',
+      logradouro: '',
       endereco: '',
+      numero: '',
+      complemento: '',
       bairro: '',
       cidade: '',
       cep: '',
@@ -250,13 +308,13 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       celular: '',
       nascimento: '',
       rg: '',
+      orgaoRg: '',
       mae: '',
       cpf: '',
       pai: '',
       assinante: false,
       cargoCivil: '',
       salario: '',
-      comissao: '',
       admissao: '',
       demissao: '',
       login: '',
@@ -278,7 +336,10 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       ...formData,
       codigo: funcionario.codigo,
       nome: funcionario.nome,
+      logradouro: funcionario.logradouro || '',
       endereco: funcionario.endereco,
+      numero: funcionario.numero || '',
+      complemento: funcionario.complemento || '',
       bairro: funcionario.bairro,
       cidade: funcionario.cidade,
       cep: funcionario.cep,
@@ -288,13 +349,13 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       celular: funcionario.celular,
       nascimento: funcionario.nascimento,
       rg: funcionario.rg,
+      orgaoRg: funcionario.orgaoRg || '',
       mae: funcionario.mae,
       cpf: funcionario.cpf,
       pai: funcionario.pai,
       assinante: funcionario.assinante,
       cargoCivil: funcionario.cargoCivil,
       salario: funcionario.salario,
-      comissao: funcionario.comissao,
       admissao: funcionario.admissao,
       demissao: funcionario.demissao,
       login: funcionario.login,
@@ -307,12 +368,14 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   const containerStyles: React.CSSProperties = {
     backgroundColor: theme.background,
     color: theme.text,
-    padding: '10px',
+    padding: '8px',
     borderRadius: '8px',
     height: '100%',
-    overflow: 'hidden',
+    overflowY: 'auto',
+    overflowX: 'hidden',  // SEM scroll horizontal - campos se adaptam
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    boxSizing: 'border-box'
   }
 
   const titleStyles: React.CSSProperties = {
@@ -326,42 +389,110 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
 
   const formContainerStyles: React.CSSProperties = {
     backgroundColor: theme.surface,
-    padding: '12px',
+    padding: '8px',
     borderRadius: '8px',
     border: `1px solid ${theme.border}`,
-    flex: 1,
-    overflow: 'hidden',
+    overflow: 'visible',
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    minWidth: '0',  // Permite adaptar ao tamanho da janela
+    flexShrink: 1,  // Permite encolher proporcionalmente
+    height: 'auto'
   }
 
   const formGridStyles: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
-    marginBottom: '8px',
-    padding: '8px',
-    flex: 1,
-    overflow: 'hidden'
+    marginBottom: '2px',
+    padding: '4px',
+    overflow: 'visible',
+    height: 'auto',
+    minWidth: '0',  // Permite adaptar
+    flexShrink: 1  // Permite encolher
   }
 
   const fieldStyles: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px'
+    gap: '1px',
+    flexShrink: 1,  // Permite encolher proporcionalmente
+    minWidth: '120px',  // Largura mínima para legibilidade - quebra linha se menor
+    flex: '1 1 auto'  // Cresce e encolhe proporcionalmente
   }
 
   const rowStyles: React.CSSProperties = {
     display: 'flex',
     gap: '6px',
-    marginBottom: '6px'
+    marginBottom: '2px',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',  // Quebra linha quando não couber - campos sempre visíveis
+    minWidth: '0'  // Permite adaptar ao tamanho da janela
+  }
+
+  const row1Styles: React.CSSProperties = {
+    display: 'flex',
+    gap: '4px',  // Gap menor para caber melhor
+    marginBottom: '2px',
+    alignItems: 'flex-start',
+    flexWrap: 'nowrap',  // NÃO quebra - linha 1 sempre junta
+    minWidth: '0'
+  }
+
+  const row2Styles: React.CSSProperties = {
+    display: 'flex',
+    gap: '6px',
+    marginBottom: '2px',
+    alignItems: 'flex-start',
+    flexWrap: 'nowrap',  // Mantém Nome, RG, Órgão RG e CPF na mesma linha
+    minWidth: '0'
+  }
+
+  const row1FieldStyles: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1px',
+    flexShrink: 1,
+    minWidth: '80px',  // Menor que os outros para caber melhor
+    flex: '1 1 auto'
   }
 
   const labelStyles: React.CSSProperties = {
     fontSize: getRelativeFontSize(11),
     fontWeight: '500',
     color: theme.text,
-    marginBottom: '2px'
+    marginBottom: '2px',
+    height: '14px',
+    lineHeight: '14px',
+    display: 'block',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    minWidth: 0
+  }
+
+  const getInputStyles = (fieldName: string): React.CSSProperties => {
+    const focusColor = theme.background === '#1a1a1a' ? '#ffd4a3' : '#ffedd5'
+    return {
+      padding: '4px 8px',
+      border: `1px solid ${theme.border}`,
+      borderRadius: '3px',
+      backgroundColor: focusedField === fieldName ? focusColor : theme.background,
+      color: focusedField === fieldName ? (theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000') : theme.text,
+      fontSize: getRelativeFontSize(12),
+      outline: 'none',
+      transition: 'all 0.2s ease',
+      height: '24px',
+      boxSizing: 'border-box',
+      width: '100%',
+      minWidth: '100px',  // Largura mínima garantida para legibilidade
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      WebkitBoxShadow: focusedField === fieldName ? `0 0 0 1000px ${focusColor} inset` : `0 0 0 1000px ${theme.background} inset`,
+      WebkitTextFillColor: focusedField === fieldName ? (theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000') : theme.text,
+      boxShadow: focusedField === fieldName ? `0 0 0 1000px ${focusColor} inset` : 'none'
+    } as React.CSSProperties
   }
 
   const inputStyles: React.CSSProperties = {
@@ -372,9 +503,14 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     color: theme.text,
     fontSize: getRelativeFontSize(12),
     outline: 'none',
-    transition: 'border-color 0.3s ease',
+    transition: 'all 0.2s ease',
     height: '24px',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    width: '100%',
+    minWidth: '100px',  // Largura mínima garantida
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
   }
 
   const selectStyles: React.CSSProperties = {
@@ -391,7 +527,11 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     boxSizing: 'border-box',
     display: 'block',
     width: '100%',
-    minHeight: '24px'
+    minHeight: '24px',
+    minWidth: '100px',  // Largura mínima garantida
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
   } as React.CSSProperties
 
   const checkboxStyles: React.CSSProperties = {
@@ -411,8 +551,11 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     display: 'flex',
     gap: '8px',
     justifyContent: 'center',
-    padding: '8px',
-    marginTop: '16px'
+    padding: '0px',
+    marginTop: '2px',
+    flexWrap: 'wrap',  // Permite quebrar linha quando necessário
+    flexShrink: 0,  // Botões não encolhem
+    minHeight: '40px'  // Altura mínima garantida
   }
 
   const buttonStyles: React.CSSProperties = {
@@ -427,20 +570,24 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     gap: '4px',
     transition: 'all 0.3s ease',
     minWidth: '80px',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    whiteSpace: 'nowrap',
+    flexShrink: 0
   }
 
   const primaryButtonStyles: React.CSSProperties = {
     ...buttonStyles,
     backgroundColor: theme.primary,
-    color: '#ffffff'
+    color: '#ffffff',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
   }
 
   const secondaryButtonStyles: React.CSSProperties = {
     ...buttonStyles,
     backgroundColor: theme.surface,
     color: theme.text,
-    border: `1px solid ${theme.border}`
+    border: `1px solid ${theme.border}`,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
   }
 
   const specialLabelStyles: React.CSSProperties = {
@@ -449,14 +596,25 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   }
 
   const lookupButtonStyles: React.CSSProperties = {
-    ...inputStyles,
-    width: '24px',
-    padding: '4px',
+    padding: '2px 6px',
+    border: 'none',
+    borderRadius: '3px',
+    cursor: 'pointer',
+    fontSize: '10px',
+    fontWeight: '500',
     display: 'flex',
     alignItems: 'center',
+    gap: '4px',
+    transition: 'all 0.2s ease',
+    height: '24px',
+    minHeight: '24px',
+    maxHeight: '24px',
+    minWidth: '24px',
+    maxWidth: '24px',
     justifyContent: 'center',
-    cursor: 'pointer',
-    height: '24px'
+    backgroundColor: theme.border,
+    color: theme.text,
+    boxSizing: 'border-box'
   }
 
   // Estados dos UFs brasileiros
@@ -472,76 +630,86 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       onClose={onClose}
       resetToOriginalPosition={resetToOriginalPosition}
       headerColor="#6B7280"
-      height="700px"
+      height="600px"
       width="900px"
+      resizable={true}
+      minWidth="350px"
+      minHeight="400px"
     >
       <div style={containerStyles}>
         {/* Formulário */}
         <div style={formContainerStyles}>
             <div style={formGridStyles}>
               {/* Linha 1 - Código, Ordem Sinal Público, Em atividade, Assinante */}
-              <div style={rowStyles}>
-                <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>Código</label>
-                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              <div style={row1Styles}>
+                <div style={row1FieldStyles}>
+                <label style={labelStyles}>Código</label>
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '24px' }}>
                     <button
                       type="button"
                       onClick={handleScanner}
                       style={{
-                        padding: '4px 8px',
+                        padding: '0',
                         border: 'none',
-                        borderRadius: '3px',
+                        borderRadius: '0',
                         backgroundColor: 'transparent',
                         cursor: 'pointer',
-                        fontSize: getRelativeFontSize(16),
+                        fontSize: getRelativeFontSize(14),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        height: '24px',
+                        height: '20px',
                         width: '24px',
-                        minWidth: '24px'
+                        minWidth: '24px',
+                        boxSizing: 'border-box',
+                        flexShrink: 0,
+                        transition: 'opacity 0.2s ease',
+                        lineHeight: '1'
                       }}
                       title="Escanear documento com scanner/câmera"
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.border}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                     >
                       📷
                     </button>
-                    <input
-                      type="text"
-                      value={formData.codigo}
-                      onChange={(e) => handleInputChange('codigo', e.target.value)}
-                      style={{...inputStyles, flex: 1}}
-                      placeholder="0"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={formData.codigo}
+                    onChange={(e) => handleInputChange('codigo', e.target.value)}
+                      style={{...inputStyles, flex: 1, minWidth: '50px'}}
+                    placeholder="0"
+                  />
                 </div>
+              </div>
 
-                <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>Ordem Sinal Público</label>
+                <div style={row1FieldStyles}>
+                <label style={labelStyles}>Ordem Sinal Público</label>
                   <input
                     type="text"
                     value={formData.ordemSinalPublico}
                     onChange={(e) => handleInputChange('ordemSinalPublico', e.target.value)}
-                    style={inputStyles}
+                    onFocus={() => setFocusedField('ordemSinalPublico')}
+                    onBlur={() => setFocusedField(null)}
+                    className="funcionario-input"
+                    style={{...getInputStyles('ordemSinalPublico'), minWidth: '60px'}}
                     placeholder="99"
                   />
-                </div>
+              </div>
 
-                <div style={{...fieldStyles, width: '25%'}}>
+                <div style={row1FieldStyles}>
                   <label style={specialLabelStyles}>Em atividade?</label>
                   <div style={checkboxStyles}>
-                    <input
-                      type="checkbox"
-                      checked={formData.emAtividade}
-                      onChange={(e) => handleInputChange('emAtividade', e.target.checked)}
-                      style={checkboxInputStyles}
-                    />
-                    <span style={{ fontSize: getRelativeFontSize(12) }}>Sim</span>
-                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.emAtividade}
+                    onChange={(e) => handleInputChange('emAtividade', e.target.checked)}
+                    style={checkboxInputStyles}
+                  />
+                  <span style={{ fontSize: getRelativeFontSize(12) }}>Sim</span>
                 </div>
+              </div>
 
-                <div style={{...fieldStyles, width: '25%'}}>
+                <div style={row1FieldStyles}>
                   <label style={labelStyles}>Assinante</label>
                   <div style={checkboxStyles}>
                     <input
@@ -555,17 +723,19 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 </div>
               </div>
 
-              {/* Linha 2 - Nome, RG, CPF */}
-              <div style={rowStyles}>
-                <div style={{...fieldStyles, width: '40%'}}>
+              {/* Linha 2 - Nome, RG, Órgão RG, CPF */}
+              <div style={row2Styles}>
+                <div style={{...fieldStyles, width: '35%'}}>
                   <label style={labelStyles}>Nome</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '4px' }}>
                     <input
                       type="text"
                       value={formData.nome}
                       onChange={(e) => handleInputChange('nome', e.target.value)}
-                      style={{ ...inputStyles, flex: 1 }}
-                      placeholder="Nome completo"
+                      onFocus={() => setFocusedField('nome')}
+                      onBlur={() => setFocusedField(null)}
+                      className="funcionario-input"
+                      style={{ ...getInputStyles('nome'), flex: 1 }}
                     />
                     <button
                       style={lookupButtonStyles}
@@ -576,190 +746,265 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                   </div>
                 </div>
 
-                <div style={{...fieldStyles, width: '30%'}}>
+                <div style={{...fieldStyles, width: '20%'}}>
                   <label style={labelStyles}>RG</label>
                   <input
                     type="text"
                     value={formData.rg}
                     onChange={(e) => handleInputChange('rg', e.target.value)}
-                    style={inputStyles}
-                    placeholder="Número do RG"
+                    onFocus={() => setFocusedField('rg')}
+                    onBlur={() => setFocusedField(null)}
+                    className="funcionario-input"
+                    style={getInputStyles('rg')}
                   />
                 </div>
 
-                <div style={{...fieldStyles, width: '30%'}}>
+                <div style={{...fieldStyles, width: '20%'}}>
+                  <label style={labelStyles}>Órgão RG</label>
+                  <input
+                    type="text"
+                    value={formData.orgaoRg}
+                    onChange={(e) => handleInputChange('orgaoRg', e.target.value)}
+                    onFocus={() => setFocusedField('orgaoRg')}
+                    onBlur={() => setFocusedField(null)}
+                    className="funcionario-input"
+                    style={getInputStyles('orgaoRg')}
+                  />
+                </div>
+
+                <div style={{...fieldStyles, width: '25%'}}>
                   <label style={labelStyles}>CPF</label>
                   <input
                     type="text"
                     value={formData.cpf}
-                    onChange={(e) => handleInputWithFormat('cpf', e.target.value, formatCPF)}
-                    style={inputStyles}
+                    onChange={(e) => handleInputChange('cpf', e.target.value)}
+                    onFocus={() => setFocusedField('cpf')}
+                    onBlur={() => setFocusedField(null)}
+                    className="funcionario-input"
+                    style={getInputStyles('cpf')}
                     placeholder="000.000.000-00"
                     maxLength={14}
                   />
+                  {getError && getError('cpf') ? (
+                    <span style={{ color: '#dc2626', fontSize: '10px', marginTop: '2px' }}>
+                      ❌ {getError('cpf')}
+                    </span>
+                  ) : formData.cpf.replace(/\D/g, '').length === 11 ? (
+                    <span style={{ color: '#16a34a', fontSize: '10px', marginTop: '2px' }}>
+                      ✅ CPF válido
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
               {/* Linha 3 - CEP, Logradouro, Endereço, Número */}
-              <div style={rowStyles}>
+              <div style={row2Styles}>
                 <div style={{...fieldStyles, width: '15%'}}>
-                  <label style={labelStyles}>CEP</label>
-                  <input
-                    type="text"
-                    value={formData.cep}
-                    onChange={(e) => handleInputWithFormat('cep', e.target.value, formatCEP)}
-                    style={inputStyles}
-                    placeholder="00000-000"
-                    maxLength={9}
-                    onBlur={(e) => {
-                      if (e.target.value && CepService.validarCep(e.target.value)) {
-                        handleBuscarCep(e.target.value)
-                      }
-                    }}
+                <label style={labelStyles}>CEP</label>
+                <input
+                  type="text"
+                  value={formData.cep}
+                    onChange={(e) => handleInputChange('cep', e.target.value)}
+                    onFocus={() => setFocusedField('cep')}
+                    onBlur={() => setFocusedField(null)}
+                    style={getInputStyles('cep')}
+                  placeholder="00000-000"
+                  maxLength={9}
+                    disabled={loadingCEP}
                   />
-                </div>
+                  {loadingCEP && (
+                    <span style={{ color: theme.primary, fontSize: '10px', marginTop: '2px' }}>
+                      🔍 Buscando...
+                    </span>
+                  )}
+                  {getError && getError('cep') && (
+                    <span style={{ color: '#dc2626', fontSize: '10px', marginTop: '2px' }}>
+                      {getError('cep')}
+                    </span>
+                  )}
+              </div>
 
-                <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>Logradouro</label>
-                  <select style={selectStyles}>
-                    <option value="">Selecione</option>
-                    <option value="Rua">Rua</option>
-                    <option value="Avenida">Avenida</option>
-                    <option value="Praça">Praça</option>
-                    <option value="Alameda">Alameda</option>
-                    <option value="Travessa">Travessa</option>
-                  </select>
-                </div>
+              <div style={{...fieldStyles, width: '25%'}}>
+                <label style={labelStyles}>Logradouro</label>
+                  <select 
+                    value={formData.logradouro}
+                    onChange={(e) => handleInputChange('logradouro', e.target.value)}
+                    onFocus={() => setFocusedField('logradouro')}
+                    onBlur={() => setFocusedField(null)}
+                    className="funcionario-input"
+                    style={selectStyles}
+                  >
+                  <option value="">Selecione</option>
+                  <option value="Rua">Rua</option>
+                  <option value="Avenida">Avenida</option>
+                  <option value="Praça">Praça</option>
+                  <option value="Alameda">Alameda</option>
+                  <option value="Travessa">Travessa</option>
+                </select>
+              </div>
 
                 <div style={{...fieldStyles, width: '40%'}}>
-                  <label style={labelStyles}>Endereço</label>
-                  <input
-                    type="text"
-                    value={formData.endereco}
-                    onChange={(e) => handleInputChange('endereco', e.target.value)}
-                    style={inputStyles}
-                    placeholder="Nome da rua/avenida"
-                  />
-                </div>
+                <label style={labelStyles}>Endereço</label>
+                <input
+                  type="text"
+                  value={formData.endereco}
+                  onChange={(e) => handleInputChange('endereco', e.target.value)}
+                    onFocus={() => setFocusedField('endereco')}
+                    onBlur={() => setFocusedField(null)}
+                    style={getInputStyles('endereco')}
+                  placeholder="Nome da rua/avenida"
+                />
+              </div>
 
-                <div style={{...fieldStyles, width: '15%'}}>
-                  <label style={labelStyles}>Número</label>
-                  <input
-                    type="text"
-                    style={inputStyles}
-                    placeholder="123"
-                  />
+                <div style={{...fieldStyles, width: '20%'}}>
+                <label style={labelStyles}>Número</label>
+                <input
+                  type="text"
+                  value={formData.numero}
+                  onChange={(e) => handleInputChange('numero', e.target.value)}
+                  onFocus={() => setFocusedField('numero')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('numero')}
+                />
                 </div>
               </div>
 
               {/* Linha 4 - Complemento, Bairro, Cidade, UF */}
-              <div style={rowStyles}>
-                <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>Complemento</label>
-                  <input
-                    type="text"
-                    style={inputStyles}
-                    placeholder="Apto, casa, etc."
-                  />
-                </div>
+              <div style={row2Styles}>
+              <div style={{...fieldStyles, width: '25%'}}>
+                <label style={labelStyles}>Complemento</label>
+                <input
+                  type="text"
+                  value={formData.complemento}
+                  onChange={(e) => handleInputChange('complemento', e.target.value)}
+                  onFocus={() => setFocusedField('complemento')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('complemento')}
+                  placeholder="Apto, casa, etc."
+                />
+              </div>
 
                 <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>Bairro</label>
-                  <input
-                    type="text"
-                    value={formData.bairro}
-                    onChange={(e) => handleInputChange('bairro', e.target.value)}
-                    style={inputStyles}
-                    placeholder="Bairro"
-                  />
-                </div>
+                <label style={labelStyles}>Bairro</label>
+                <input
+                  type="text"
+                  value={formData.bairro}
+                  onChange={(e) => handleInputChange('bairro', e.target.value)}
+                  onFocus={() => setFocusedField('bairro')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('bairro')}
+                  placeholder="Bairro"
+                />
+              </div>
 
                 <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>Cidade</label>
-                  <input
-                    type="text"
-                    value={formData.cidade}
-                    onChange={(e) => handleInputChange('cidade', e.target.value)}
-                    style={inputStyles}
-                    placeholder="Cidade"
-                  />
-                </div>
+                <label style={labelStyles}>Cidade</label>
+                <input
+                  type="text"
+                  value={formData.cidade}
+                  onChange={(e) => handleInputChange('cidade', e.target.value)}
+                  onFocus={() => setFocusedField('cidade')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('cidade')}
+                  placeholder="Cidade"
+                />
+              </div>
 
                 <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>UF</label>
-                  <select
-                    value={formData.uf}
-                    onChange={(e) => handleInputChange('uf', e.target.value)}
-                    style={selectStyles}
-                  >
-                    <option value="">Selecione</option>
-                    {ufOptions.map(uf => (
-                      <option key={uf} value={uf}>{uf}</option>
-                    ))}
-                  </select>
-                </div>
+                <label style={labelStyles}>UF</label>
+                <select
+                  value={formData.uf}
+                  onChange={(e) => handleInputChange('uf', e.target.value)}
+                  onFocus={() => setFocusedField('uf')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={selectStyles}
+                >
+                  <option value="">Selecione</option>
+                  {ufOptions.map(uf => (
+                    <option key={uf} value={uf}>{uf}</option>
+                  ))}
+                </select>
+              </div>
               </div>
 
               {/* Linha 5 - Nascimento, Nome do Pai, Nome da Mãe */}
-              <div style={rowStyles}>
+              <div style={row2Styles}>
                 <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>Nascimento</label>
-                  <input
-                    type="date"
-                    value={formData.nascimento}
-                    onChange={(e) => handleInputChange('nascimento', e.target.value)}
-                    style={inputStyles}
-                  />
-                </div>
+                <label style={labelStyles}>Nascimento</label>
+                <input
+                  type="date"
+                  value={formData.nascimento}
+                  onChange={(e) => handleInputChange('nascimento', e.target.value)}
+                  onFocus={() => setFocusedField('nascimento')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('nascimento')}
+                />
+              </div>
 
                 <div style={{...fieldStyles, width: '37.5%'}}>
                   <label style={labelStyles}>Nome do Pai</label>
-                  <input
-                    type="text"
-                    value={formData.pai}
-                    onChange={(e) => handleInputChange('pai', e.target.value)}
-                    style={inputStyles}
-                    placeholder="Nome do pai"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={formData.pai}
+                  onChange={(e) => handleInputChange('pai', e.target.value)}
+                  onFocus={() => setFocusedField('pai')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('pai')}
+                />
+              </div>
 
                 <div style={{...fieldStyles, width: '37.5%'}}>
                   <label style={labelStyles}>Nome da Mãe</label>
-                  <input
-                    type="text"
-                    value={formData.mae}
-                    onChange={(e) => handleInputChange('mae', e.target.value)}
-                    style={inputStyles}
-                    placeholder="Nome da mãe"
-                  />
+                <input
+                  type="text"
+                  value={formData.mae}
+                  onChange={(e) => handleInputChange('mae', e.target.value)}
+                  onFocus={() => setFocusedField('mae')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('mae')}
+                />
                 </div>
               </div>
 
               {/* Linha 6 - Telefone, Celular, Email */}
-              <div style={rowStyles}>
+              <div style={row2Styles}>
                 <div style={{...fieldStyles, width: '33.33%'}}>
                   <label style={labelStyles}>Telefone</label>
-                  <input
-                    type="text"
-                    value={formData.telefone}
-                    onChange={(e) => handleInputWithFormat('telefone', e.target.value, formatTelefone)}
-                    style={inputStyles}
-                    placeholder="(00) 0000-0000"
-                    maxLength={14}
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={formData.telefone}
+                  onChange={(e) => handleInputWithFormat('telefone', e.target.value, formatTelefone)}
+                  onFocus={() => setFocusedField('telefone')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('telefone')}
+                  placeholder="(00) 0000-0000"
+                  maxLength={14}
+                />
+              </div>
 
                 <div style={{...fieldStyles, width: '33.33%'}}>
                   <label style={labelStyles}>Celular</label>
-                  <input
-                    type="text"
-                    value={formData.celular}
-                    onChange={(e) => handleInputWithFormat('celular', e.target.value, formatCelular)}
-                    style={inputStyles}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={formData.celular}
+                  onChange={(e) => handleInputWithFormat('celular', e.target.value, formatCelular)}
+                  onFocus={() => setFocusedField('celular')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('celular')}
+                  placeholder="(00) 00000-0000"
+                  maxLength={15}
+                />
+              </div>
 
                 <div style={{...fieldStyles, width: '33.33%'}}>
                   <label style={labelStyles}>Email</label>
@@ -767,7 +1012,10 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    style={inputStyles}
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
+                    className="funcionario-input"
+                    style={getInputStyles('email')}
                     placeholder="email@exemplo.com"
                   />
                 </div>
@@ -778,111 +1026,114 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
               {/* Linha 13 */}
 
 
-              {/* Linha 7 - Cargo Civil, Admissão, Demissão, Salário, Comissão */}
-              <div style={rowStyles}>
-                <div style={{...fieldStyles, width: '20%'}}>
-                  <label style={labelStyles}>Cargo Civil</label>
-                  <select
-                    value={formData.cargoCivil}
-                    onChange={(e) => handleInputChange('cargoCivil', e.target.value)}
-                    style={selectStyles}
-                  >
-                    <option value="">Selecione o cargo</option>
-                    <option value="escrevente">Escrevente</option>
-                    <option value="preposto-autorizado">Preposto Autorizado</option>
-                    <option value="auxiliar">Auxiliar</option>
-                  </select>
-                </div>
+              {/* Linha 7 - Cargo, Admissão, Demissão, Salário */}
+              <div style={row2Styles}>
+                <div style={{...fieldStyles, width: '25%'}}>
+                  <label style={labelStyles}>Cargo</label>
+                <select
+                  value={formData.cargoCivil}
+                  onChange={(e) => handleInputChange('cargoCivil', e.target.value)}
+                  onFocus={() => setFocusedField('cargoCivil')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={selectStyles}
+                >
+                  <option value="">Selecione o cargo</option>
+                  <option value="escrevente">Escrevente</option>
+                  <option value="preposto-autorizado">Preposto Autorizado</option>
+                  <option value="auxiliar">Auxiliar</option>
+                </select>
+              </div>
 
-                <div style={{...fieldStyles, width: '20%'}}>
+                <div style={{...fieldStyles, width: '25%'}}>
                   <label style={labelStyles}>Admissão</label>
                   <input
                     type="date"
                     value={formData.admissao}
                     onChange={(e) => handleInputChange('admissao', e.target.value)}
-                    style={inputStyles}
+                    onFocus={() => setFocusedField('admissao')}
+                    onBlur={() => setFocusedField(null)}
+                    className="funcionario-input"
+                    style={getInputStyles('admissao')}
                   />
                 </div>
 
-                <div style={{...fieldStyles, width: '20%'}}>
+                <div style={{...fieldStyles, width: '25%'}}>
                   <label style={labelStyles}>Demissão</label>
                   <input
                     type="date"
                     value={formData.demissao}
                     onChange={(e) => handleInputChange('demissao', e.target.value)}
-                    style={inputStyles}
+                    onFocus={() => setFocusedField('demissao')}
+                    onBlur={() => setFocusedField(null)}
+                    className="funcionario-input"
+                    style={getInputStyles('demissao')}
                   />
                 </div>
 
-                <div style={{...fieldStyles, width: '20%'}}>
-                  <label style={labelStyles}>Salário</label>
-                  <input
-                    type="number"
-                    value={formData.salario}
-                    onChange={(e) => handleInputChange('salario', e.target.value)}
-                    style={inputStyles}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
+                <div style={{...fieldStyles, width: '25%'}}>
+                <label style={labelStyles}>Salário</label>
+                <input
+                  type="number"
+                  value={formData.salario}
+                  onChange={(e) => handleInputChange('salario', e.target.value)}
+                  onFocus={() => setFocusedField('salario')}
+                  onBlur={() => setFocusedField(null)}
+                  className="funcionario-input"
+                  style={getInputStyles('salario')}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
 
-                <div style={{...fieldStyles, width: '20%'}}>
-                  <label style={labelStyles}>Comissão (%)</label>
-                  <input
-                    type="number"
-                    value={formData.comissao}
-                    onChange={(e) => handleInputChange('comissao', e.target.value)}
-                    style={inputStyles}
-                    placeholder="0"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                  />
-                </div>
               </div>
 
               {/* Linha 9 - Login, Senha e Observação */}
               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
                 {/* Coluna esquerda - Login e Senha */}
                 <div style={{ display: 'flex', flexDirection: 'column', width: '40%', gap: '6px' }}>
-                  <div style={fieldStyles}>
-                    <label style={labelStyles}>Login</label>
-                    <input
-                      type="text"
-                      value={formData.login}
-                      onChange={(e) => handleInputChange('login', e.target.value)}
-                      style={inputStyles}
-                      placeholder="Login do usuário"
-                    />
+              <div style={fieldStyles}>
+                <label style={labelStyles}>Login</label>
+                <input
+                  type="text"
+                  value={formData.login}
+                  onChange={(e) => handleInputChange('login', e.target.value)}
+                      onFocus={() => setFocusedField('login')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('login')}
+                  placeholder="Login do usuário"
+                />
+              </div>
+              <div style={fieldStyles}>
+                <label style={labelStyles}>Senha</label>
+                <input
+                  type="password"
+                  value={formData.senha}
+                  onChange={(e) => handleInputChange('senha', e.target.value)}
+                      onFocus={() => setFocusedField('senha')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('senha')}
+                  placeholder="Senha do usuário"
+                />
                   </div>
-                  <div style={fieldStyles}>
-                    <label style={labelStyles}>Senha</label>
-                    <input
-                      type="password"
-                      value={formData.senha}
-                      onChange={(e) => handleInputChange('senha', e.target.value)}
-                      style={inputStyles}
-                      placeholder="Senha do usuário"
-                    />
-                  </div>
-                </div>
+              </div>
 
                 {/* Coluna direita - Observação */}
                 <div style={{ width: '60%' }}>
                   <div style={fieldStyles}>
-                    <label style={labelStyles}>Observação</label>
-                    <textarea
-                      value={formData.observacao}
-                      onChange={(e) => handleInputChange('observacao', e.target.value)}
-                      style={{ 
-                        ...inputStyles, 
-                        height: '70px', 
-                        resize: 'none',
+                <label style={labelStyles}>Observação</label>
+                <textarea
+                  value={formData.observacao}
+                  onChange={(e) => handleInputChange('observacao', e.target.value)}
+                    style={{ 
+                      ...inputStyles, 
+                      height: '70px', 
+                      resize: 'none',
                         paddingTop: '4px'
-                      }}
-                      placeholder="Observações sobre o funcionário"
-                    />
+                    }}
+                  placeholder="Observações sobre o funcionário"
+                />
                   </div>
                 </div>
               </div>
@@ -893,7 +1144,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
               <button
                 style={{
                   ...primaryButtonStyles,
-                  backgroundColor: hoveredButton === 'gravar' ? theme.primary + 'dd' : theme.primary
+                  backgroundColor: hoveredButton === 'gravar' ? '#2563eb' : theme.primary,
+                  transform: hoveredButton === 'gravar' ? 'translateY(-2px)' : 'translateY(0)',
+                  boxShadow: hoveredButton === 'gravar' ? '0 4px 8px rgba(0, 0, 0, 0.2)' : '0 2px 4px rgba(0, 0, 0, 0.1)'
                 }}
                 onClick={handleSave}
                 onMouseEnter={() => setHoveredButton('gravar')}
@@ -906,7 +1159,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
               <button
                 style={{
                   ...secondaryButtonStyles,
-                  backgroundColor: hoveredButton === 'limpar' ? theme.surface + 'dd' : theme.surface
+                  backgroundColor: hoveredButton === 'limpar' ? theme.border : theme.surface,
+                  transform: hoveredButton === 'limpar' ? 'translateY(-2px)' : 'translateY(0)',
+                  boxShadow: hoveredButton === 'limpar' ? '0 3px 6px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}
                 onClick={handleClear}
                 onMouseEnter={() => setHoveredButton('limpar')}
@@ -918,7 +1173,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
               <button
                 style={{
                   ...secondaryButtonStyles,
-                  backgroundColor: hoveredButton === 'imprimir' ? theme.surface + 'dd' : theme.surface
+                  backgroundColor: hoveredButton === 'imprimir' ? theme.border : theme.surface,
+                  transform: hoveredButton === 'imprimir' ? 'translateY(-2px)' : 'translateY(0)',
+                  boxShadow: hoveredButton === 'imprimir' ? '0 3px 6px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}
                 onClick={handlePrint}
                 onMouseEnter={() => setHoveredButton('imprimir')}
@@ -930,7 +1187,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
               <button
                 style={{
                   ...secondaryButtonStyles,
-                  backgroundColor: hoveredButton === 'retornar' ? theme.surface + 'dd' : theme.surface
+                  backgroundColor: hoveredButton === 'retornar' ? theme.border : theme.surface,
+                  transform: hoveredButton === 'retornar' ? 'translateY(-2px)' : 'translateY(0)',
+                  boxShadow: hoveredButton === 'retornar' ? '0 3px 6px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}
                 onClick={onClose}
                 onMouseEnter={() => setHoveredButton('retornar')}

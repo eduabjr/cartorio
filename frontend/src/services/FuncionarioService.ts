@@ -1,5 +1,9 @@
-// FuncionarioService.ts
-// Serviço para gerenciamento de funcionários
+/**
+ * Serviço de Funcionários - Integração com microserviço
+ * Utiliza o ApiService para comunicação resiliente
+ */
+
+import { apiService } from './ApiService'
 
 export interface Funcionario {
   id?: string
@@ -56,163 +60,74 @@ export interface FuncionarioListResponse {
 }
 
 class FuncionarioService {
-  private readonly baseUrl = '/api/funcionarios'
-
-  // Buscar todos os funcionários
+  /**
+   * Buscar todos os funcionários
+   */
   async getFuncionarios(page: number = 1, limit: number = 10, search?: string): Promise<FuncionarioListResponse> {
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString()
-      })
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    })
 
-      if (search) {
-        params.append('search', search)
-      }
-
-      const response = await fetch(`${this.baseUrl}?${params}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return {
-        success: true,
-        ...data
-      }
-    } catch (error) {
-      console.error('Erro ao buscar funcionários:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      }
+    if (search) {
+      params.append('search', search)
     }
+
+    const endpoint = `/funcionarios?${params}`
+
+    return apiService.get<FuncionarioListResponse>(endpoint, {
+      fallback: {
+        success: true,
+        data: [],
+        total: 0,
+        message: 'Dados offline'
+      }
+    })
   }
 
-  // Buscar funcionário por ID
+  /**
+   * Buscar funcionário por ID
+   */
   async getFuncionarioById(id: string): Promise<FuncionarioResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return {
-        success: true,
-        data: data
-      }
-    } catch (error) {
-      console.error('Erro ao buscar funcionário:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      }
+    const data = await apiService.get<Funcionario>(`/funcionarios/${id}`)
+    return {
+      success: true,
+      data: data
     }
   }
 
-  // Criar novo funcionário
+  /**
+   * Criar novo funcionário
+   */
   async createFuncionario(funcionario: Omit<Funcionario, 'id' | 'createdAt' | 'updatedAt'>): Promise<FuncionarioResponse> {
-    try {
-      const response = await fetch(this.baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(funcionario)
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return {
-        success: true,
-        data: data,
-        message: 'Funcionário criado com sucesso!'
-      }
-    } catch (error) {
-      console.error('Erro ao criar funcionário:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      }
+    const data = await apiService.post<Funcionario>('/funcionarios', funcionario)
+    return {
+      success: true,
+      data: data,
+      message: 'Funcionário criado com sucesso!'
     }
   }
 
-  // Atualizar funcionário
+  /**
+   * Atualizar funcionário
+   */
   async updateFuncionario(id: string, funcionario: Partial<Funcionario>): Promise<FuncionarioResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(funcionario)
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return {
-        success: true,
-        data: data,
-        message: 'Funcionário atualizado com sucesso!'
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar funcionário:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      }
+    const data = await apiService.put<Funcionario>(`/funcionarios/${id}`, funcionario)
+    return {
+      success: true,
+      data: data,
+      message: 'Funcionário atualizado com sucesso!'
     }
   }
 
-  // Deletar funcionário
+  /**
+   * Deletar funcionário
+   */
   async deleteFuncionario(id: string): Promise<FuncionarioResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return {
-        success: true,
-        message: 'Funcionário deletado com sucesso!'
-      }
-    } catch (error) {
-      console.error('Erro ao deletar funcionário:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      }
+    await apiService.delete<void>(`/funcionarios/${id}`)
+    return {
+      success: true,
+      message: 'Funcionário deletado com sucesso!'
     }
   }
 
@@ -313,32 +228,16 @@ class FuncionarioService {
     return cep
   }
 
-  // Buscar funcionários por nome (para lookup)
+  /**
+   * Buscar funcionários por nome (para lookup)
+   */
   async searchFuncionariosByName(name: string): Promise<FuncionarioListResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/search?name=${encodeURIComponent(name)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return {
-        success: true,
-        data: data
-      }
-    } catch (error) {
-      console.error('Erro ao buscar funcionários por nome:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      }
+    const data = await apiService.get<Funcionario[]>(`/funcionarios/search?name=${encodeURIComponent(name)}`, {
+      fallback: []
+    })
+    return {
+      success: true,
+      data: data
     }
   }
 }

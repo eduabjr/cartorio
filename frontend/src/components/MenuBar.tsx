@@ -1,23 +1,42 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAccessibility } from '../hooks/useAccessibility'
 
 export function MenuBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
+  const { getTheme, currentTheme } = useAccessibility()
+  const [theme, setTheme] = useState(getTheme())
+  
+  // Atualizar tema quando currentTheme mudar
+  useEffect(() => {
+    const newTheme = getTheme()
+    setTheme(newTheme)
+    console.log('🎨 MenuBar - Tema atualizado:', currentTheme, newTheme)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTheme])
 
   const handleLogout = () => {
     // Implementar logout
     console.log('Logout')
   }
 
+  const menuStyles: React.CSSProperties = {
+    background: theme.surface,
+    padding: '4px 24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+    borderBottom: `1px solid ${theme.border}`
+  }
+
   return (
     <div>
       {/* Menu Mobile Button */}
-      <div className="lg:hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-4 py-2 shadow-lg">
+      <div className="lg:hidden" style={menuStyles}>
         <div className="flex justify-between items-center">
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+            className="flex items-center space-x-2 transition-colors duration-150"
+            style={{ color: theme.text }}
           >
             <span className="font-medium">Menu</span>
           </button>
@@ -25,82 +44,93 @@ export function MenuBar() {
       </div>
 
       {/* Menu Desktop */}
-      <div className="hidden lg:block bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-6 py-3 shadow-lg">
+      <div className="hidden lg:block" style={menuStyles}>
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-8">
             <button
               onClick={() => navigate('/cadastros')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Cadastros</span>
             </button>
             
             <button
               onClick={() => navigate('/processos')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Processos</span>
             </button>
             
             <button
               onClick={() => navigate('/atendimento')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Atendimento</span>
             </button>
             
             <button
               onClick={() => navigate('/protocolo')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Protocolo</span>
             </button>
             
             <button
               onClick={() => navigate('/lavratura')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Lavratura</span>
             </button>
             
             <button
               onClick={() => navigate('/certidoes')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Certidões</span>
             </button>
             
             <button
               onClick={() => navigate('/firmas')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Firmas</span>
             </button>
             
             <button
               onClick={() => navigate('/livro-e')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Livro E</span>
             </button>
             
             <button
               onClick={() => navigate('/livro-comercial')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Livro Comercial</span>
             </button>
             
             <button
               onClick={() => navigate('/remessas')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Remessas</span>
             </button>
             
             <button
               onClick={() => navigate('/relatorios')}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 transition-colors duration-150"
+              className="flex items-center space-x-2 transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="font-medium">Relatórios</span>
             </button>
@@ -109,7 +139,8 @@ export function MenuBar() {
           <div className="flex items-center space-x-4">
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-1 px-3 py-2 text-white hover:text-red-200 hover:bg-red-500 hover:bg-opacity-20 rounded-lg transition-colors duration-150"
+              className="flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors duration-150"
+              style={{ color: theme.text }}
             >
               <span className="text-sm">Sair</span>
             </button>
@@ -119,7 +150,7 @@ export function MenuBar() {
 
       {/* Menu Mobile */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-4 py-2 shadow-lg">
+        <div className="lg:hidden" style={menuStyles}>
           <div className="flex flex-col space-y-2">
             <button
               onClick={() => {

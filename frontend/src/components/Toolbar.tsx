@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { 
   UserIcon, 
   DocumentIcon, 
@@ -9,8 +10,19 @@ import {
   UploadIcon,
   SettingsIcon
 } from './icons'
+import { useAccessibility } from '../hooks/useAccessibility'
 
 export function Toolbar() {
+  const { getTheme, currentTheme } = useAccessibility()
+  const [theme, setTheme] = useState(getTheme())
+  
+  // Atualizar tema quando currentTheme mudar
+  useEffect(() => {
+    const newTheme = getTheme()
+    setTheme(newTheme)
+    console.log('🎨 Toolbar - Tema atualizado:', currentTheme, newTheme)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTheme])
   const toolbarItems = [
     { icon: UserIcon, label: 'Cadastros', onClick: () => console.log('Cadastros') },
     { icon: DocumentIcon, label: 'Documentos', onClick: () => console.log('Documentos') },
@@ -25,21 +37,33 @@ export function Toolbar() {
     { icon: SettingsIcon, label: 'Configurações', onClick: () => console.log('Configurações') }
   ]
 
+  const toolbarStyles: React.CSSProperties = {
+    backgroundColor: theme.surface,
+    borderBottom: `1px solid ${theme.border}`,
+    padding: '0 16px'
+  }
+
   return (
-    <div className="bg-white border-b border-gray-300 px-4 py-2">
-      <div className="flex space-x-2">
+    <div style={toolbarStyles}>
+      <div className="flex space-x-1">
         {toolbarItems.map((item, index) => {
           const IconComponent = item.icon
           return (
             <button
               key={index}
-              className="p-2 hover:bg-gray-100 rounded-md transition-colors group"
+              className="p-0.5 rounded-md transition-colors group"
               title={item.label}
               onClick={item.onClick}
+              style={{ 
+                color: theme.text,
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.background}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <IconComponent 
-                size={20} 
-                className="text-gray-600 group-hover:text-primary-600 transition-colors" 
+                size={16} 
+                style={{ color: theme.text }}
               />
             </button>
           )

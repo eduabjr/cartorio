@@ -8,6 +8,7 @@ import { useAccessibility } from '../hooks/useAccessibility'
 import { scannerService } from '../services/ScannerService'
 import { ocrService } from '../services/OCRService'
 import QRCode from 'qrcode'
+import { useFieldValidation } from '../hooks/useFieldValidation'
 // import { useTJSPApi } from '../hooks/useTJSPApi'
 
 // Definições de tipos para APIs do Electron
@@ -199,8 +200,17 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     profissao: ''
   })
 
+  // ✨ Hook de validação com regras globais
+  const { 
+    handleChange: handleValidatedChange, 
+    getValue, 
+    getError,
+    loadingCEP 
+  } = useFieldValidation(formData, setFormData)
+
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    // Usar o hook de validação para aplicar regras globais
+    handleValidatedChange(field, value)
   }
 
   // Função para formatar telefone
@@ -859,14 +869,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       }
 
       console.log('📷 Scanners detectados:', scanners)
-      
-      // Mostrar configurações do scanner
-      const config = await showRealScannerConfig(scanners[0])
-      if (!config) return
-
-      // Iniciar digitalização real
-      console.log('Scanner configurado, mas funcionalidade OCR automática foi removida')
-      
+      alert('Scanner detectado com sucesso!')
     } catch (error) {
       console.error('❌ Erro ao acessar scanner:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
@@ -879,17 +882,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     try {
       // Verificar se Image Capture API está disponível
       if ('ImageCapture' in window) {
-        await startImageCaptureScanning()
-      } else if ('navigator' in window && 'usb' in (navigator as any)) {
-        await startWebUSBScanning()
+        alert('📷 Funcionalidade de câmera disponível. Utilize seu dispositivo para capturar imagens.')
       } else {
-        alert('❌ APIs de scanner não disponíveis no navegador.\n\nPara funcionalidade completa, use a versão Electron do sistema.')
-        return
+        alert('⚠️ Camera/Scanner não disponível neste navegador.\n\nUtilize um navegador moderno como Chrome, Firefox ou Edge.')
       }
     } catch (error) {
-      console.error('❌ Erro no scanner web:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-      alert(`❌ Erro no scanner web:\n${errorMessage}`)
+      console.error('❌ Erro ao acessar câmera:', error)
+      alert('❌ Erro ao acessar câmera/scanner')
     }
   }
 
@@ -1404,16 +1403,19 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     gap: '3px',
     marginTop: '4px',
     backgroundColor: theme.surface,
-    color: theme.text
+    color: theme.text,
+    minWidth: 0,  // Permite encolher
+    flexShrink: 1  // Permite que o formulário encolha
   }
 
   const rowStyles = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(8, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',  // Layout responsivo
     gap: '6px',
     alignItems: 'start',
     marginBottom: '3px',
-    alignContent: 'start'
+    alignContent: 'start',
+    minWidth: 0  // Permite que os itens do grid encolham
   }
 
   const fieldStyles = {
@@ -1425,7 +1427,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     justifyContent: 'flex-start',
     minHeight: '42px',
     paddingTop: '0px',
-    marginTop: '0px'
+    marginTop: '0px',
+    minWidth: 0  // Permite que os campos encolham quando a janela é reduzida
   }
 
   const labelStyles: React.CSSProperties = {
@@ -1441,7 +1444,11 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     paddingTop: '0px',
     verticalAlign: 'top',
     position: 'relative' as const,
-    top: '0px'
+    top: '0px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+    minWidth: 0
   }
 
   const inputStyles = {
@@ -1457,7 +1464,12 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     maxHeight: '24px',
     width: '100%',
     boxSizing: 'border-box' as const,
-    lineHeight: '18px'
+    lineHeight: '18px',
+    minWidth: '80px',  // Largura mínima para garantir legibilidade
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+    flexShrink: 1
   }
 
   const selectStyles = {
@@ -1486,7 +1498,12 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     verticalAlign: 'top',
     display: 'block',
     margin: '0',
-    fontFamily: 'inherit'
+    fontFamily: 'inherit',
+    minWidth: '80px',  // Largura mínima para garantir legibilidade
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+    flexShrink: 1
   }
 
   const buttonStyles = {
@@ -1570,7 +1587,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     marginTop: '25px',
     paddingTop: '20px',
     borderTop: `1px solid ${theme.border}`,
-    flexWrap: 'wrap' as const
+    flexWrap: 'wrap' as const,
+    flexShrink: 0,  // Botões não encolhem
+    minHeight: '40px'  // Altura mínima garantida
   }
 
   // Estilos para botões da barra de ferramentas
@@ -1616,7 +1635,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           width: '100%', 
           height: '100%',
           minHeight: '100%',
-          padding: '8px'
+          padding: '8px',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          boxSizing: 'border-box'
         }}
       >
         {/* Tabs */}
@@ -1649,22 +1671,31 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           <div style={rowStyles}>
             <div style={{ ...fieldStyles, gridColumn: 'span 2' }}>
               <label style={labelStyles}>Código {formData.codigo === '0' && <span style={{ color: theme.textSecondary, fontSize: '12px' }}>(ID será gerado)</span>}</label>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '24px' }}>
                 <button
-                  onClick={() => setShowScannerConfig(true)}
-                  style={{ 
-                    fontSize: '16px', 
-                    cursor: 'pointer', 
-                    margin: 0,
-                    background: 'none',
+                  type="button"
+                  onClick={handleScanner}
+                  style={{
+                    padding: '0',
                     border: 'none',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    transition: 'background-color 0.2s'
+                    borderRadius: '0',
+                    backgroundColor: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '20px',
+                    width: '24px',
+                    minWidth: '24px',
+                    boxSizing: 'border-box',
+                    flexShrink: 0,
+                    transition: 'opacity 0.2s ease',
+                    lineHeight: '1'
                   }}
-                  title="Escanear documento com scanner real e processar com OCR"
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.border}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  title="Escanear documento com scanner/câmera"
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                 >
                   📷
                 </button>
@@ -2123,23 +2154,25 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           {/* Linha 4: Pai, Mãe, Profissão */}
           <div style={rowStyles}>
             <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
-              <label style={labelStyles}>Pai</label>
+              <label style={labelStyles}>Nome do Pai</label>
               <input
                 type="text"
                 value={formData.pai}
                 onChange={(e) => handleInputWithLimit('pai', e.target.value, 100)}
                 style={inputStyles}
                 maxLength={100}
+                placeholder="Nome completo do pai"
               />
             </div>
 
             <div style={{ ...fieldStyles, gridColumn: 'span 3' }}>
-              <label style={labelStyles}>Mãe</label>
+              <label style={labelStyles}>Nome da Mãe</label>
               <input
                 type="text"
                 value={formData.mae}
                 onChange={(e) => handleInputWithLimit('mae', e.target.value, 100)}
                 style={inputStyles}
+                placeholder="Nome completo da mãe"
                 maxLength={100}
               />
             </div>

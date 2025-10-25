@@ -36,6 +36,7 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
   const getNextZIndex = useCallback(() => {
     const newZIndex = nextZIndex + 1
     setNextZIndex(newZIndex)
+    console.log(`📈 Novo zIndex gerado: ${newZIndex}`)
     return newZIndex
   }, [nextZIndex])
 
@@ -59,27 +60,18 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
     const existingWindow = windows.find(w => w.type === windowData.type)
     
     if (existingWindow) {
-      console.log(`🔄 Janela do tipo '${windowData.type}' já está aberta, fechando e reabrindo na posição original...`)
+      console.log(`🔄 Janela do tipo '${windowData.type}' já está aberta, trazendo para frente...`)
       
-      // Fechar a janela existente
-      setWindows(prev => prev.filter(w => w.id !== existingWindow.id))
-      
-      // Aguardar um momento e abrir nova janela na posição original
-      setTimeout(() => {
-        const originalPosition = { x: 100, y: 150 } // Posição original
-        const zIndex = getNextZIndex()
-        
-        const newWindow: WindowInstance = {
-          ...windowData,
-          position: originalPosition,
-          zIndex,
-          isMinimized: false,
-          isMaximized: false
-        }
-
-        setWindows(prev => [...prev, newWindow])
-        console.log(`✅ Nova janela '${windowData.type}' aberta na posição original`)
-      }, 100)
+      // Trazer a janela existente para frente (sem fechar/reabrir)
+      const newZIndex = getNextZIndex()
+      setWindows(prev => 
+        prev.map(w => 
+          w.id === existingWindow.id 
+            ? { ...w, zIndex: newZIndex, isMinimized: false } // Desminimizar se estava minimizada
+            : w
+        )
+      )
+      console.log(`✅ Janela '${windowData.type}' trazida para frente`)
     } else {
       // Nova janela - usar posição sequencial
       const position = getNextPosition()
@@ -111,15 +103,23 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
   }, [windows])
 
   const bringToFront = useCallback((id: string) => {
-    const newZIndex = getNextZIndex()
-    setWindows(prev => 
-      prev.map(window => 
-        window.id === id 
-          ? { ...window, zIndex: newZIndex }
-          : window
+    console.log(`🔺 bringToFront chamado para windowId: ${id}`)
+    setNextZIndex(prev => {
+      const newZIndex = prev + 1
+      console.log(`🎯 Atualizando para novo zIndex: ${newZIndex}`)
+      
+      setWindows(prevWindows => 
+        prevWindows.map(window => {
+          if (window.id === id) {
+            console.log(`✅ Window ${id} agora tem zIndex: ${newZIndex}`)
+            return { ...window, zIndex: newZIndex }
+          }
+          return window
+        })
       )
-    )
-  }, [getNextZIndex])
+      return newZIndex
+    })
+  }, [])
 
   const updateWindowPosition = useCallback((id: string, position: { x: number; y: number }) => {
     setWindows(prev => 
