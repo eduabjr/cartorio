@@ -397,6 +397,22 @@ class NVDAService {
       return
     }
 
+    // ⛔ IGNORAR elementos SVG e elementos com aria-hidden="true"
+    if (element.tagName === 'svg' || 
+        element.closest('svg') || 
+        element.getAttribute('aria-hidden') === 'true' ||
+        element.closest('[aria-hidden="true"]')) {
+      console.log('🚫 Ignorando foco em SVG ou elemento oculto')
+      return
+    }
+
+    // ⛔ IGNORAR elementos dentro do header (controles de janela)
+    if (element.closest('[role="banner"]') && 
+        (element.closest('[role="group"]') || element.closest('button'))) {
+      console.log('🚫 Ignorando controles do header')
+      return
+    }
+
     const label = this.getElementLabel(element)
     if (label) {
       await this.announce(`Foco em: ${label}`, {
@@ -410,10 +426,10 @@ class NVDAService {
    * Obtém label acessível de um elemento
    */
   private getElementLabel(element: HTMLElement): string | null {
-    // Tentar aria-label primeiro
+    // Tentar aria-label primeiro (PRIORIDADE MÁXIMA)
     const ariaLabel = element.getAttribute('aria-label')
-    if (ariaLabel) {
-      return ariaLabel
+    if (ariaLabel && ariaLabel.trim()) {
+      return ariaLabel.trim()
     }
 
     // Tentar aria-labelledby
@@ -421,26 +437,38 @@ class NVDAService {
     if (ariaLabelledBy) {
       const labelElement = document.getElementById(ariaLabelledBy)
       if (labelElement) {
-        return labelElement.textContent || labelElement.innerText
+        const labelText = labelElement.textContent || labelElement.innerText
+        if (labelText && labelText.trim()) {
+          return labelText.trim()
+        }
       }
     }
 
-    // Tentar texto do elemento
-    const textContent = element.textContent || element.innerText
-    if (textContent && textContent.trim()) {
-      return textContent.trim()
-    }
-
-    // Tentar placeholder
+    // Tentar placeholder (campos de entrada)
     const placeholder = element.getAttribute('placeholder')
-    if (placeholder) {
-      return placeholder
+    if (placeholder && placeholder.trim()) {
+      return placeholder.trim()
     }
 
     // Tentar title
     const title = element.getAttribute('title')
-    if (title) {
-      return title
+    if (title && title.trim()) {
+      return title.trim()
+    }
+
+    // Tentar texto do elemento (ÚLTIMA OPÇÃO, com filtros)
+    let textContent = element.textContent || element.innerText
+    if (textContent) {
+      textContent = textContent.trim()
+      
+      // ⛔ FILTRAR símbolos Unicode de ícones SVG (□, ⊡, ✕, etc)
+      const svgSymbols = /[\u25A1\u22A1\u2715\u2716\u2212\u2014\u2500]/g
+      textContent = textContent.replace(svgSymbols, '')
+      
+      // ⛔ FILTRAR se for apenas espaços em branco ou símbolos
+      if (textContent.trim() && textContent.length > 0) {
+        return textContent.trim()
+      }
     }
 
     return null

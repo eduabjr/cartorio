@@ -10,6 +10,7 @@ interface MovableWindowProps {
   height?: number
   initialX?: number
   initialY?: number
+  onPositionChange?: (x: number, y: number, width: number, height: number) => void
 }
 
 export function MovableWindow({
@@ -20,20 +21,31 @@ export function MovableWindow({
   width = 800,
   height = 600,
   initialX = 100,
-  initialY = 100
+  initialY = 100,
+  onPositionChange
 }: MovableWindowProps) {
   const [position, setPosition] = useState({ x: initialX, y: initialY })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const windowRef = useRef<HTMLDivElement>(null)
 
+  // Notificar mudanças de posição
+  useEffect(() => {
+    if (onPositionChange) {
+      console.log('📍 MovableWindow: Posição mudou →', { x: position.x, y: position.y, width, height })
+      onPositionChange(position.x, position.y, width, height)
+    }
+  }, [position.x, position.y, width, height, onPositionChange])
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
-        setPosition({
+        const newPos = {
           x: e.clientX - dragStart.x,
           y: e.clientY - dragStart.y
-        })
+        }
+        console.log('🖱️  Arrastando janela para:', newPos)
+        setPosition(newPos)
       }
     }
 
@@ -55,6 +67,7 @@ export function MovableWindow({
   const handleMouseDown = (e: React.MouseEvent) => {
     if (windowRef.current) {
       const rect = windowRef.current.getBoundingClientRect()
+      console.log('🎯 Iniciando arraste da janela')
       setDragStart({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
@@ -68,14 +81,16 @@ export function MovableWindow({
   return (
     <div
       ref={windowRef}
-      className="fixed bg-white border border-gray-300 shadow-2xl rounded-lg z-50"
+      className="absolute bg-white border border-gray-300 shadow-2xl rounded-lg z-50"
       style={{
         left: position.x,
         top: position.y,
         width: width,
         height: height,
         minWidth: 400,
-        minHeight: 300
+        minHeight: 300,
+        position: 'absolute',
+        pointerEvents: 'auto'
       }}
     >
       {/* Header da janela */}

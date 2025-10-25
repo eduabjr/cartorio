@@ -5,6 +5,11 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 // Expor APIs seguras para o frontend
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Window Control APIs
+  minimizeWindow: () => ipcRenderer.send('window-minimize'),
+  maximizeWindow: () => ipcRenderer.send('window-maximize'),
+  closeWindow: () => ipcRenderer.send('window-close'),
+  
   // Scanner APIs
   detectScanners: () => ipcRenderer.invoke('detect-scanners'),
   scanDocument: (config) => ipcRenderer.invoke('scan-document', config),

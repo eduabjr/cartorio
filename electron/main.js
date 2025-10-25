@@ -19,17 +19,23 @@ function createMainWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 800,
+    frame: false, // Remove completamente o frame nativo
+    transparent: false,
+    hasShadow: true,
+    backgroundColor: '#1a5c3a',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: !isDev
+      webSecurity: !isDev,
+      devTools: isDev
     },
     icon: path.join(__dirname, '../frontend/public/logo-light.png'),
     title: 'Sistema CIVITAS - Cartório Digital',
     show: false,
-    titleBarStyle: 'default'
+    autoHideMenuBar: true,
+    menuBarVisible: false
   })
 
   // Carregar a aplicação
@@ -41,6 +47,11 @@ function createMainWindow() {
     // Modo produção - carregar arquivos estáticos
     mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'))
   }
+
+  // Remover menu nativo completamente
+  mainWindow.setMenu(null)
+  mainWindow.setMenuBarVisibility(false)
+  mainWindow.setAutoHideMenuBar(true)
 
   // Mostrar janela quando estiver pronta
   mainWindow.once('ready-to-show', () => {
@@ -70,10 +81,17 @@ function createMainWindow() {
     shell.openExternal(url)
     return { action: 'deny' }
   })
+
+  return mainWindow
 }
 
 // Inicializar aplicação
 app.whenReady().then(() => {
+  // Remover menu da aplicação completamente
+  if (process.platform === 'darwin') {
+    app.dock.hide()
+  }
+  
   createMainWindow()
   
   // Inicializar bridge de scanner
@@ -100,6 +118,29 @@ app.on('web-contents-created', (event, contents) => {
     event.preventDefault()
     shell.openExternal(navigationUrl)
   })
+})
+
+// IPC Handlers para controles da janela
+ipcMain.on('window-minimize', () => {
+  if (mainWindow) {
+    mainWindow.minimize()
+  }
+})
+
+ipcMain.on('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow.maximize()
+    }
+  }
+})
+
+ipcMain.on('window-close', () => {
+  if (mainWindow) {
+    mainWindow.close()
+  }
 })
 
 // IPC Handlers para comunicação com o frontend

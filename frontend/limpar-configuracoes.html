@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limpar Configurações - CIVITAS</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a5c3a 0%, #0d3d26 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+    
+    h1 {
+      color: #1a5c3a;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    .info-box {
+      background: #f0f9ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin-bottom: 24px;
+      border-radius: 4px;
+    }
+    
+    .info-box h3 {
+      color: #1e40af;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    
+    .info-box p {
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .warning-box {
+      background: #fff7ed;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin-bottom: 24px;
+      border-radius: 4px;
+    }
+    
+    .warning-box h3 {
+      color: #d97706;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    
+    .warning-box ul {
+      margin-left: 20px;
+      color: #78350f;
+    }
+    
+    .warning-box li {
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    
+    .status {
+      background: #f3f4f6;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+    }
+    
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .status-label {
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .status-value {
+      color: #6b7280;
+      font-family: monospace;
+    }
+    
+    .status-value.exists {
+      color: #ef4444;
+      font-weight: 600;
+    }
+    
+    .status-value.clean {
+      color: #10b981;
+      font-weight: 600;
+    }
+    
+    .buttons {
+      display: flex;
+      gap: 12px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #dc2626;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    
+    .btn-primary {
+      background: #1a5c3a;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #134429;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(26, 92, 58, 0.3);
+    }
+    
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+    
+    .success-message {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+      font-weight: 600;
+      text-align: center;
+    }
+    
+    .success-message.show {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 Limpar Configurações</h1>
+    <p class="subtitle">Sistema CIVITAS - Resetar Preferências de Acessibilidade</p>
+    
+    <div class="info-box">
+      <h3>ℹ️ Sobre esta ferramenta</h3>
+      <p>Esta página permite limpar as configurações salvas no navegador. Útil quando há conflitos ou comportamentos inesperados.</p>
+    </div>
+    
+    <div class="warning-box">
+      <h3>⚠️ O que será removido:</h3>
+      <ul>
+        <li><strong>accessibility-settings</strong> - Configurações de acessibilidade</li>
+        <li><strong>theme</strong> - Tema atual (light/dark/highContrast)</li>
+        <li><strong>token</strong> - Token de autenticação</li>
+        <li><strong>user</strong> - Dados do usuário</li>
+      </ul>
+    </div>
+    
+    <div class="status" id="status">
+      <div class="status-item">
+        <span class="status-label">accessibility-settings:</span>
+        <span class="status-value" id="status-accessibility">...</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">theme:</span>
+        <span class="status-value" id="status-theme">...</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">token:</span>
+        <span class="status-value" id="status-token">...</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">user:</span>
+        <span class="status-value" id="status-user">...</span>
+      </div>
+    </div>
+    
+    <div class="success-message" id="successMessage">
+      ✅ Configurações limpas com sucesso!
+    </div>
+    
+    <div class="buttons">
+      <button class="btn-danger" onclick="limparTudo()">
+        🗑️ Limpar Tudo
+      </button>
+      <button class="btn-primary" onclick="limparApenasTema()">
+        🎨 Apenas Tema
+      </button>
+      <button class="btn-secondary" onclick="verificarStatus()">
+        🔄 Atualizar
+      </button>
+    </div>
+  </div>
+  
+  <script>
+    function verificarStatus() {
+      const keys = ['accessibility-settings', 'theme', 'token', 'user'];
+      
+      keys.forEach(key => {
+        const element = document.getElementById(`status-${key.replace('-', '')}`);
+        const value = localStorage.getItem(key);
+        
+        if (value) {
+          element.textContent = value.length > 50 ? value.substring(0, 50) + '...' : value;
+          element.className = 'status-value exists';
+        } else {
+          element.textContent = '(vazio)';
+          element.className = 'status-value clean';
+        }
+      });
+    }
+    
+    function limparTudo() {
+      if (confirm('⚠️ Tem certeza que deseja limpar TODAS as configurações?\n\nVocê precisará fazer login novamente.')) {
+        localStorage.removeItem('accessibility-settings');
+        localStorage.removeItem('theme');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        mostrarSucesso();
+        verificarStatus();
+        
+        setTimeout(() => {
+          alert('✅ Configurações limpas!\n\n📌 Próximos passos:\n1. Feche esta aba\n2. Recarregue a aplicação (F5)\n3. Faça login novamente');
+        }, 500);
+      }
+    }
+    
+    function limparApenasTema() {
+      if (confirm('🎨 Deseja limpar apenas as configurações de tema e acessibilidade?')) {
+        localStorage.removeItem('accessibility-settings');
+        localStorage.removeItem('theme');
+        
+        mostrarSucesso();
+        verificarStatus();
+        
+        setTimeout(() => {
+          alert('✅ Tema e acessibilidade limpos!\n\n📌 Recarregue a aplicação (F5) para aplicar');
+        }, 500);
+      }
+    }
+    
+    function mostrarSucesso() {
+      const msg = document.getElementById('successMessage');
+      msg.classList.add('show');
+      setTimeout(() => {
+        msg.classList.remove('show');
+      }, 3000);
+    }
+    
+    // Verificar status ao carregar
+    verificarStatus();
+  </script>
+</body>
+</html>
+

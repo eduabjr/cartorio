@@ -49,7 +49,10 @@ export function Layout() {
       className={`flex flex-col h-screen theme-${currentTheme}`}
       style={{
         backgroundColor: theme.background,
-        color: theme.text
+        color: theme.text,
+        margin: 0,
+        padding: 0,
+        overflow: 'hidden'
       }}
     >
       <SafeComponent name="Header">
@@ -61,23 +64,39 @@ export function Layout() {
       </SafeComponent>
       
       <main 
-        className="flex-1 overflow-auto"
+        className="flex-1 main-content-area"
         style={{
           backgroundColor: theme.background,
-          color: theme.text
+          color: theme.text,
+          position: 'relative',
+          overflow: 'auto',
+          overflowX: 'auto',
+          overflowY: 'auto',
+          height: '100%',
+          minHeight: 0
         }}
       >
-        <SafeComponent name="MainContent">
-          <Outlet />
-        </SafeComponent>
+        {/* Container interno que expande com as janelas */}
+        <div style={{
+          position: 'relative',
+          minHeight: '200vh',  // 2x a altura da viewport
+          minWidth: '200vw',   // 2x a largura da viewport
+          width: '100%',
+          height: '100%'
+        }}>
+          <SafeComponent name="MainContent">
+            <Outlet />
+          </SafeComponent>
+          
+          {/* WindowManager DENTRO do container scrollável */}
+          <SafeComponent name="WindowManager">
+            <WindowManager />
+          </SafeComponent>
+        </div>
       </main>
       
       <SafeComponent name="SideMenu">
         <SideMenu isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} />
-      </SafeComponent>
-      
-      <SafeComponent name="WindowManager">
-        <WindowManager />
       </SafeComponent>
     </div>
   )

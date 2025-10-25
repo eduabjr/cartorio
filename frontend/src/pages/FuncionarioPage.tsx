@@ -45,6 +45,7 @@ import { CepService, CepData } from '../services/CepService'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
 import { useFieldValidation } from '../hooks/useFieldValidation'
+import { validarCPF, formatCPF } from '../utils/cpfValidator'
 
 interface FuncionarioPageProps {
   onClose: () => void
@@ -54,6 +55,9 @@ interface FuncionarioPageProps {
 export function FuncionarioPage({ onClose, resetToOriginalPosition }: FuncionarioPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  
+  // Cor do header: teal no light, laranja no dark
+  const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
 
   // Estados para os dados do funcionário
   const [formData, setFormData] = useState({
@@ -150,15 +154,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       // Campos de texto usam o hook de validação
       handleFieldChange(field, value)
     }
-  }
-
-  // Função para formatar CPF
-  const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, '')
-    if (numbers.length <= 11) {
-      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-    }
-    return value
   }
 
   // Função para formatar CEP
@@ -378,58 +373,68 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
         <style>
           @media print {
             @page {
-              margin: 2cm;
+              margin: 0.8cm;
+              size: A4 portrait;
+            }
+            body {
+              padding: 0 !important;
             }
           }
           body {
             font-family: Arial, sans-serif;
-            padding: 20px;
-            max-width: 800px;
+            padding: 10px;
+            max-width: 100%;
             margin: 0 auto;
+            font-size: 11px;
           }
           h1 {
             text-align: center;
             color: #333;
             border-bottom: 2px solid #6B7280;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            font-size: 18px;
           }
           .section {
-            margin-bottom: 20px;
+            margin-bottom: 8px;
+            page-break-inside: avoid;
           }
           .section-title {
             background-color: #6B7280;
             color: white;
-            padding: 8px 12px;
+            padding: 4px 8px;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
+            font-size: 12px;
           }
           .field-row {
             display: flex;
-            margin-bottom: 8px;
+            margin-bottom: 3px;
             border-bottom: 1px solid #eee;
-            padding: 5px 0;
+            padding: 2px 0;
           }
           .field-label {
             font-weight: bold;
-            width: 200px;
+            width: 160px;
             color: #555;
+            font-size: 10px;
           }
           .field-value {
             flex: 1;
             color: #000;
+            font-size: 10px;
           }
           .empty {
             color: #999;
             font-style: italic;
           }
           .footer {
-            margin-top: 40px;
+            margin-top: 15px;
             text-align: center;
-            font-size: 12px;
+            font-size: 9px;
             color: #666;
             border-top: 1px solid #ccc;
-            padding-top: 10px;
+            padding-top: 5px;
           }
         </style>
       </head>
@@ -889,6 +894,34 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     boxSizing: 'border-box'
   }
 
+  const iconButtonStyles = {
+    position: 'absolute' as const,
+    right: '6px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    padding: '0px',
+    fontSize: '14px',
+    border: 'none',
+    borderRadius: '0px',
+    cursor: 'pointer',
+    backgroundColor: 'transparent',
+    color: theme.primary,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'opacity 0.2s ease',
+    zIndex: 1,
+    width: '20px',
+    height: '20px',
+    outline: 'none',
+    boxShadow: 'none'
+  }
+
+  const getInputWithIconStyles = (fieldName: string) => ({
+    ...getInputStyles(fieldName),
+    paddingRight: '30px' // Espaço para o ícone
+  })
+
   // Estados dos UFs brasileiros
   const ufOptions = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -906,11 +939,12 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       title="Funcionário"
       onClose={onClose}
       resetToOriginalPosition={resetToOriginalPosition}
-      headerColor="#6B7280"
+      headerColor={headerColor}
       height="540px"  // Reduzido de 600px para 540px
       width="900px"
       minWidth="900px"  // 🔒 BLOQUEIO: Impede redução abaixo de 900px
       minHeight="540px" // Reduzido de 600px para 540px
+      resizable={false}  // 🔒 BLOQUEIO: Desabilita redimensionamento
     >
       <div style={containerStyles}>
         {/* Formulário */}
@@ -1003,7 +1037,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
               <div style={row2Styles}>
                 <div style={{...fieldStyles, width: '35%'}}>
                   <label style={labelStyles}>Nome</label>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ position: 'relative' }}>
                     <input
                       type="text"
                       value={formData.nome}
@@ -1011,14 +1045,15 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                       onFocus={() => setFocusedField('nome')}
                       onBlur={() => setFocusedField(null)}
                       className="funcionario-input"
-                      style={{ ...getInputStyles('nome'), flex: 1 }}
+                      style={getInputWithIconStyles('nome')}
                     />
                     <button
-                      style={lookupButtonStyles}
                       onClick={() => setShowLookup(true)}
-                    >
-                      ...
-                    </button>
+                      style={iconButtonStyles}
+                      title="Buscar funcionário"
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                    >🔍</button>
                   </div>
                 </div>
 
@@ -1053,9 +1088,27 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                   <input
                     type="text"
                     value={formData.cpf}
-                    onChange={(e) => handleInputChange('cpf', e.target.value)}
+                    onChange={(e) => {
+                      // Permite apenas números, máximo 11 dígitos
+                      const valor = e.target.value.replace(/\D/g, '').slice(0, 11)
+                      handleInputChange('cpf', valor)
+                    }}
                     onFocus={() => setFocusedField('cpf')}
-                    onBlur={() => setFocusedField(null)}
+                    onBlur={(e) => {
+                      setFocusedField(null)
+                      const valor = e.target.value
+                      if (valor) {
+                        // Formata CPF
+                        const cpfFormatado = formatCPF(valor)
+                        handleInputChange('cpf', cpfFormatado)
+                        
+                        // Valida CPF
+                        const validacao = validarCPF(valor)
+                        if (!validacao.isValid) {
+                          alert(`❌ CPF inválido!\n\n${validacao.error}`)
+                        }
+                      }
+                    }}
                     className="funcionario-input"
                     style={getInputStyles('cpf')}
                     placeholder="000.000.000-00"
@@ -1119,7 +1172,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                     onFocus={() => setFocusedField('endereco')}
                     onBlur={() => setFocusedField(null)}
                     style={getInputStyles('endereco')}
-                  placeholder="Nome da rua/avenida"
                 />
               </div>
 
@@ -1149,7 +1201,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                   onBlur={() => setFocusedField(null)}
                   className="funcionario-input"
                   style={getInputStyles('complemento')}
-                  placeholder="Apto, casa, etc."
                 />
               </div>
 
@@ -1163,7 +1214,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                   onBlur={() => setFocusedField(null)}
                   className="funcionario-input"
                   style={getInputStyles('bairro')}
-                  placeholder="Bairro"
                 />
               </div>
 
@@ -1177,7 +1227,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                   onBlur={() => setFocusedField(null)}
                   className="funcionario-input"
                   style={getInputStyles('cidade')}
-                  placeholder="Cidade"
                 />
               </div>
 
@@ -1393,12 +1442,14 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 <textarea
                   value={formData.observacao}
                   onChange={(e) => handleInputChange('observacao', e.target.value)}
-                    style={{ 
-                      ...inputStyles, 
-                      height: '70px', 
-                      resize: 'none',
-                        paddingTop: '4px'
-                    }}
+                  onFocus={() => setFocusedField('observacao')}
+                  onBlur={() => setFocusedField(null)}
+                  style={{ 
+                    ...getInputStyles('observacao'), 
+                    height: '70px', 
+                    resize: 'none',
+                    paddingTop: '4px'
+                  }}
                   placeholder="Observações sobre o funcionário"
                 />
                   </div>

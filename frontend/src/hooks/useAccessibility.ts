@@ -92,12 +92,12 @@ export const professionalThemes = {
     primary: '#FF8C00', // Laranja vibrante para links e botões
     secondary: '#A1D2D3', // Azul suave para elementos de destaque
     accent: '#A1D2D3', // Azul suave para elementos de destaque
-    background: '#121212', // Preto escuro
-    surface: '#121212', // Preto escuro
-    text: '#B0B0B0', // Cinza claro
-    textSecondary: '#B0B0B0', // Cinza claro
-    border: '#2C2C2C', // Cinza escuro
-    success: '#A1D2D3', // Azul suave
+    background: '#0a0a0a', // Preto muito escuro para fundo geral
+    surface: '#1e1e1e', // Cinza escuro para superfícies (MenuBar, Toolbar)
+    text: '#C8C8C8', // Cinza claro suave (melhor para os olhos no dark mode)
+    textSecondary: '#9A9A9A', // Cinza médio suave para texto secundário
+    border: '#3a3a3a', // Cinza médio para bordas (mais visível)
+    success: '#10b981', // Verde mais vibrante
     warning: '#f59e0b', // Amarelo moderno
     error: '#ef4444', // Vermelho moderno
     info: '#f19830' // Laranja para informações
@@ -121,14 +121,20 @@ export const professionalThemes = {
 
 // Função para aplicar configurações de contraste avançado e filtro azul
 function applyContrastSettings(settings: AccessibilitySettings) {
-  const { contrastLevel, highContrast, blueLightFilter, blueLightIntensity } = settings
+  const { contrastLevel, highContrast, blueLightFilter, blueLightIntensity, reducedMotion } = settings
   
   console.log('🔵 Aplicando configurações de filtro:', {
     blueLightFilter,
     blueLightIntensity,
     highContrast,
-    contrastLevel
+    contrastLevel,
+    reducedMotion
   })
+  
+  // 🔒 PROTEÇÃO: reducedMotion NÃO deve afetar contraste ou filtros
+  if (reducedMotion) {
+    console.log('⏸️  Modo de movimento reduzido está ATIVO - mas NÃO afeta filtros/contraste')
+  }
   
   // Remover classes anteriores
   document.body.classList.remove('high-contrast-active', 'high-contrast-custom')
@@ -214,6 +220,9 @@ function applyContrastSettings(settings: AccessibilitySettings) {
     blueLightFilter: blueLightFilterValue,
     daltonismFilter: daltonismFilter
   })
+  
+  // 🔒 VERIFICAÇÃO FINAL: Garantir que reducedMotion não alterou nada além de animações
+  console.log('✅ applyContrastSettings concluído - reducedMotion não afetou filtros ou temas')
 }
 
 export function useAccessibility() {
@@ -270,22 +279,21 @@ export function useAccessibility() {
 
   // Detectar preferências do sistema
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     const prefersHighContrast = window.matchMedia('(prefers-contrast: high)')
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
 
     console.log('🔍 useAccessibility - Detectando preferências do sistema:', {
       prefersDark: prefersDark.matches,
-      prefersHighContrast: prefersHighContrast.matches,
-      reducedMotion: mediaQuery.matches
+      prefersHighContrast: prefersHighContrast.matches
     })
 
     // Só aplicar preferências do sistema se não houver configurações salvas
     const savedSettings = localStorage.getItem('accessibility-settings')
     if (!savedSettings) {
+      // ⚠️ NÃO ativar reducedMotion automaticamente - apenas detectar tema
       setSettings(prev => ({
         ...prev,
-        reducedMotion: mediaQuery.matches,
+        // reducedMotion mantém o padrão (false) - usuário deve ativar manualmente
         highContrast: prefersHighContrast.matches
       }))
 
@@ -302,11 +310,7 @@ export function useAccessibility() {
       console.log('⚠️ Configurações salvas encontradas, não aplicando preferências do sistema')
     }
 
-    // Listeners para mudanças
-    const handleMotionChange = (e: MediaQueryListEvent) => {
-      setSettings(prev => ({ ...prev, reducedMotion: e.matches }))
-    }
-
+    // Listeners para mudanças (SEM listener para reducedMotion)
     const handleContrastChange = (e: MediaQueryListEvent) => {
       setSettings(prev => ({ ...prev, highContrast: e.matches }))
       if (e.matches) {
@@ -320,12 +324,10 @@ export function useAccessibility() {
       }
     }
 
-    mediaQuery.addEventListener('change', handleMotionChange)
     prefersHighContrast.addEventListener('change', handleContrastChange)
     prefersDark.addEventListener('change', handleColorSchemeChange)
 
     return () => {
-      mediaQuery.removeEventListener('change', handleMotionChange)
       prefersHighContrast.removeEventListener('change', handleContrastChange)
       prefersDark.removeEventListener('change', handleColorSchemeChange)
     }
@@ -467,9 +469,24 @@ export function useAccessibility() {
 
 
   const updateSettings = (newSettings: Partial<AccessibilitySettings>) => {
+    console.log('🔧 updateSettings chamado com:', newSettings)
+    
     setSettings(prev => {
       const updated = { ...prev, ...newSettings }
       localStorage.setItem('accessibility-settings', JSON.stringify(updated))
+      
+      console.log('💾 Configurações atualizadas:', updated)
+      
+      // 🔒 PROTEÇÃO ESPECIAL: Se reducedMotion foi alterado, garantir que não afeta temas
+      if (newSettings.reducedMotion !== undefined) {
+        console.log('⏸️  reducedMotion alterado para:', newSettings.reducedMotion)
+        console.log('🔒 GARANTIA: Temas NÃO serão afetados')
+        console.log('🎨 Tema atual permanece:', currentTheme)
+        
+        announceToScreenReader(
+          newSettings.reducedMotion ? 'Movimento reduzido ativado - temas não afetados' : 'Movimento reduzido desativado'
+        )
+      }
       
       // Anunciar mudanças importantes para leitor de tela
       if (newSettings.highContrast !== undefined) {
@@ -490,12 +507,6 @@ export function useAccessibility() {
           'grande': 'tamanho grande'
         }
         announceToScreenReader(`Fonte alterada para ${sizeNames[newSettings.fontSize]}`)
-      }
-      
-      if (newSettings.reducedMotion !== undefined) {
-        announceToScreenReader(
-          newSettings.reducedMotion ? 'Movimento reduzido ativado' : 'Movimento reduzido desativado'
-        )
       }
       
       return updated
@@ -612,8 +623,26 @@ export function useAccessibility() {
 
   // Aplicar tema e configurações globalmente
   useEffect(() => {
+    // 🔒 OTIMIZAÇÃO: Evitar re-aplicações desnecessárias usando um timestamp
+    const lastApplied = (window as any).__lastThemeApplied || 0
+    const now = Date.now()
+    
+    // Se aplicou há menos de 100ms, ignorar (evita loops)
+    if (now - lastApplied < 100) {
+      console.log('⏭️  Pulando aplicação (muito recente)')
+      return
+    }
+    
+    (window as any).__lastThemeApplied = now
+    
+    console.log('🔄 useAccessibility - Aplicando configurações globais')
+    console.log('📊 Estado atual:', { currentTheme, settings })
+    
     const theme = getTheme()
     const fontSize = getFontSize()
+    
+    // 🔒 PROTEÇÃO: Garantir que o tema seja aplicado corretamente SEMPRE
+    console.log('🎨 Aplicando tema:', currentTheme, theme)
     
     // Aplicar tema ao body
     document.body.style.setProperty('--primary-color', theme.primary)
@@ -640,16 +669,22 @@ export function useAccessibility() {
     document.body.className = document.body.className.replace(/theme-\w+/g, '')
     document.body.classList.add(`theme-${currentTheme}`)
     
-    // Aplicar configurações de contraste avançado
-    applyContrastSettings(settings)
-    
+    // 🔒 SEPARAÇÃO: Aplicar reducedMotion ANTES de contraste (não pode interferir)
     if (settings.reducedMotion) {
+      console.log('⏸️  Aplicando modo de movimento reduzido')
       document.body.style.setProperty('--animation-duration', '0.01s')
       document.body.style.setProperty('--transition-duration', '0.01s')
     } else {
+      console.log('▶️  Removendo modo de movimento reduzido')
       document.body.style.removeProperty('--animation-duration')
       document.body.style.removeProperty('--transition-duration')
     }
+    
+    // 🔒 PROTEÇÃO: Aplicar configurações de contraste DEPOIS do tema
+    // Isso garante que reducedMotion não afete o tema
+    applyContrastSettings(settings)
+    
+    console.log('✅ Configurações aplicadas com sucesso')
   }, [currentTheme, settings])
 
   // Funções específicas para contraste

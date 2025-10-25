@@ -81,6 +81,17 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
   const theme = getTheme()
 
   return (
+    <>
+      <style>{`
+        .config-close-btn:hover {
+          background-color: ${isDarkMode ? '#2a2a2a' : '#e5e7eb'} !important;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+        }
+        .config-footer-btn:hover {
+          background-color: ${isDarkMode ? '#2a2a2a' : '#e5e7eb'} !important;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+        }
+      `}</style>
     <div style={{
       position: 'fixed',
       top: 0,
@@ -145,10 +156,11 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
           </div>
           <button
             onClick={onClose}
+            className="config-close-btn"
             style={{
               width: '32px',
               height: '32px',
-              background: '#f3f4f6',
+              backgroundColor: isDarkMode ? '#3a3a3a' : '#f3f4f6',
               border: 'none',
               borderRadius: '16px',
               cursor: 'pointer',
@@ -159,14 +171,6 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
               justifyContent: 'center',
               transition: 'all 0.2s ease',
               boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-            }}
-            onMouseOver={(e) => {
-              (e.target as HTMLButtonElement).style.background = '#e5e7eb'
-              (e.target as HTMLButtonElement).style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)'
-            }}
-            onMouseOut={(e) => {
-              (e.target as HTMLButtonElement).style.background = '#f3f4f6'
-              (e.target as HTMLButtonElement).style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)'
             }}
           >
             ✕
@@ -243,7 +247,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: settings.keyboardNavigation ? '#10b981' : '#f3f4f6',
+                    background: settings.keyboardNavigation ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                     transition: '0.3s',
                     borderRadius: '24px'
                   }}>
@@ -254,7 +258,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                       width: '18px',
                       left: '3px',
                       bottom: '3px',
-                      background: 'white',
+                      background: '#D0D0D0',
                       transition: '0.3s',
                       borderRadius: '50%',
                       transform: settings.keyboardNavigation ? 'translateX(20px)' : 'translateX(0)'
@@ -312,7 +316,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: (settings.keyboardCommands?.tabNavigation !== false) ? '#10b981' : '#f3f4f6',
+                        background: (settings.keyboardCommands?.tabNavigation !== false) ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                         transition: '0.3s',
                         borderRadius: '20px'
                       }}>
@@ -323,7 +327,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                           width: '14px',
                           left: '3px',
                           bottom: '3px',
-                          background: 'white',
+                          background: '#D0D0D0',
                           transition: '0.3s',
                           borderRadius: '50%',
                           transform: (settings.keyboardCommands?.tabNavigation !== false) ? 'translateX(16px)' : 'translateX(0)'
@@ -372,7 +376,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: (settings.keyboardCommands?.arrowKeys !== false) ? '#10b981' : '#f3f4f6',
+                        background: (settings.keyboardCommands?.arrowKeys !== false) ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                         transition: '0.3s',
                         borderRadius: '20px'
                       }}>
@@ -383,7 +387,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                           width: '14px',
                           left: '3px',
                           bottom: '3px',
-                          background: 'white',
+                          background: '#D0D0D0',
                           transition: '0.3s',
                           borderRadius: '50%',
                           transform: (settings.keyboardCommands?.arrowKeys !== false) ? 'translateX(16px)' : 'translateX(0)'
@@ -432,7 +436,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: (settings.keyboardCommands?.enterSpace !== false) ? '#10b981' : '#f3f4f6',
+                        background: (settings.keyboardCommands?.enterSpace !== false) ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                         transition: '0.3s',
                         borderRadius: '20px'
                       }}>
@@ -443,7 +447,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                           width: '14px',
                           left: '3px',
                           bottom: '3px',
-                          background: 'white',
+                          background: '#D0D0D0',
                           transition: '0.3s',
                           borderRadius: '50%',
                           transform: (settings.keyboardCommands?.enterSpace !== false) ? 'translateX(16px)' : 'translateX(0)'
@@ -492,7 +496,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: (settings.keyboardCommands?.escape !== false) ? '#10b981' : '#f3f4f6',
+                        background: (settings.keyboardCommands?.escape !== false) ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                         transition: '0.3s',
                         borderRadius: '20px'
                       }}>
@@ -503,7 +507,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                           width: '14px',
                           left: '3px',
                           bottom: '3px',
-                          background: 'white',
+                          background: '#D0D0D0',
                           transition: '0.3s',
                           borderRadius: '50%',
                           transform: (settings.keyboardCommands?.escape !== false) ? 'translateX(16px)' : 'translateX(0)'
@@ -551,7 +555,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: (settings.keyboardCommands?.shortcuts !== false) ? '#10b981' : '#f3f4f6',
+                        background: (settings.keyboardCommands?.shortcuts !== false) ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                         transition: '0.3s',
                         borderRadius: '20px'
                       }}>
@@ -562,7 +566,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                           width: '14px',
                           left: '3px',
                           bottom: '3px',
-                          background: 'white',
+                          background: '#D0D0D0',
                           transition: '0.3s',
                           borderRadius: '50%',
                           transform: (settings.keyboardCommands?.shortcuts !== false) ? 'translateX(16px)' : 'translateX(0)'
@@ -644,7 +648,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                     width: '18px',
                     left: '3px',
                     bottom: '3px',
-                    background: 'white',
+                          background: '#D0D0D0',
                     transition: '0.3s',
                     borderRadius: '50%',
                     transform: isDarkMode ? 'translateX(20px)' : 'translateX(0)'
@@ -652,119 +656,6 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                 </span>
               </label>
             </div>
-
-            {/* Filtro de Luz Azul */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '8px 0',
-              borderBottom: `1px solid ${theme.border}`
-            }}>
-              <div>
-                <span style={{ color: theme.text, fontSize: '14px', fontWeight: '500' }}>
-                  Filtro de Luz Azul
-                </span>
-                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
-                  Reduz a luz azul para evitar cansaço visual
-                </p>
-              </div>
-              <label style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '44px',
-                height: '24px'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={settings.blueLightFilter}
-                  onChange={toggleBlueLightFilter}
-                  style={{ opacity: 0, width: 0, height: 0 }}
-                />
-                <span style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: settings.blueLightFilter ? '#10b981' : '#f3f4f6',
-                  transition: '0.3s',
-                  borderRadius: '24px'
-                }}>
-                  <span style={{
-                    position: 'absolute',
-                    content: '""',
-                    height: '18px',
-                    width: '18px',
-                    left: '3px',
-                    bottom: '3px',
-                    background: 'white',
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                    transform: settings.blueLightFilter ? 'translateX(20px)' : 'translateX(0)'
-                  }} />
-                </span>
-              </label>
-            </div>
-
-            {/* Intensidade do Filtro Azul */}
-            {settings.blueLightFilter && (
-              <div style={{ padding: '8px 0', borderBottom: `1px solid ${theme.border}` }}>
-                <label style={{ 
-                  color: theme.text, 
-                  fontSize: '12px', 
-                  fontWeight: '500',
-                  marginBottom: '6px',
-                  display: 'block'
-                }}>
-                  Intensidade:
-                </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {Object.entries(blueLightPresets).map(([key, preset]) => (
-                    <label key={key} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      background: settings.blueLightIntensity === key ? theme.primary + '15' : 'transparent',
-                      border: `1px solid ${settings.blueLightIntensity === key ? theme.primary : theme.border}`,
-                      transition: 'all 0.2s ease'
-                    }}>
-                      <input
-                        type="radio"
-                        name="blueLightIntensity"
-                        value={key}
-                        checked={settings.blueLightIntensity === key}
-                        onChange={() => setBlueLightIntensity(key as any)}
-                        style={{ 
-                          marginRight: '8px', 
-                          width: '14px',
-                          height: '14px',
-                          accentColor: theme.primary
-                        }}
-                      />
-                      <div>
-                        <div style={{ 
-                          fontSize: '11px', 
-                          fontWeight: '500',
-                          color: theme.text 
-                        }}>
-                          {preset.name}
-                        </div>
-                        <div style={{ 
-                          fontSize: '9px', 
-                          color: theme.textSecondary 
-                        }}>
-                          {preset.description}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Tamanho da Fonte */}
             <div style={{ padding: '8px 0' }}>
@@ -787,7 +678,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   fontSize: '13px',
                   border: 'none',
                   borderRadius: '20px',
-                  background: '#f3f4f6',
+                  background: isDarkMode ? '#3a3a3a' : '#f3f4f6',
                   color: theme.text,
                   cursor: 'pointer',
                   outline: 'none',
@@ -865,7 +756,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: settings.highContrast ? '#10b981' : '#f3f4f6',
+                  background: settings.highContrast ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                   transition: '0.3s',
                   borderRadius: '24px'
                 }}>
@@ -876,7 +767,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                     width: '18px',
                     left: '3px',
                     bottom: '3px',
-                    background: 'white',
+                          background: '#D0D0D0',
                     transition: '0.3s',
                     borderRadius: '50%',
                     transform: settings.highContrast ? 'translateX(20px)' : 'translateX(0)'
@@ -943,61 +834,6 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
               </div>
             )}
 
-            {/* Redução de Movimento */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '8px 0',
-              borderBottom: `1px solid ${theme.border}`
-            }}>
-              <div>
-                <span style={{ color: theme.text, fontSize: '14px', fontWeight: '500' }}>
-                  Reduzir Movimento
-                </span>
-                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
-                  Desativa animações para usuários sensíveis
-                </p>
-              </div>
-              <label style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '44px',
-                height: '24px'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={settings.reducedMotion}
-                  onChange={() => updateSettings({ reducedMotion: !settings.reducedMotion })}
-                  style={{ opacity: 0, width: 0, height: 0 }}
-                />
-                <span style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: settings.reducedMotion ? '#10b981' : '#f3f4f6',
-                  transition: '0.3s',
-                  borderRadius: '24px'
-                }}>
-                  <span style={{
-                    position: 'absolute',
-                    content: '""',
-                    height: '18px',
-                    width: '18px',
-                    left: '3px',
-                    bottom: '3px',
-                    background: 'white',
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                    transform: settings.reducedMotion ? 'translateX(20px)' : 'translateX(0)'
-                  }} />
-                </span>
-              </label>
-            </div>
-
             {/* Leitor de Tela */}
             <div style={{
               display: 'flex',
@@ -1033,7 +869,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: settings.screenReader ? '#10b981' : '#f3f4f6',
+                  background: settings.screenReader ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                   transition: '0.3s',
                   borderRadius: '24px'
                 }}>
@@ -1044,7 +880,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                     width: '18px',
                     left: '3px',
                     bottom: '3px',
-                    background: 'white',
+                          background: '#D0D0D0',
                     transition: '0.3s',
                     borderRadius: '50%',
                     transform: settings.screenReader ? 'translateX(20px)' : 'translateX(0)'
@@ -1053,6 +889,118 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
               </label>
             </div>
 
+            {/* Filtro de Luz Azul */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '8px 0',
+              borderBottom: `1px solid ${theme.border}`
+            }}>
+              <div>
+                <span style={{ color: theme.text, fontSize: '14px', fontWeight: '500' }}>
+                  Filtro de Luz Azul
+                </span>
+                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
+                  Reduz a luz azul para evitar cansaço visual
+                </p>
+              </div>
+              <label style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '44px',
+                height: '24px'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={settings.blueLightFilter}
+                  onChange={toggleBlueLightFilter}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: settings.blueLightFilter ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
+                  transition: '0.3s',
+                  borderRadius: '24px'
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    content: '""',
+                    height: '18px',
+                    width: '18px',
+                    left: '3px',
+                    bottom: '3px',
+                    background: '#D0D0D0',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                    transform: settings.blueLightFilter ? 'translateX(20px)' : 'translateX(0)'
+                  }} />
+                </span>
+              </label>
+            </div>
+
+            {/* Intensidade do Filtro Azul */}
+            {settings.blueLightFilter && (
+              <div style={{ padding: '8px 0', borderBottom: `1px solid ${theme.border}` }}>
+                <label style={{ 
+                  color: theme.text, 
+                  fontSize: '12px', 
+                  fontWeight: '500',
+                  marginBottom: '6px',
+                  display: 'block'
+                }}>
+                  Intensidade:
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {Object.entries(blueLightPresets).map(([key, preset]) => (
+                    <label key={key} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      background: settings.blueLightIntensity === key ? theme.primary + '15' : 'transparent',
+                      border: `1px solid ${settings.blueLightIntensity === key ? theme.primary : theme.border}`,
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <input
+                        type="radio"
+                        name="blueLightIntensity"
+                        value={key}
+                        checked={settings.blueLightIntensity === key}
+                        onChange={() => setBlueLightIntensity(key as any)}
+                        style={{ 
+                          marginRight: '8px', 
+                          width: '14px',
+                          height: '14px',
+                          accentColor: theme.primary
+                        }}
+                      />
+                      <div>
+                        <div style={{ 
+                          fontSize: '11px', 
+                          fontWeight: '500',
+                          color: theme.text 
+                        }}>
+                          {preset.name}
+                        </div>
+                        <div style={{ 
+                          fontSize: '9px', 
+                          color: theme.textSecondary 
+                        }}>
+                          {preset.description}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Modo Daltonismo */}
             <div style={{
@@ -1088,7 +1036,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: modoDaltonismo ? '#10b981' : '#f3f4f6',
+                  background: modoDaltonismo ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                   transition: '0.3s',
                   borderRadius: '24px'
                 }}>
@@ -1099,7 +1047,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                     width: '18px',
                     left: '3px',
                     bottom: '3px',
-                    background: 'white',
+                          background: '#D0D0D0',
                     transition: '0.3s',
                     borderRadius: '50%',
                     transform: modoDaltonismo ? 'translateX(20px)' : 'translateX(0)'
@@ -1145,7 +1093,6 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
               </div>
             )}
 
-
           </div>
         </div>
 
@@ -1163,9 +1110,10 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
         }}>
           <button
             onClick={onClose}
+            className="config-footer-btn"
             style={{
               padding: '8px 16px',
-              background: '#f3f4f6',
+              backgroundColor: isDarkMode ? '#3a3a3a' : '#f3f4f6',
               color: theme.text,
               border: 'none',
               borderRadius: '20px',
@@ -1175,19 +1123,12 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
               transition: 'all 0.2s ease',
               boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
             }}
-            onMouseOver={(e) => {
-              (e.target as HTMLButtonElement).style.background = '#e5e7eb'
-              (e.target as HTMLButtonElement).style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)'
-            }}
-            onMouseOut={(e) => {
-              (e.target as HTMLButtonElement).style.background = '#f3f4f6'
-              (e.target as HTMLButtonElement).style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)'
-            }}
           >
             Fechar
           </button>
         </div>
       </div>
     </div>
+    </>
   )
 }

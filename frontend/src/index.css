@@ -1,5 +1,9 @@
 html, body {
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
 }
 
 body {
@@ -11,6 +15,28 @@ body {
   color: var(--text-color, #1e293b);
   transition: background-color var(--transition-duration, 0.3s) ease, color var(--transition-duration, 0.3s) ease;
   font-size: var(--base-font-size, 16px);
+}
+
+/* Garantir que o root da aplicação ocupe toda a tela no Electron */
+#root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Root não tem scroll - apenas a área main */
+}
+
+/* Remover qualquer espaçamento no topo da aplicação */
+* {
+  -webkit-app-region: inherit;
+}
+
+/* Garantir que não haja bordas ou margens inesperadas */
+.flex, .flex-col {
+  margin: 0;
+  padding: 0;
 }
 
   /* Configuração de movimento reduzido */
@@ -300,6 +326,55 @@ body {
 
 .config-content::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary-color);
+}
+
+/* Scrollbar INVISÍVEL para área principal (main-content-area) */
+.main-content-area::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.main-content-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Scrollbar completamente invisível por padrão */
+.main-content-area::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 5px;
+  transition: background 0.3s ease;
+}
+
+/* Aparece APENAS ao passar mouse sobre a área OU ao scrollar */
+.main-content-area:hover::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+}
+
+.main-content-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.4);
+}
+
+.main-content-area::-webkit-scrollbar-thumb:active {
+  background: rgba(128, 128, 128, 0.6);
+}
+
+/* Para Firefox - scrollbar automática e fina */
+.main-content-area {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+/* Tema dark - scrollbar mais clara */
+.theme-dark .main-content-area:hover::-webkit-scrollbar-thumb {
+  background: rgba(200, 200, 200, 0.2);
+}
+
+.theme-dark .main-content-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 200, 200, 0.4);
+}
+
+.theme-dark .main-content-area::-webkit-scrollbar-thumb:active {
+  background: rgba(200, 200, 200, 0.6);
 }
 
 /* Melhorar responsividade para fontes grandes */

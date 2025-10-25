@@ -16,6 +16,8 @@ import { MovableTabs } from './components/MovableTabs'
 import { ClientePage } from './pages/ClientePage'
 import { FuncionarioPage } from './pages/FuncionarioPage'
 import { FirmasPage } from './pages/FirmasPage'
+import { TipoDocumentoDigitalizadoPage } from './pages/TipoDocumentoDigitalizadoPage'
+import { CartorioSeadePage } from './pages/CartorioSeadePage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { SystemStatus } from './components/SystemStatus'
@@ -375,7 +377,16 @@ function AppContent() {
               })
               console.log('✅ Janela de Funcionário aberta!')
             } },
-          { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => (window as any).navigateToPage?.('cartorio-seade') },
+            { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => {
+              console.log('✅ CARTÓRIO SEADE CLICADO! Abrindo janela...')
+              openWindow({
+                id: `cartorio-seade-${Date.now()}`,
+                title: 'Cadastro de Cartório (SEADE)',
+                component: CartorioSeadePage,
+                props: { onClose: () => {} }
+              })
+              console.log('✅ Janela de Cartório SEADE aberta!')
+            } },
           { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => (window as any).navigateToPage?.('dnv-bloqueadas') },
           { id: 'oficios-mandados', label: 'Ofícios e Mandados', icon: '', onClick: () => (window as any).navigateToPage?.('oficios-mandados') },
           { id: 'hospital', label: 'Hospital', icon: '', onClick: () => (window as any).navigateToPage?.('hospital') },
@@ -463,13 +474,20 @@ function AppContent() {
             label: 'Configurações do Sistema', 
             icon: '', 
             submenu: [
-              { id: 'config-sistema-funcionario', label: 'Funcionário', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-funcionario') },
               { id: 'config-sistema-feriados', label: 'Feriados', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-feriados') },
               { id: 'config-sistema-ibge', label: 'IBGE', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-ibge') },
               { id: 'config-sistema-pais', label: 'País', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-pais') },
               { id: 'config-sistema-cep', label: 'CEP', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-cep') },
               { id: 'config-sistema-cidade', label: 'Cidade', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-cidade') },
-              { id: 'cadastros-tipos-documento', label: 'Tipos de Documento Digitalizado', icon: '', onClick: () => (window as any).navigateToPage?.('cadastros-tipos-documento') }
+              { id: 'cadastros-tipos-documento', label: 'Tipos de Documento Digitalizado', icon: '', onClick: () => {
+                console.log('✅ Abrindo Tipos de Documento Digitalizado...')
+                openWindow({
+                  id: `tipo-doc-${Date.now()}`,
+                  title: 'Cadastro de Tipo de Documento Digitalizado',
+                  component: TipoDocumentoDigitalizadoPage,
+                  props: { onClose: () => {} }
+                })
+              } }
             ]
           }
         ]
@@ -814,7 +832,7 @@ function AppContent() {
         flexDirection: 'column',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: theme.text,
-        overflow: 'hidden'
+        overflow: 'hidden'  // Mantém hidden aqui - o scroll é no main
       }}>
 
         {/* Header com Controles de Janela */}
@@ -898,14 +916,29 @@ function AppContent() {
           onTabMinimize={handleTabMinimize}
         />
 
-        {/* Área de Conteúdo Principal - COMPLETAMENTE LIMPA */}
-        <div style={{
-          flex: 1,
+        {/* Área de Conteúdo Principal - COM SCROLL DINÂMICO */}
+        <div 
+          className="main-content-area"
+          style={{
+            flex: 1,
             background: theme.background,
-          position: 'relative',
-          marginTop: '120px' // Espaço para os dois menus
-        }}>
-          {/* Área completamente vazia para suas adaptações futuras */}
+            position: 'relative',
+            marginTop: '120px', // Espaço para os dois menus
+            overflow: 'auto',   // ← ATIVA O SCROLL!
+            overflowX: 'auto',
+            overflowY: 'auto'
+          }}
+        >
+          {/* Container interno expansível para as janelas */}
+          <div style={{
+            position: 'relative',
+            minHeight: '200vh',  // 2x a altura da tela
+            minWidth: '200vw',   // 2x a largura da tela
+            width: '100%',
+            height: '100%'
+          }}>
+            {/* Área vazia - janelas aparecem aqui via WindowManager */}
+          </div>
         </div>
 
         {/* Navigation Manager */}

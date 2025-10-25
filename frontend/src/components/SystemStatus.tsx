@@ -47,7 +47,8 @@ export function SystemStatus({
       backdropFilter: 'blur(10px)',
       border: '1px solid rgba(255, 255, 255, 0.1)',
       cursor: 'pointer',
-      transition: 'all 0.3s ease'
+      transition: 'all 0.3s ease',
+      pointerEvents: 'auto' as const  // Permite cliques apenas no elemento
     }
 
     switch (position) {

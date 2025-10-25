@@ -295,7 +295,6 @@ export const FIELD_RULES: Record<string, FieldRule> = {
     label: 'CEP',
     type: 'text',
     maxLength: 9,   // Com máscara: XXXXX-XXX
-    minLength: 8,   // Sem máscara: 8 dígitos
     placeholder: '00000-000',
     allowNumbers: true,
     allowLetters: false,
@@ -310,9 +309,9 @@ export const FIELD_RULES: Record<string, FieldRule> = {
     validator: (value: string) => {
       const numbers = value.replace(/\D/g, '')
       if (numbers.length === 0) return { isValid: true }
-      if (numbers.length < 8) return { isValid: false, error: 'CEP incompleto' }
       if (numbers.length === 8) return { isValid: true }
-      return { isValid: false, error: 'CEP inválido' }
+      // Não valida se estiver incompleto (deixa digitar)
+      return { isValid: true }
     }
   },
 
@@ -645,11 +644,9 @@ export function validateField(fieldName: string, value: string): { isValid: bool
     return { isValid: true }
   }
 
-  if (rule.minLength && value.replace(/\D/g, '').length < rule.minLength) {
-    return {
-      isValid: false,
-      error: `${rule.label} deve ter no mínimo ${rule.minLength} dígitos`
-    }
+  // Validação personalizada tem prioridade
+  if (rule.validator) {
+    return rule.validator(value)
   }
 
   if (rule.maxLength && value.length > rule.maxLength) {
@@ -664,10 +661,6 @@ export function validateField(fieldName: string, value: string): { isValid: bool
       isValid: false,
       error: `${rule.label} em formato inválido`
     }
-  }
-
-  if (rule.validator) {
-    return rule.validator(value)
   }
 
   return { isValid: true }

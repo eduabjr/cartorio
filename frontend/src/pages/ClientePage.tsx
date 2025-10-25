@@ -46,6 +46,7 @@ import { scannerService } from '../services/ScannerService'
 import { ocrService } from '../services/OCRService'
 import QRCode from 'qrcode'
 import { useFieldValidation } from '../hooks/useFieldValidation'
+import { validarCPF, formatCPF } from '../utils/cpfValidator'
 // import { useTJSPApi } from '../hooks/useTJSPApi'
 
 // Definições de tipos para APIs do Electron
@@ -121,6 +122,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const { getTheme, currentTheme } = useAccessibility()
   // const tjspApi = useTJSPApi()
   const theme = getTheme()
+  
+  // Cor do header: teal no light, laranja no dark
+  const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
   const [activeTab, setActiveTab] = useState('cadastro')
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
@@ -315,19 +319,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const [documentPosition, setDocumentPosition] = useState({ x: 0, y: 0 })
   
   // Estados para Selo Digital
-  const [selosDigitais, setSelosDigitais] = useState<any[]>([
-    {
-      id: 1,
-      dataCadastro: '2024-01-15',
-      seloDigital: 'SD-2024-001',
-      cns: '123456789',
-      naturezaAto: 'Escritura',
-      anoAto: '2024',
-      digito: '1',
-      cia: '001',
-      qrCode: ''
-    }
-  ])
+  const [selosDigitais, setSelosDigitais] = useState<any[]>([])
   const [seloSelecionado, setSeloSelecionado] = useState<number>(0)
   const [campoPrincipal, setCampoPrincipal] = useState('')
   const [campoSecundario, setCampoSecundario] = useState('')
@@ -609,21 +601,6 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   }
 
 
-  // Função para formatar CPF
-  const formatarCpf = (valor: string): string => {
-    const cpfLimpo = valor.replace(/[^\d]/g, '')
-    
-    if (cpfLimpo.length <= 3) return cpfLimpo
-    if (cpfLimpo.length <= 6) return `${cpfLimpo.slice(0, 3)}.${cpfLimpo.slice(3)}`
-    if (cpfLimpo.length <= 9) return `${cpfLimpo.slice(0, 3)}.${cpfLimpo.slice(3, 6)}.${cpfLimpo.slice(6)}`
-    return `${cpfLimpo.slice(0, 3)}.${cpfLimpo.slice(3, 6)}.${cpfLimpo.slice(6, 9)}-${cpfLimpo.slice(9, 11)}`
-  }
-
-  // Handler para mudança no CPF com formatação automática
-  const handleCpfChange = (valor: string) => {
-    const cpfFormatado = formatarCpf(valor)
-    handleInputChange('cpf', cpfFormatado)
-  }
 
 
 
@@ -1636,6 +1613,20 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     flexShrink: 1  // 🔒 FIXO - Encolhe proporcionalmente
   }
 
+  // Estilos para campos menores (CEP, Logradouro, Número)
+  const fieldStylesSmall = {
+    ...fieldStyles,
+    flex: '0.6',  // 60% do tamanho padrão
+    minWidth: '60px'
+  }
+
+  // Estilos para campo Endereço (maior)
+  const fieldStylesLarge = {
+    ...fieldStyles,
+    flex: '2',  // 200% do tamanho padrão
+    minWidth: 0
+  }
+
   const labelStyles: React.CSSProperties = {
     fontSize: '12px',
     fontWeight: '600',
@@ -1852,7 +1843,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
   return (
     <>
-    <BasePage title="Cliente" onClose={onClose} width="900px" height="580px" minWidth="900px" minHeight="580px" resetToOriginalPosition={resetToOriginalPosition} headerColor="#FF8C00">
+    <BasePage title="Cliente" onClose={onClose} width="900px" height="580px" minWidth="900px" minHeight="580px" resetToOriginalPosition={resetToOriginalPosition} headerColor={headerColor} resizable={false}>
+      {/* 🔒 BLOQUEIO: Redimensionamento DESABILITADO - Dimensões fixas 900x580px */}
       {/* Wrapper para garantir tema correto */}
       <div 
         className={`theme-${currentTheme}`}
@@ -1899,7 +1891,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           {/* Linha 1: Código, Nome, Número Cartão */}
           <div style={{...rowStyles, display: 'flex', alignItems: 'flex-end', gap: '8px'}}>
             {/* Campo Código */}
-            <div style={{display: 'flex', flexDirection: 'column', maxWidth: '120px', flexShrink: 0}}>
+            <div style={{display: 'flex', flexDirection: 'column', maxWidth: '150px', flexShrink: 0}}>
               <label style={{fontSize: '12px', color: theme.text, marginBottom: '2px', height: '18px', lineHeight: '18px'}}>Código</label>
               <div style={{display: 'flex', gap: '4px', alignItems: 'center', height: '24px'}}>
                 <button
@@ -1926,7 +1918,11 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 <input
                   type="text"
                   value={formData.codigo}
-                  onChange={(e) => handleInputWithLimit('codigo', e.target.value, 10)}
+                  onChange={(e) => {
+                    // Permite apenas números
+                    const valor = e.target.value.replace(/\D/g, '')
+                    handleInputWithLimit('codigo', valor, 10)
+                  }}
                   style={{...inputStyles, flex: 1, minWidth: '50px', height: '24px'}}
                   maxLength={10}
                 />
@@ -1935,7 +1931,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             {/* Campo Nome */}
-            <div style={{display: 'flex', flexDirection: 'column', flex: '0.6', minWidth: '100px'}}>
+            <div style={{display: 'flex', flexDirection: 'column', flex: '0.7', minWidth: '100px'}}>
               <label style={{fontSize: '12px', color: theme.text, marginBottom: '2px', height: '18px', lineHeight: '18px'}}>Nome *</label>
               <div style={{display: 'flex', gap: '6px', alignItems: 'center', height: '24px'}}>
                 <input
@@ -1973,7 +1969,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 </div>
                 <input
                   type="text"
+                  value={formData.numeroCartao}
+                  onChange={(e) => {
+                    // Permite apenas números
+                    const valor = e.target.value.replace(/\D/g, '')
+                    handleInputChange('numeroCartao', valor)
+                  }}
                   style={{...inputStyles, flex: 1, minWidth: '30px', height: '24px'}}
+                  maxLength={20}
                 />
                 <button type="button" style={{...secondaryButtonStyles, height: '24px', minWidth: '25px', padding: '3px 6px'}}>...</button>
               </div>
@@ -2001,7 +2004,27 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             <input
               type="text"
               value={formData.cpf}
-              onChange={(e) => handleCpfChange(e.target.value)}
+              onChange={(e) => {
+                // Permite apenas números, máximo 11 dígitos
+                const valor = e.target.value.replace(/\D/g, '').slice(0, 11)
+                handleInputChange('cpf', valor)
+              }}
+              onFocus={() => setFocusedField('cpf')}
+              onBlur={(e) => {
+                setFocusedField(null)
+                const valor = e.target.value
+                if (valor) {
+                  // Formata CPF
+                  const cpfFormatado = formatCPF(valor)
+                  handleInputChange('cpf', cpfFormatado)
+                  
+                  // Valida CPF
+                  const validacao = validarCPF(valor)
+                  if (!validacao.isValid) {
+                    alert(`❌ CPF inválido!\n\n${validacao.error}`)
+                  }
+                }
+              }}
               style={inputStyles}
               placeholder="000.000.000-00"
               maxLength={14}
@@ -2423,7 +2446,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
           {/* Linha 5: CEP, Logradouro, Endereço, Número, Complemento */}
           <div style={rowStyles}>
-            <div style={fieldStyles}>
+            <div style={fieldStylesSmall}>
               <label style={labelStyles}>CEP</label>
               <input
                 type="text"
@@ -2436,7 +2459,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               />
             </div>
 
-            <div style={fieldStyles}>
+            <div style={fieldStylesSmall}>
               <label style={labelStyles}>Logradouro</label>
               <select
                 value={formData.logradouro}
@@ -2453,7 +2476,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </select>
             </div>
 
-            <div style={fieldStyles}>
+            <div style={fieldStylesLarge}>
               <label style={labelStyles}>Endereço</label>
                 <input
                   type="text"
@@ -2464,7 +2487,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 />
             </div>
 
-            <div style={fieldStyles}>
+            <div style={fieldStylesSmall}>
               <label style={labelStyles}>Número</label>
               <input
                 type="text"
@@ -2853,6 +2876,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleFieldChange('email', e.target.value)}
+                onBlur={(e) => {
+                  const email = e.target.value.trim()
+                  if (email && !email.includes('@')) {
+                    alert('⚠️ E-mail inválido! O e-mail deve conter @')
+                  } else if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                    alert('⚠️ E-mail inválido! Formato correto: usuario@exemplo.com')
+                  }
+                }}
                 style={inputStyles}
                 placeholder="usuario@exemplo.com"
                 maxLength={100}
@@ -2931,7 +2962,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               onMouseEnter={() => setHoveredButton('fechar')}
               onMouseLeave={() => setHoveredButton(null)}
             >
-              🚪 Fechar
+              ❌ Fechar
             </button>
           </div>
 
@@ -3422,8 +3453,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           display: 'flex', 
           flexDirection: 'column', 
           height: '100%', 
-          padding: '2px',
-          gap: '2px',
+          padding: '12px',
+          gap: '8px',
           overflow: 'auto'  // Permite scroll se necessário
         }}>
           {/* Grade de Dados */}
@@ -3445,13 +3476,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               fontSize: '11px',  // Reduzido de 12px para 11px
               flexShrink: 0
             }}>
-              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>DataCadastro</div>
-              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>Selo Digital</div>
-              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>CNS</div>
-              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>Natureza Ato</div>
-              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>AnoAto</div>
-              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>Digito</div>
-              <div style={{ padding: '4px' }}>CIA</div>
+              <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>DataCadastro</div>
+              <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>Selo Digital</div>
+              <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>CNS</div>
+              <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>Natureza Ato</div>
+              <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>AnoAto</div>
+              <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>Digito</div>
+              <div style={{ padding: '6px 8px' }}>CIA</div>
             </div>
             
             {/* Linhas de dados */}
@@ -3469,13 +3500,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 }}
                 onClick={() => handleSelecionarSelo(index)}
               >
-                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.dataCadastro}</div>
-                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.seloDigital}</div>
-                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.cns}</div>
-                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.naturezaAto}</div>
-                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.anoAto}</div>
-                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.digito}</div>
-                <div style={{ padding: '4px' }}>{selo.cia}</div>
+                <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>{selo.dataCadastro}</div>
+                <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>{selo.seloDigital}</div>
+                <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>{selo.cns}</div>
+                <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>{selo.naturezaAto}</div>
+                <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>{selo.anoAto}</div>
+                <div style={{ padding: '6px 8px', borderRight: `1px solid ${theme.border}` }}>{selo.digito}</div>
+                <div style={{ padding: '6px 8px' }}>{selo.cia}</div>
               </div>
             ))}
           </div>
@@ -3557,10 +3588,11 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               backgroundColor: theme.surface,
               border: `1px solid ${theme.border}`,
               borderRadius: '4px',
-              padding: '15px',
+              padding: '8px 20px 20px 20px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px'
+              gap: '12px',
+              justifyContent: 'flex-start'
             }}>
               <input
                 type="text"
@@ -3568,15 +3600,18 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 value={campoPrincipal}
                 onChange={(e) => setCampoPrincipal(e.target.value)}
                 style={{
-                  width: '100%',
-                  height: '40px',
-                  padding: '8px 12px',
+                  width: 'calc(100% - 10px)',
+                  maxWidth: '100%',
+                  height: '70px',
+                  padding: '12px',
                   border: `1px solid ${theme.border}`,
                   borderRadius: '4px',
                   backgroundColor: theme.background,
                   color: theme.text,
-                  fontSize: '12px',
-                  outline: 'none'
+                  fontSize: '14px',
+                  outline: 'none',
+                  boxSizing: 'border-box' as const,
+                  marginTop: '0'
                 }}
               />
               <input
@@ -3585,15 +3620,17 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 value={campoSecundario}
                 onChange={(e) => setCampoSecundario(e.target.value)}
                 style={{
-                  width: '100%',
-                  height: '30px',
-                  padding: '6px 12px',
+                  width: 'calc(100% - 10px)',
+                  maxWidth: '100%',
+                  height: '42px',
+                  padding: '10px 12px',
                   border: `1px solid ${theme.border}`,
                   borderRadius: '4px',
                   backgroundColor: theme.background,
                   color: theme.text,
-                  fontSize: '11px',
-                  outline: 'none'
+                  fontSize: '12px',
+                  outline: 'none',
+                  boxSizing: 'border-box' as const
                 }}
               />
 
