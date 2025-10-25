@@ -1,5 +1,27 @@
+// ⚠️⚠️⚠️ ATENÇÃO: LAYOUT PERFEITO E TRAVADO - NÃO MODIFICAR ⚠️⚠️⚠️
+// 
 // FuncionarioPage.tsx
 // Tela de Cadastro/Manutenção de Funcionários conforme especificação
+//
+// 🔒 ESTE LAYOUT ESTÁ PERFEITO E NÃO DEVE SER MODIFICADO
+// 📖 Consulte: frontend/FUNCIONARIO-LAYOUT-LOCKED.md
+// 📅 Data de Bloqueio: 25/10/2025
+//
+// ⛔ NÃO MODIFIQUE:
+// - Propriedades flexShrink (TODAS devem ser 1)
+// - Propriedades minWidth (inputs: 0, row1Fields: 60px)
+// - Propriedades overflow (overflowX e overflowY: auto)
+// - Propriedades flexWrap (TODAS devem ser nowrap)
+// - Larguras percentuais dos campos
+// - Estrutura das 7 linhas
+//
+// ✅ COMPORTAMENTO CORRETO:
+// - Janela normal: SEM scroll, todos campos visíveis
+// - Janela reduzida: COM scroll, campos encolhem proporcionalmente
+// - Nenhum campo ultrapassa a área limite
+// - Layout NÃO quebra
+//
+// ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO PODE QUEBRAR O LAYOUT ⚠️⚠️⚠️
 
 import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
@@ -364,6 +386,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     })
   }
 
+  // ⚠️ SEÇÃO DE ESTILOS - NÃO MODIFICAR - LAYOUT PERFEITO ⚠️
+  // Consulte: frontend/FUNCIONARIO-LAYOUT-LOCKED.md
+  
   // Estilos baseados no tema
   const containerStyles: React.CSSProperties = {
     backgroundColor: theme.background,
@@ -371,8 +396,8 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     padding: '8px',
     borderRadius: '8px',
     height: '100%',
-    overflowY: 'auto',
-    overflowX: 'hidden',  // SEM scroll horizontal - campos se adaptam
+    overflowY: 'auto',  // ⚠️ CRÍTICO - NÃO ALTERAR - Scroll vertical
+    overflowX: 'auto',  // ⚠️ CRÍTICO - NÃO ALTERAR - Scroll horizontal
     display: 'flex',
     flexDirection: 'column',
     boxSizing: 'border-box'
@@ -395,8 +420,8 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     overflow: 'visible',
     display: 'flex',
     flexDirection: 'column',
-    minWidth: '0',  // Permite adaptar ao tamanho da janela
-    flexShrink: 1,  // Permite encolher proporcionalmente
+    minWidth: 0,
+    flexShrink: 1,  // Permite encolher para se adaptar
     height: 'auto'
   }
 
@@ -408,8 +433,8 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     padding: '4px',
     overflow: 'visible',
     height: 'auto',
-    minWidth: '0',  // Permite adaptar
-    flexShrink: 1  // Permite encolher
+    minWidth: 0,
+    flexShrink: 1  // Permite encolher para se adaptar
   }
 
   const fieldStyles: React.CSSProperties = {
@@ -417,8 +442,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     flexDirection: 'column',
     gap: '1px',
     flexShrink: 1,  // Permite encolher proporcionalmente
-    minWidth: '120px',  // Largura mínima para legibilidade - quebra linha se menor
-    flex: '1 1 auto'  // Cresce e encolhe proporcionalmente
+    minWidth: '0'  // Permite encolher completamente
   }
 
   const rowStyles: React.CSSProperties = {
@@ -426,17 +450,20 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     gap: '6px',
     marginBottom: '2px',
     alignItems: 'flex-start',
-    flexWrap: 'wrap',  // Quebra linha quando não couber - campos sempre visíveis
-    minWidth: '0'  // Permite adaptar ao tamanho da janela
+    flexWrap: 'nowrap',  // NÃO quebra linha - mantém campos juntos
+    minWidth: '0',
+    flexShrink: 1  // Permite encolher proporcionalmente
   }
 
   const row1Styles: React.CSSProperties = {
     display: 'flex',
-    gap: '4px',  // Gap menor para caber melhor
+    gap: '8px',  // Gap para espaçamento uniforme
     marginBottom: '2px',
     alignItems: 'flex-start',
+    justifyContent: 'space-between',  // Distribui campos uniformemente
     flexWrap: 'nowrap',  // NÃO quebra - linha 1 sempre junta
-    minWidth: '0'
+    minWidth: '0',
+    flexShrink: 1  // Permite encolher proporcionalmente
   }
 
   const row2Styles: React.CSSProperties = {
@@ -444,17 +471,18 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     gap: '6px',
     marginBottom: '2px',
     alignItems: 'flex-start',
-    flexWrap: 'nowrap',  // Mantém Nome, RG, Órgão RG e CPF na mesma linha
-    minWidth: '0'
+    flexWrap: 'nowrap',  // Mantém campos na mesma linha - NÃO quebra
+    minWidth: '0',
+    flexShrink: 1  // Permite encolher proporcionalmente
   }
 
   const row1FieldStyles: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     gap: '1px',
-    flexShrink: 1,
-    minWidth: '80px',  // Menor que os outros para caber melhor
-    flex: '1 1 auto'
+    flexShrink: 1,  // Permite encolher proporcionalmente
+    flex: '1',  // Ocupa espaço disponível igualmente
+    minWidth: '60px'  // Largura mínima menor para se adaptar melhor
   }
 
   const labelStyles: React.CSSProperties = {
@@ -485,7 +513,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       height: '24px',
       boxSizing: 'border-box',
       width: '100%',
-      minWidth: '100px',  // Largura mínima garantida para legibilidade
+      minWidth: '0',  // Permite encolher completamente
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
@@ -528,7 +556,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     display: 'block',
     width: '100%',
     minHeight: '24px',
-    minWidth: '100px',  // Largura mínima garantida
+    minWidth: '0',  // Permite encolher completamente
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap'
@@ -632,9 +660,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       headerColor="#6B7280"
       height="600px"
       width="900px"
-      resizable={true}
-      minWidth="350px"
-      minHeight="400px"
     >
       <div style={containerStyles}>
         {/* Formulário */}
@@ -785,15 +810,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                     placeholder="000.000.000-00"
                     maxLength={14}
                   />
-                  {getError && getError('cpf') ? (
-                    <span style={{ color: '#dc2626', fontSize: '10px', marginTop: '2px' }}>
-                      ❌ {getError('cpf')}
-                    </span>
-                  ) : formData.cpf.replace(/\D/g, '').length === 11 ? (
-                    <span style={{ color: '#16a34a', fontSize: '10px', marginTop: '2px' }}>
-                      ✅ CPF válido
-                    </span>
-                  ) : null}
                 </div>
               </div>
 

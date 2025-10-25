@@ -35,15 +35,13 @@ export function formatCPF(cpf: string): string {
  */
 function calcularPrimeiroDigito(cpf: string): number {
   let soma = 0
-  let multiplicador = 10
 
   for (let i = 0; i < 9; i++) {
-    soma += parseInt(cpf[i]) * multiplicador
-    multiplicador--
+    soma += parseInt(cpf[i]) * (10 - i)
   }
 
-  const resto = soma % 11
-  return resto < 2 ? 0 : 11 - resto
+  const resto = (soma * 10) % 11
+  return (resto === 10 || resto === 11) ? 0 : resto
 }
 
 /**
@@ -51,15 +49,13 @@ function calcularPrimeiroDigito(cpf: string): number {
  */
 function calcularSegundoDigito(cpf: string): number {
   let soma = 0
-  let multiplicador = 11
 
   for (let i = 0; i < 10; i++) {
-    soma += parseInt(cpf[i]) * multiplicador
-    multiplicador--
+    soma += parseInt(cpf[i]) * (11 - i)
   }
 
-  const resto = soma % 11
-  return resto < 2 ? 0 : 11 - resto
+  const resto = (soma * 10) % 11
+  return (resto === 10 || resto === 11) ? 0 : resto
 }
 
 /**

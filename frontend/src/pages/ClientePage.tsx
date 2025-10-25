@@ -1404,18 +1404,18 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     marginTop: '4px',
     backgroundColor: theme.surface,
     color: theme.text,
-    minWidth: 0,  // Permite encolher
-    flexShrink: 1  // Permite que o formulário encolha
+    minWidth: 0,
+    flexShrink: 0  // NÃO encolhe - mantém tamanho fixo
   }
 
   const rowStyles = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',  // Layout responsivo
+    display: 'flex',
     gap: '6px',
     alignItems: 'start',
     marginBottom: '3px',
-    alignContent: 'start',
-    minWidth: 0  // Permite que os itens do grid encolham
+    flexWrap: 'nowrap' as const,  // NÃO quebra linha - mantém campos juntos
+    minWidth: 0,
+    flexShrink: 0  // NÃO encolhe - mantém proporções
   }
 
   const fieldStyles = {
@@ -1428,7 +1428,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     minHeight: '42px',
     paddingTop: '0px',
     marginTop: '0px',
-    minWidth: 0  // Permite que os campos encolham quando a janela é reduzida
+    minWidth: 0,
+    flexShrink: 0  // NÃO encolhe - mantém proporção
   }
 
   const labelStyles: React.CSSProperties = {
@@ -1465,11 +1466,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     width: '100%',
     boxSizing: 'border-box' as const,
     lineHeight: '18px',
-    minWidth: '80px',  // Largura mínima para garantir legibilidade
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    flexShrink: 1
+    minWidth: '80px',
+    flexShrink: 0  // NÃO encolhe - mantém proporção
   }
 
   const selectStyles = {
@@ -1499,11 +1497,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     display: 'block',
     margin: '0',
     fontFamily: 'inherit',
-    minWidth: '80px',  // Largura mínima para garantir legibilidade
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    flexShrink: 1
+    minWidth: '80px',
+    flexShrink: 0  // NÃO encolhe - mantém proporção
   }
 
   const buttonStyles = {
@@ -1587,7 +1582,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     marginTop: '25px',
     paddingTop: '20px',
     borderTop: `1px solid ${theme.border}`,
-    flexWrap: 'wrap' as const,
+    flexWrap: 'nowrap' as const,  // NÃO quebra - botões ficam na mesma linha
     flexShrink: 0,  // Botões não encolhem
     minHeight: '40px'  // Altura mínima garantida
   }
@@ -1637,7 +1632,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           minHeight: '100%',
           padding: '8px',
           overflowY: 'auto',
-          overflowX: 'hidden',
+          overflowX: 'auto',
           boxSizing: 'border-box'
         }}
       >
