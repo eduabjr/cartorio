@@ -27,6 +27,7 @@ import { announcementService } from './services/AnnouncementService'
 import { WindowProvider, useWindowManager } from './contexts/WindowContext'
 import { FormDataProvider } from './contexts/FormDataContext'
 import { singleInstanceService } from './services/SingleInstanceService'
+import { ThemeProtector } from './components/ThemeProtector'
 
 interface User {
   id: string
@@ -1399,13 +1400,15 @@ function AppContent() {
 // Função principal que envolve tudo com o WindowProvider
 function App() {
   return (
-    <WindowProvider>
-      <FormDataProvider>
-        <AppContent />
-        <SystemStatus showDetails={false} position="bottom-left" />
-        <InstanceNotification position="top-left" />
-      </FormDataProvider>
-    </WindowProvider>
+    <ThemeProtector>
+      <WindowProvider>
+        <FormDataProvider>
+          <AppContent />
+          <SystemStatus showDetails={false} position="bottom-left" />
+          <InstanceNotification position="top-left" />
+        </FormDataProvider>
+      </WindowProvider>
+    </ThemeProtector>
   )
 }
 

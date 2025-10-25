@@ -187,10 +187,12 @@ export function BasePage({
 
   const contentStyles = {
     flex: 1,
-    padding: '12px 12px 0px 12px',
+    padding: '8px 8px 4px 8px',  // Reduzido padding
     overflow: 'hidden',
     backgroundColor: theme.surface,
-    color: theme.text
+    color: theme.text,
+    display: 'flex',
+    flexDirection: 'column' as const
   }
 
   const closeButtonStyles = {

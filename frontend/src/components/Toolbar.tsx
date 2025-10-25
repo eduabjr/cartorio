@@ -13,16 +13,15 @@ import {
 import { useAccessibility } from '../hooks/useAccessibility'
 
 export function Toolbar() {
+  // 🔒 BLOQUEIO: Usar getTheme() diretamente sem useState local
   const { getTheme, currentTheme } = useAccessibility()
-  const [theme, setTheme] = useState(getTheme())
+  const theme = getTheme()
   
-  // Atualizar tema quando currentTheme mudar
+  // 🔒 BLOQUEIO: Log para debug (apenas desenvolvimento)
   useEffect(() => {
-    const newTheme = getTheme()
-    setTheme(newTheme)
-    console.log('🎨 Toolbar - Tema atualizado:', currentTheme, newTheme)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTheme])
+    console.log('🎨 Toolbar - Tema atual:', currentTheme, theme)
+  }, [currentTheme, theme])
+  
   const toolbarItems = [
     { icon: UserIcon, label: 'Cadastros', onClick: () => console.log('Cadastros') },
     { icon: DocumentIcon, label: 'Documentos', onClick: () => console.log('Documentos') },
@@ -37,10 +36,12 @@ export function Toolbar() {
     { icon: SettingsIcon, label: 'Configurações', onClick: () => console.log('Configurações') }
   ]
 
+  // 🔒 BLOQUEIO: Estilos sempre atualizados com o tema atual
   const toolbarStyles: React.CSSProperties = {
     backgroundColor: theme.surface,
     borderBottom: `1px solid ${theme.border}`,
-    padding: '0 16px'
+    padding: '0 16px',
+    transition: 'all 0.3s ease' // Transição suave na troca de tema
   }
 
   return (

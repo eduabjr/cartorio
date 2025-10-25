@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { nvdaService } from '../services/NVDAService'
+import { validateTheme, runThemeValidationTests } from '../utils/themeValidator'
 
 export interface AccessibilitySettings {
   highContrast: boolean
@@ -229,6 +230,12 @@ export function useAccessibility() {
 
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'highContrast'>('light')
   const [isThemeLoaded, setIsThemeLoaded] = useState(false)
+
+  // 🔒 PROTEÇÃO: Validar temas na inicialização
+  useEffect(() => {
+    console.log('🔒 Iniciando validação de temas...')
+    runThemeValidationTests(professionalThemes)
+  }, [])
 
   // Carregar configurações salvas
   useEffect(() => {
@@ -512,10 +519,19 @@ export function useAccessibility() {
     }
   }
 
-  const getTheme = () => {
-    // Se o tema for highContrast, usar o tema light como base
-    const themeKey = currentTheme === 'highContrast' ? 'light' : currentTheme
-    const themeColors = professionalThemes[themeKey as keyof typeof professionalThemes]
+  const getTheme = (): ThemeColors => {
+    // 🔒 BLOQUEIO: Garantir que o tema seja válido
+    const validThemes = ['light', 'dark', 'highContrast'] as const
+    const safeTheme = validThemes.includes(currentTheme as any) ? currentTheme : 'light'
+    
+    // 🔒 BLOQUEIO: Sempre retornar o tema correto baseado em currentTheme
+    const themeColors = professionalThemes[safeTheme as keyof typeof professionalThemes]
+    
+    // 🔒 BLOQUEIO: Verificar se o tema existe
+    if (!themeColors) {
+      console.error(`❌ Tema '${safeTheme}' não encontrado! Usando 'light' como fallback`)
+      return { ...professionalThemes.light }
+    }
     
     // Retornar uma cópia do objeto para garantir que React detecte mudanças
     return { ...themeColors }

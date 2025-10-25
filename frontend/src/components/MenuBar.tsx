@@ -5,27 +5,28 @@ import { useAccessibility } from '../hooks/useAccessibility'
 export function MenuBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
-  const { getTheme, currentTheme } = useAccessibility()
-  const [theme, setTheme] = useState(getTheme())
   
-  // Atualizar tema quando currentTheme mudar
+  // 🔒 BLOQUEIO: Usar getTheme() diretamente sem useState local
+  const { getTheme, currentTheme } = useAccessibility()
+  const theme = getTheme()
+  
+  // 🔒 BLOQUEIO: Log para debug (apenas desenvolvimento)
   useEffect(() => {
-    const newTheme = getTheme()
-    setTheme(newTheme)
-    console.log('🎨 MenuBar - Tema atualizado:', currentTheme, newTheme)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTheme])
+    console.log('🎨 MenuBar - Tema atual:', currentTheme, theme)
+  }, [currentTheme, theme])
 
   const handleLogout = () => {
     // Implementar logout
     console.log('Logout')
   }
 
+  // 🔒 BLOQUEIO: Estilos sempre atualizados com o tema atual
   const menuStyles: React.CSSProperties = {
     background: theme.surface,
     padding: '4px 24px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-    borderBottom: `1px solid ${theme.border}`
+    borderBottom: `1px solid ${theme.border}`,
+    transition: 'all 0.3s ease' // Transição suave na troca de tema
   }
 
   return (

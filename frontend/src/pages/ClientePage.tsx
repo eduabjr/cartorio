@@ -214,6 +214,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     
     const focusColor = theme.background === '#1a1a1a' ? '#ffd4a3' : '#ffedd5'
     const textColor = theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000'
+    const hoverBg = theme.background === '#1a1a1a' ? '#2a2a2a' : '#f5f5f5'
     
     if (!styleElement) {
       styleElement = document.createElement('style')
@@ -241,6 +242,46 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         background-color: transparent !important;
         -webkit-box-shadow: none !important;
         box-shadow: none !important;
+      }
+      
+      /* 🎯 Feedback visual para botões da toolbar */
+      button[title*="cartão"]:not(:disabled):hover,
+      button[title*="documento"]:not(:disabled):hover,
+      button[title*="Carregar"]:not(:disabled):hover,
+      button[title*="Digitalizar"]:not(:disabled):hover,
+      button[title*="Excluir"]:not(:disabled):hover,
+      button[title*="Imprimir"]:not(:disabled):hover,
+      button[title*="Girar"]:not(:disabled):hover,
+      button[title*="zoom"]:not(:disabled):hover,
+      button[title*="Voltar"]:hover {
+        transform: scale(1.05) !important;
+        background-color: #6b7280 !important;  /* Cinza para combinar */
+        color: white !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+      }
+      
+      button[title*="cartão"]:not(:disabled):active,
+      button[title*="documento"]:not(:disabled):active,
+      button[title*="Carregar"]:not(:disabled):active,
+      button[title*="Digitalizar"]:not(:disabled):active,
+      button[title*="Excluir"]:not(:disabled):active,
+      button[title*="Imprimir"]:not(:disabled):active,
+      button[title*="Girar"]:not(:disabled):active,
+      button[title*="zoom"]:not(:disabled):active,
+      button[title*="Voltar"]:active {
+        transform: scale(0.95) !important;
+        background-color: #4b5563 !important;  /* Cinza mais escuro ao clicar */
+        color: white !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1) inset !important;
+      }
+      
+      /* Botão Retornar verde com hover especial */
+      button[title*="Voltar"]:hover {
+        background-color: #059669 !important;
+      }
+      
+      button[title*="Voltar"]:active {
+        background-color: #047857 !important;
       }
     `
     
@@ -1539,8 +1580,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     display: 'flex',
     backgroundColor: theme.background,
     borderBottom: `1px solid ${theme.border}`,
-    marginTop: '-8px',  // Sobe as abas para mais perto do topo
-    marginBottom: '4px'  // Reduz espaço abaixo das abas
+    marginTop: '-8px',  // Sube as abas para mais perto do topo
+    marginBottom: '4px',  // Reduz espaço abaixo das abas
+    flexShrink: 0  // Não encolhe
   }
 
   const tabButtonStyles = (isActive: boolean) => ({
@@ -1782,17 +1824,18 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '6px 8px',
-    border: 'none',
+    padding: '4px 8px',
+    border: `1px solid ${theme.border}`,
     borderRadius: '4px',
     cursor: 'pointer',
     backgroundColor: theme.surface,
     color: theme.text,
     fontSize: '10px',
-    minWidth: '50px',
-    height: '50px',
-    transition: 'all 0.2s ease',
-    gap: '2px'
+    minWidth: '55px',
+    height: '42px',
+    transition: 'all 0.15s ease',
+    gap: '2px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
   }
 
   const toolbarButtonDisabledStyles = {
@@ -1820,9 +1863,11 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           height: '100%',
           minHeight: '580px',  // Altura mínima = altura da janela
           padding: '8px',
-          overflowY: 'auto',  // Scroll vertical quando menor que tamanho padrão
+          overflowY: activeTab === 'cadastro' ? 'auto' : 'hidden',  // Scroll apenas em cadastro
           overflowX: 'auto',  // Scroll horizontal quando menor que tamanho padrão
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {/* Tabs */}
@@ -2894,23 +2939,24 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       )}
 
       {activeTab === 'digitalizacao' && (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             {/* Abas Secundárias */}
             <div style={{
               display: 'flex',
               gap: '2px',
-              marginBottom: '10px',
-              borderBottom: `1px solid ${theme.border}`
+              marginBottom: '2px',  // Reduzido de 4px para 2px
+              borderBottom: `1px solid ${theme.border}`,
+              flexShrink: 0  // Não encolhe
             }}>
               <button
                 style={{
-                  padding: '8px 16px',
+                  padding: '4px 12px',  // Reduzido de 8px 16px para 4px 12px
                   border: 'none',
                   backgroundColor: theme.surface,
                   color: theme.text,
                   cursor: 'pointer',
                   borderBottom: `2px solid ${digitalizacaoTab === 'cartoes-assinatura' ? theme.primary : 'transparent'}`,
-                  fontSize: '12px',
+                  fontSize: '11px',  // Reduzido de 12px para 11px
                   fontWeight: '500'
                 }}
                 onClick={() => setDigitalizacaoTab('cartoes-assinatura')}
@@ -2919,13 +2965,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               </button>
               <button
                 style={{
-                  padding: '8px 16px',
+                  padding: '4px 12px',  // Reduzido de 8px 16px para 4px 12px
                   border: 'none',
                   backgroundColor: theme.surface,
                   color: theme.text,
                   cursor: 'pointer',
                   borderBottom: `2px solid ${digitalizacaoTab === 'outros-documentos' ? theme.primary : 'transparent'}`,
-                  fontSize: '12px',
+                  fontSize: '11px',  // Reduzido de 12px para 11px
                   fontWeight: '500'
                 }}
                 onClick={() => setDigitalizacaoTab('outros-documentos')}
@@ -2936,9 +2982,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
           {/* Área de Visualização de Documentos */}
           <div style={{
-            height: '350px',
-            backgroundColor: '#D4D4D4',
-            marginTop: '10px',
+            flex: 1,  // Ocupa espaço disponível ao invés de altura fixa
+            backgroundColor: '#D4D4D4',  // Cinza claro padrão
+            marginTop: '2px',
             border: `1px solid ${theme.border}`,
             borderRadius: '4px',
             display: 'flex',
@@ -2946,7 +2992,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
-            overflow: 'auto'
+            overflow: 'hidden',
+            minHeight: '240px',  // Aumentado de 200px para 240px
+            maxHeight: '370px'  // Aumentado de 320px para 370px
           }}>
             {digitalizacaoTab === 'cartoes-assinatura' ? (
               /* Conteúdo para Cartões de Assinatura */
@@ -3112,13 +3160,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '10px',
+            padding: '2px 4px',  // Reduzido de 4px 8px para 2px 4px
             backgroundColor: theme.surface,
             borderTop: `1px solid ${theme.border}`,
-            marginTop: '10px'
+            marginTop: '2px',  // Reduzido de 4px para 2px
+            flexShrink: 0  // Não encolhe
           }}>
             {/* Controles de Navegação */}
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
               {digitalizacaoTab === 'cartoes-assinatura' ? (
                 <>
                   <button 
@@ -3201,7 +3250,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             {/* Botões de Ação */}
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
               {digitalizacaoTab === 'cartoes-assinatura' ? (
                 <>
                   <button 
@@ -3373,16 +3422,19 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           display: 'flex', 
           flexDirection: 'column', 
           height: '100%', 
-          padding: '10px',
-          gap: '10px'
+          padding: '2px',
+          gap: '2px',
+          overflow: 'auto'  // Permite scroll se necessário
         }}>
           {/* Grade de Dados */}
           <div style={{
-            height: '200px',
             backgroundColor: theme.surface,
-            border: `1px solid ${theme.border}`,
-            borderRadius: '4px',
-            overflow: 'hidden'
+            border: `2px solid ${theme.primary}`,  // Borda mais grossa e colorida
+            borderRadius: '6px',
+            overflow: 'auto',
+            height: '250px',  // Altura aumentada para 250px
+            flexShrink: 0,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'  // Sombra para destaque
           }}>
             <div style={{
               display: 'grid',
@@ -3390,15 +3442,16 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               backgroundColor: theme.primary,
               color: 'white',
               fontWeight: 'bold',
-              fontSize: '12px'
+              fontSize: '11px',  // Reduzido de 12px para 11px
+              flexShrink: 0
             }}>
-              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>DataCadastro</div>
-              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>Selo Digital</div>
-              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>CNS</div>
-              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>Natureza Ato</div>
-              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>AnoAto</div>
-              <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>Digito</div>
-              <div style={{ padding: '8px' }}>CIA</div>
+              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>DataCadastro</div>
+              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>Selo Digital</div>
+              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>CNS</div>
+              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>Natureza Ato</div>
+              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>AnoAto</div>
+              <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>Digito</div>
+              <div style={{ padding: '4px' }}>CIA</div>
             </div>
             
             {/* Linhas de dados */}
@@ -3416,13 +3469,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 }}
                 onClick={() => handleSelecionarSelo(index)}
               >
-                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.dataCadastro}</div>
-                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.seloDigital}</div>
-                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.cns}</div>
-                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.naturezaAto}</div>
-                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.anoAto}</div>
-                <div style={{ padding: '8px', borderRight: `1px solid ${theme.border}` }}>{selo.digito}</div>
-                <div style={{ padding: '8px' }}>{selo.cia}</div>
+                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.dataCadastro}</div>
+                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.seloDigital}</div>
+                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.cns}</div>
+                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.naturezaAto}</div>
+                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.anoAto}</div>
+                <div style={{ padding: '4px', borderRight: `1px solid ${theme.border}` }}>{selo.digito}</div>
+                <div style={{ padding: '4px' }}>{selo.cia}</div>
               </div>
             ))}
           </div>
@@ -3430,9 +3483,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           {/* Painéis Inferiores */}
           <div style={{
             display: 'flex',
-            gap: '10px',
-            height: '150px',
-            marginTop: '20px'
+            gap: '4px',
+            overflow: 'hidden',
+            flexShrink: 0  // Garante que não será cortado
           }}>
             {/* Painel QR Code */}
             <div style={{
@@ -3443,12 +3496,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px'
+              gap: '6px',
+              padding: '8px',
+              flexShrink: 0
             }}>
               <div style={{
-                width: '90px',
-                height: '90px',
+                width: '130px',
+                height: '130px',
                 backgroundColor: '#e5e7eb',
                 border: `2px solid ${theme.border}`,
                 borderRadius: '4px',
@@ -3462,31 +3516,33 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                     src={selosDigitais[seloSelecionado].qrCode} 
                     alt="QR Code"
                     style={{
-                      width: '86px',
-                      height: '86px',
+                      width: '126px',
+                      height: '126px',
                       objectFit: 'contain'
                     }}
                   />
                 ) : (
                   <div style={{
                     color: theme.textSecondary,
-                    fontSize: '12px',
+                    fontSize: '14px',
                     textAlign: 'center'
                   }}>
                     (QrCode)
                   </div>
                 )}
               </div>
+              
               <button 
                 style={{
-                  padding: '6px 12px',
+                  padding: '10px 16px',
                   backgroundColor: theme.primary,
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
-                  fontSize: '11px',
+                  fontSize: '12px',
                   cursor: 'pointer',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  width: '100%'
                 }}
                 onClick={handleCopiarQRCode}
                 disabled={!selosDigitais[seloSelecionado]}
@@ -3540,51 +3596,49 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                   outline: 'none'
                 }}
               />
-            </div>
-          </div>
 
-          {/* Botões de Ação */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '10px',
-            paddingTop: '10px'
-          }}>
-
-            {/* Botões da direita - Exclusão */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  fontWeight: '500'
-                }}
-                onClick={handleExcluirSeloLocal}
-                disabled={!selosDigitais[seloSelecionado]}
-              >
-                Excluir Selo (Local)
-              </button>
-              <button 
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  fontWeight: '500'
-                }}
-                onClick={handleExcluirSeloTJ}
-                disabled={!selosDigitais[seloSelecionado]}
-              >
-                Excluir Selo (TJ)
-              </button>
+              {/* Botões Vermelhos */}
+              <div style={{
+                display: 'flex',
+                gap: '8px'
+              }}>
+                <button 
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onClick={handleExcluirSeloLocal}
+                  disabled={!selosDigitais[seloSelecionado]}
+                >
+                  Excluir Selo (Local)
+                </button>
+                <button 
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onClick={handleExcluirSeloTJ}
+                  disabled={!selosDigitais[seloSelecionado]}
+                >
+                  Excluir Selo (TJ)
+                </button>
+              </div>
             </div>
           </div>
         </div>

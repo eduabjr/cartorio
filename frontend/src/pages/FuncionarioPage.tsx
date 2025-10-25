@@ -637,9 +637,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   const containerStyles: React.CSSProperties = {
     backgroundColor: theme.background,
     color: theme.text,
-    padding: '8px',
+    padding: '4px',  // Reduzido de 8px para 4px
     borderRadius: '8px',
-    height: '100%',
+    flex: 1,  // Ocupa todo espaço disponível
     overflowY: 'auto',  // ⚠️ CRÍTICO - NÃO ALTERAR - Scroll vertical
     overflowX: 'auto',  // ⚠️ CRÍTICO - NÃO ALTERAR - Scroll horizontal
     display: 'flex',
@@ -650,7 +650,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   const titleStyles: React.CSSProperties = {
     fontSize: getRelativeFontSize(18),
     fontWeight: 'bold',
-    marginBottom: '10px',
+    marginBottom: '4px',  // Reduzido de 10px para 4px
     color: theme.text,
     textAlign: 'center'
   }
@@ -659,14 +659,15 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   // 🔒 BLOQUEIO: formContainerStyles - NÃO MODIFICAR padding ou flexShrink
   const formContainerStyles: React.CSSProperties = {
     backgroundColor: theme.surface,
-    padding: '8px',  // 🔒 FIXO - NÃO ALTERAR
+    padding: '4px',  // Reduzido de 8px para 4px
     borderRadius: '8px',
     border: `1px solid ${theme.border}`,
     overflow: 'visible',
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
-    flexShrink: 1,  // 🔒 FIXO - Permite encolher para se adaptar
+    flexShrink: 0,  // Não encolhe - mantém tamanho natural
+    flex: 1,  // Ocupa espaço disponível
     height: 'auto'
   }
 
@@ -674,27 +675,27 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   const formGridStyles: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',  // 🔒 FIXO - NÃO ALTERAR
-    marginBottom: '2px',
-    padding: '4px',  // 🔒 FIXO - NÃO ALTERAR
+    gap: '4px',  // Reduzido de 6px para 4px
+    marginBottom: '0px',  // Reduzido de 2px para 0px - remove margem inferior
+    padding: '2px',  // Reduzido de 4px para 2px
     overflow: 'visible',
     height: 'auto',
     minWidth: 0,
-    flexShrink: 1  // 🔒 FIXO - Permite encolher para se adaptar
+    flexShrink: 0  // Não encolhe - mantém tamanho natural
   }
 
   const fieldStyles: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '1px',
+    gap: '0px',  // Reduzido de 1px para 0px
     flexShrink: 1,  // Permite encolher proporcionalmente
     minWidth: '0'  // Permite encolher completamente
   }
 
   const rowStyles: React.CSSProperties = {
     display: 'flex',
-    gap: '6px',
-    marginBottom: '2px',
+    gap: '4px',  // Reduzido de 6px para 4px
+    marginBottom: '1px',  // Reduzido de 2px para 1px
     alignItems: 'flex-start',
     flexWrap: 'nowrap',  // NÃO quebra linha - mantém campos juntos
     minWidth: '0',
@@ -704,8 +705,8 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   // 🔒 BLOQUEIO: row1Styles - NUNCA modificar flexWrap, gap ou justifyContent
   const row1Styles: React.CSSProperties = {
     display: 'flex',
-    gap: '8px',  // 🔒 FIXO - Gap para espaçamento uniforme
-    marginBottom: '2px',
+    gap: '6px',  // Reduzido de 8px para 6px
+    marginBottom: '1px',  // Reduzido de 2px para 1px
     alignItems: 'flex-start',
     justifyContent: 'space-between',  // 🔒 FIXO - Distribui campos uniformemente
     flexWrap: 'nowrap',  // 🔒 CRÍTICO - NÃO quebra - linha 1 sempre junta
@@ -716,8 +717,8 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   // 🔒 BLOQUEIO: row2Styles - NUNCA modificar flexWrap, gap ou flexShrink
   const row2Styles: React.CSSProperties = {
     display: 'flex',
-    gap: '6px',  // 🔒 FIXO - NÃO ALTERAR
-    marginBottom: '2px',
+    gap: '4px',  // Reduzido de 6px para 4px
+    marginBottom: '1px',  // Reduzido de 2px para 1px
     alignItems: 'flex-start',
     flexWrap: 'nowrap',  // 🔒 CRÍTICO - Mantém campos na mesma linha - NÃO quebra
     minWidth: '0',
@@ -737,9 +738,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     fontSize: getRelativeFontSize(11),
     fontWeight: '500',
     color: theme.text,
-    marginBottom: '2px',
-    height: '14px',
-    lineHeight: '14px',
+    marginBottom: '0px',  // Reduzido de 2px para 0px
+    height: '12px',  // Reduzido de 14px para 12px
+    lineHeight: '12px',  // Reduzido de 14px para 12px
     display: 'block',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -827,17 +828,17 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   const buttonContainerStyles: React.CSSProperties = {
     display: 'flex',
     justifyContent: 'center',
-    gap: '14px',
-    marginTop: '-2px',  // 🔒 CRÍTICO - Botões ainda mais próximos - sobe os botões
-    paddingTop: '2px',  // 🔒 CRÍTICO - Espaço mínimo reduzido
+    gap: '12px',  // Reduzido de 14px para 12px
+    marginTop: '-4px',  // Reduzido de -2px para -4px (sobe mais os botões)
+    paddingTop: '2px',  // Mantido
     borderTop: `1px solid ${theme.border}`,
     flexWrap: 'nowrap' as const,  // 🔒 FIXO - NÃO quebra - botões ficam na mesma linha
     flexShrink: 0,  // 🔒 FIXO - Botões não encolhem
-    minHeight: '40px'  // 🔒 FIXO - Altura mínima garantida
+    minHeight: '36px'  // Reduzido de 40px para 36px
   }
 
   const buttonStyles: React.CSSProperties = {
-    padding: '10px 16px',
+    padding: '6px 12px',  // Reduzido de 10px 16px para 6px 12px
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer',
@@ -906,10 +907,10 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       onClose={onClose}
       resetToOriginalPosition={resetToOriginalPosition}
       headerColor="#6B7280"
-      height="600px"
+      height="540px"  // Reduzido de 600px para 540px
       width="900px"
       minWidth="900px"  // 🔒 BLOQUEIO: Impede redução abaixo de 900px
-      minHeight="600px" // 🔒 BLOQUEIO: Impede redução abaixo de 600px
+      minHeight="540px" // Reduzido de 600px para 540px
     >
       <div style={containerStyles}>
         {/* Formulário */}
