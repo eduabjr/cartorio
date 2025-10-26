@@ -173,9 +173,10 @@ export function Header({ onMenuClick }: HeaderProps) {
         aria-label="Controles da janela"
         style={{ 
           display: 'flex', 
-          gap: '8px',
+          gap: '4px',
           alignItems: 'center',
           paddingRight: '12px',
+          height: '100%',
           WebkitAppRegion: 'no-drag' as any
         }}
       >
@@ -193,10 +194,10 @@ export function Header({ onMenuClick }: HeaderProps) {
             e.currentTarget.style.backgroundColor = '#3f3f3f'
           }}
           style={{
-            width: '32px',
-            height: '32px',
+            width: '22px',
+            height: '22px',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             backgroundColor: '#3f3f3f',
             color: 'white',
             cursor: 'pointer',
@@ -215,8 +216,8 @@ export function Header({ onMenuClick }: HeaderProps) {
           title="Minimizar"
           aria-label="Minimizar janela"
         >
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="white" aria-hidden="true" focusable="false">
-            <rect x="0" y="5" width="11" height="1"/>
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="white" aria-hidden="true" focusable="false">
+            <rect x="0" y="4" width="9" height="1"/>
           </svg>
         </button>
 
@@ -252,10 +253,10 @@ export function Header({ onMenuClick }: HeaderProps) {
             e.currentTarget.style.backgroundColor = '#3f3f3f'
           }}
           style={{
-            width: '32px',
-            height: '32px',
+            width: '22px',
+            height: '22px',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             backgroundColor: '#3f3f3f',
             color: 'white',
             cursor: 'pointer',
@@ -285,23 +286,23 @@ export function Header({ onMenuClick }: HeaderProps) {
         >
           {windowState === 'normal' ? (
             // ÍCONE 1: Normal → Setas para dentro (reduzir)
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="white" strokeWidth="1.3" aria-hidden="true" focusable="false" style={{ pointerEvents: 'none' }}>
-              <rect x="0.5" y="0.5" width="10" height="10" />
-              <path d="M3 3 L3 5.5 L5.5 5.5 M8 3 L8 5.5 L5.5 5.5 M3 8 L3 5.5 M8 8 L8 5.5" 
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="white" strokeWidth="1.2" aria-hidden="true" focusable="false" style={{ pointerEvents: 'none' }}>
+              <rect x="0.5" y="0.5" width="8" height="8" />
+              <path d="M2.5 2.5 L2.5 4.5 L4.5 4.5 M6.5 2.5 L6.5 4.5 L4.5 4.5 M2.5 6.5 L2.5 4.5 M6.5 6.5 L6.5 4.5" 
                     strokeLinecap="round" strokeLinejoin="round" fill="white" fillOpacity="0.3"/>
             </svg>
           ) : windowState === 'minimized' ? (
             // ÍCONE 2: Reduzido → Setas para fora (estender)
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="white" strokeWidth="1.3" aria-hidden="true" focusable="false" style={{ pointerEvents: 'none' }}>
-              <path d="M1 1 L1 4 M1 1 L4 1 M10 1 L7 1 M10 1 L10 4 M1 10 L1 7 M1 10 L4 10 M10 10 L10 7 M10 10 L7 10" 
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="white" strokeWidth="1.2" aria-hidden="true" focusable="false" style={{ pointerEvents: 'none' }}>
+              <path d="M0.5 0.5 L0.5 3 M0.5 0.5 L3 0.5 M8.5 0.5 L6 0.5 M8.5 0.5 L8.5 3 M0.5 8.5 L0.5 6 M0.5 8.5 L3 8.5 M8.5 8.5 L8.5 6 M8.5 8.5 L6 8.5" 
                     strokeLinecap="round" strokeLinejoin="round"/>
-              <rect x="3.5" y="3.5" width="4" height="4" fill="white" fillOpacity="0.3"/>
+              <rect x="3" y="3" width="3" height="3" fill="white" fillOpacity="0.3"/>
             </svg>
           ) : (
             // ÍCONE 3: Estendido → Quadrados sobrepostos (voltar ao normal)
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="white" strokeWidth="1.2" aria-hidden="true" focusable="false" style={{ pointerEvents: 'none' }}>
-              <rect x="3" y="0.5" width="7" height="7" />
-              <rect x="0.5" y="3" width="7" height="7" />
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="white" strokeWidth="1.1" aria-hidden="true" focusable="false" style={{ pointerEvents: 'none' }}>
+              <rect x="2.5" y="0.5" width="6" height="6" />
+              <rect x="0.5" y="2.5" width="6" height="6" />
             </svg>
           )}
         </button>
@@ -320,10 +321,10 @@ export function Header({ onMenuClick }: HeaderProps) {
             e.currentTarget.style.backgroundColor = '#e81123'
           }}
           style={{
-            width: '32px',
-            height: '32px',
+            width: '22px',
+            height: '22px',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             backgroundColor: '#e81123',
             color: 'white',
             cursor: 'pointer',
@@ -342,8 +343,8 @@ export function Header({ onMenuClick }: HeaderProps) {
           title="Fechar"
           aria-label="Fechar janela"
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="white" aria-hidden="true" focusable="false">
-            <path d="M1 1 L9 9 M9 1 L1 9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="white" aria-hidden="true" focusable="false">
+            <path d="M0.5 0.5 L7.5 7.5 M7.5 0.5 L0.5 7.5" stroke="white" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
         </button>
       </div>

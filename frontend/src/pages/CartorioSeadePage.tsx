@@ -39,9 +39,9 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
 
   // Estado para o formulário
   const [formData, setFormData] = useState({
-    codigo: '',
-    numeroSeade: '',
-    numeroCnj: '',
+    codigo: '0',
+    numeroSeade: '0',
+    numeroCnj: '0',
     tituloCartorio: '',
     cnpj: '',
     cep: '',
@@ -69,9 +69,9 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   // Função para criar novo registro
   const handleNovo = () => {
     setFormData({
-      codigo: '',
-      numeroSeade: '',
-      numeroCnj: '',
+      codigo: '0',
+      numeroSeade: '0',
+      numeroCnj: '0',
       tituloCartorio: '',
       cnpj: '',
       cep: '',

@@ -18,6 +18,7 @@ import { FuncionarioPage } from './pages/FuncionarioPage'
 import { FirmasPage } from './pages/FirmasPage'
 import { TipoDocumentoDigitalizadoPage } from './pages/TipoDocumentoDigitalizadoPage'
 import { CartorioSeadePage } from './pages/CartorioSeadePage'
+import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { SystemStatus } from './components/SystemStatus'
@@ -380,14 +381,25 @@ function AppContent() {
             { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => {
               console.log('✅ CARTÓRIO SEADE CLICADO! Abrindo janela...')
               openWindow({
-                id: `cartorio-seade-${Date.now()}`,
+                id: 'cartorio-seade-window',
+                type: 'cartorio-seade',
                 title: 'Cadastro de Cartório (SEADE)',
                 component: CartorioSeadePage,
                 props: { onClose: () => {} }
               })
               console.log('✅ Janela de Cartório SEADE aberta!')
             } },
-          { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => (window as any).navigateToPage?.('dnv-bloqueadas') },
+          { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => {
+            console.log('✅ DNV E DO BLOQUEADAS CLICADO! Abrindo janela...')
+            openWindow({
+              id: 'dnv-do-bloqueadas-window',
+              type: 'dnv-do-bloqueadas',
+              title: 'Cadastro de Declaração Bloqueada',
+              component: DNVDOBloqueadasPage,
+              props: { onClose: () => {} }
+            })
+            console.log('✅ Janela de DNV e DO Bloqueadas aberta!')
+          } },
           { id: 'oficios-mandados', label: 'Ofícios e Mandados', icon: '', onClick: () => (window as any).navigateToPage?.('oficios-mandados') },
           { id: 'hospital', label: 'Hospital', icon: '', onClick: () => (window as any).navigateToPage?.('hospital') },
           { id: 'cemiterio', label: 'Cemitério', icon: '', onClick: () => (window as any).navigateToPage?.('cemiterio') },
@@ -482,7 +494,8 @@ function AppContent() {
               { id: 'cadastros-tipos-documento', label: 'Tipos de Documento Digitalizado', icon: '', onClick: () => {
                 console.log('✅ Abrindo Tipos de Documento Digitalizado...')
                 openWindow({
-                  id: `tipo-doc-${Date.now()}`,
+                  id: 'tipo-doc-window',
+                  type: 'tipo-documento',
                   title: 'Cadastro de Tipo de Documento Digitalizado',
                   component: TipoDocumentoDigitalizadoPage,
                   props: { onClose: () => {} }
@@ -672,7 +685,8 @@ function AppContent() {
           { id: 'firmas-cadastrar', label: 'Cadastrar Firma', icon: '', onClick: () => {
             console.log('✅ CADASTRAR FIRMA CLICADO! Abrindo janela...')
             openWindow({
-              id: `firmas-${Date.now()}`,
+              id: 'firmas-window',
+              type: 'firmas',
               title: 'Firmas',
               component: FirmasPage,
               props: { onClose: () => {} }
@@ -682,7 +696,8 @@ function AppContent() {
           { id: 'documento-desentranhado', label: 'Documento Desentranhado', icon: '', onClick: () => {
             console.log('✅ DOCUMENTO DESENTRANHADO CLICADO! Abrindo janela...')
             openWindow({
-              id: `firmas-doc-${Date.now()}`,
+              id: 'firmas-doc-window',
+              type: 'firmas-documento-desentranhado',
               title: 'Documento Desentranhado',
               component: FirmasPage,
               props: { onClose: () => {} }
@@ -692,7 +707,8 @@ function AppContent() {
           { id: 'autenticacao-item-13', label: 'Autenticação Item 13', icon: '', onClick: () => {
             console.log('✅ AUTENTICAÇÃO ITEM 13 CLICADO! Abrindo janela...')
             openWindow({
-              id: `firmas-auth-${Date.now()}`,
+              id: 'firmas-auth-window',
+              type: 'firmas-autenticacao-item13',
               title: 'Autenticação Item 13',
               component: FirmasPage,
               props: { onClose: () => {} }
@@ -706,7 +722,8 @@ function AppContent() {
               submenu: [
                 { id: 'antecedentes-pf', label: 'Antecedentes PF', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-pf-${Date.now()}`,
+                    id: 'firmas-pf-window',
+                    type: 'firmas-antecedentes-pf',
                     title: 'Antecedentes PF',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -714,7 +731,8 @@ function AppContent() {
                 } },
                 { id: 'antecedentes-ssp', label: 'Antecedentes SSP', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-ssp-${Date.now()}`,
+                    id: 'firmas-ssp-window',
+                    type: 'firmas-antecedentes-ssp',
                     title: 'Antecedentes SSP',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -722,7 +740,8 @@ function AppContent() {
                 } },
                 { id: 'antecedente-epol', label: 'Antecedente Epol', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-epol-${Date.now()}`,
+                    id: 'firmas-epol-window',
+                    type: 'firmas-antecedente-epol',
                     title: 'Antecedente Epol',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -730,7 +749,8 @@ function AppContent() {
                 } },
                 { id: 'certificado-digital', label: 'Certificado Digital', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-cert-${Date.now()}`,
+                    id: 'firmas-cert-window',
+                    type: 'firmas-certificado-digital',
                     title: 'Certificado Digital',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -738,7 +758,8 @@ function AppContent() {
                 } },
                 { id: 'certidao-naturalizacao', label: 'Certidão de Naturalização', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-nat-${Date.now()}`,
+                    id: 'firmas-nat-window',
+                    type: 'firmas-certidao-naturalizacao',
                     title: 'Certidão de Naturalização',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -746,7 +767,8 @@ function AppContent() {
                 } },
                 { id: 'cnh-digital', label: 'CNH Digital', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-cnh-${Date.now()}`,
+                    id: 'firmas-cnh-window',
+                    type: 'firmas-cnh-digital',
                     title: 'CNH Digital',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -754,7 +776,8 @@ function AppContent() {
                 } },
                 { id: 'qrcode', label: 'QRCODE', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-qr-${Date.now()}`,
+                    id: 'firmas-qr-window',
+                    type: 'firmas-qrcode',
                     title: 'QRCODE',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -762,7 +785,8 @@ function AppContent() {
                 } },
                 { id: 'rg-digital', label: 'RG Digital', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-rg-${Date.now()}`,
+                    id: 'firmas-rg-window',
+                    type: 'firmas-rg-digital',
                     title: 'RG Digital',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -770,7 +794,8 @@ function AppContent() {
                 } },
                 { id: 'tjsp', label: 'TJSP', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-tjsp-${Date.now()}`,
+                    id: 'firmas-tjsp-window',
+                    type: 'firmas-tjsp',
                     title: 'TJSP',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -778,7 +803,8 @@ function AppContent() {
                 } },
                 { id: 'tse', label: 'TSE', icon: '', onClick: () => {
                   openWindow({
-                    id: `firmas-tse-${Date.now()}`,
+                    id: 'firmas-tse-window',
+                    type: 'firmas-tse',
                     title: 'TSE',
                     component: FirmasPage,
                     props: { onClose: () => {} }
@@ -807,7 +833,7 @@ function AppContent() {
       { id: 'firmas', label: 'Firmas', icon: '✍️', onClick: () => {
         console.log('✅ FIRMAS CLICADO! Abrindo janela...')
         openWindow({
-          id: `firmas-${Date.now()}`,
+          id: 'firmas-window',
           type: 'firmas',
           title: 'Firmas',
           component: FirmasPage,
