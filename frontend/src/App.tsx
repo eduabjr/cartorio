@@ -19,6 +19,7 @@ import { FirmasPage } from './pages/FirmasPage'
 import { TipoDocumentoDigitalizadoPage } from './pages/TipoDocumentoDigitalizadoPage'
 import { CartorioSeadePage } from './pages/CartorioSeadePage'
 import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
+import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { SystemStatus } from './components/SystemStatus'
@@ -400,7 +401,17 @@ function AppContent() {
             })
             console.log('✅ Janela de DNV e DO Bloqueadas aberta!')
           } },
-          { id: 'oficios-mandados', label: 'Ofícios e Mandados', icon: '', onClick: () => (window as any).navigateToPage?.('oficios-mandados') },
+          { id: 'oficios-mandados', label: 'Ofícios e Mandados', icon: '', onClick: () => {
+            console.log('✅ OFÍCIOS E MANDADOS CLICADO! Abrindo janela...')
+            openWindow({
+              id: 'oficios-mandados-window',
+              type: 'oficios-mandados',
+              title: 'Controle de Ofícios e Mandados',
+              component: OficiosMandadosPage,
+              props: { onClose: () => {} }
+            })
+            console.log('✅ Janela de Ofícios e Mandados aberta!')
+          } },
           { id: 'hospital', label: 'Hospital', icon: '', onClick: () => (window as any).navigateToPage?.('hospital') },
           { id: 'cemiterio', label: 'Cemitério', icon: '', onClick: () => (window as any).navigateToPage?.('cemiterio') },
           { id: 'funeraria', label: 'Funerária', icon: '', onClick: () => (window as any).navigateToPage?.('funeraria') },
