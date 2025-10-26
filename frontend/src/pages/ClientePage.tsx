@@ -36,6 +36,7 @@
 // ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
 
 import React, { useState, useEffect } from 'react'
+import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
 import { OCRProgress } from '../components/OCRProgress'
 import { ScannerConfig } from '../components/ScannerConfig'
@@ -2526,11 +2527,11 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
             <div style={fieldStyles}>
               <label style={labelStyles}>Cidade</label>
-              <input
-                type="text"
+              <CidadeAutocompleteInput
                 value={formData.cidade}
-                onChange={(e) => handleInputWithLimit('cidade', e.target.value, 50)}
-                style={inputStyles}
+                onChange={(cidade) => handleInputWithLimit('cidade', cidade, 50)}
+                uf={formData.uf}
+                inputStyles={inputStyles}
                 maxLength={50}
               />
             </div>

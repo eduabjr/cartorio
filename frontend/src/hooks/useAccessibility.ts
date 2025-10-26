@@ -161,7 +161,17 @@ function applyContrastSettings(settings: AccessibilitySettings) {
   
   const daltonismFilter = daltonismPresets[contrastLevel] || 'none'
   
-  // Se alto contraste está desabilitado, aplicar filtros de daltonismo + azul
+  // 🔒 CORREÇÃO: Se alto contraste está desabilitado E não há filtros ativos, limpar tudo
+  if (!highContrast && contrastLevel === 'normal' && !blueLightFilter) {
+    document.body.style.filter = 'none'
+    document.body.style.setProperty('--contrast-filter', 'none')
+    document.body.style.setProperty('--blue-light-filter', 'none')
+    document.body.style.setProperty('--daltonism-filter', 'none')
+    console.log('✅ Filtros desabilitados - tema livre para funcionar')
+    return
+  }
+  
+  // Se alto contraste está desabilitado MAS há filtros (daltonismo/azul), aplicar apenas esses
   if (!highContrast) {
     let combinedFilter = daltonismFilter
     if (blueLightFilter && daltonismFilter !== 'none') {
@@ -170,11 +180,11 @@ function applyContrastSettings(settings: AccessibilitySettings) {
       combinedFilter = blueLightFilterValue
     }
     
-    document.body.style.filter = combinedFilter
+    document.body.style.filter = combinedFilter === 'none' ? 'none' : combinedFilter
     document.body.style.setProperty('--contrast-filter', 'none')
     document.body.style.setProperty('--blue-light-filter', blueLightFilterValue)
     document.body.style.setProperty('--daltonism-filter', daltonismFilter)
-    console.log('🔵 Aplicado filtros de daltonismo:', { daltonismFilter, blueLightFilterValue, combinedFilter })
+    console.log('🔵 Aplicado filtros de daltonismo/azul (sem bloquear tema):', { daltonismFilter, blueLightFilterValue, combinedFilter })
     return
   }
   
@@ -226,18 +236,63 @@ function applyContrastSettings(settings: AccessibilitySettings) {
 }
 
 export function useAccessibility() {
-  const [settings, setSettings] = useState<AccessibilitySettings>({
-    highContrast: false,
-    contrastLevel: 'normal',
-    blueLightFilter: false,
-    blueLightIntensity: 'medium',
-    reducedMotion: false,
-    fontSize: 'padrao',
-    screenReader: false,
-    keyboardNavigation: false
+  // 🔒 CORREÇÃO CRÍTICA: Inicializar settings do localStorage ANTES do primeiro render
+  const [settings, setSettings] = useState<AccessibilitySettings>(() => {
+    const savedSettings = localStorage.getItem('accessibility-settings')
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings)
+        console.log('⚡ Settings carregadas ANTES do primeiro render:', parsed)
+        return { ...{
+          highContrast: false,
+          contrastLevel: 'normal' as const,
+          blueLightFilter: false,
+          blueLightIntensity: 'medium' as const,
+          reducedMotion: false,
+          fontSize: 'padrao' as const,
+          screenReader: false,
+          keyboardNavigation: false
+        }, ...parsed }
+      } catch (e) {
+        console.warn('❌ Erro ao parsear settings, usando padrão')
+      }
+    }
+    return {
+      highContrast: false,
+      contrastLevel: 'normal',
+      blueLightFilter: false,
+      blueLightIntensity: 'medium',
+      reducedMotion: false,
+      fontSize: 'padrao',
+      screenReader: false,
+      keyboardNavigation: false
+    }
   })
 
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'highContrast'>('light')
+  // 🔒 CORREÇÃO CRÍTICA: Inicializar currentTheme do localStorage ANTES do primeiro render
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'highContrast'>(() => {
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme && ['light', 'dark', 'highContrast'].includes(savedTheme)) {
+      console.log('⚡ Tema carregado ANTES do primeiro render:', savedTheme)
+      
+      // 🔒 SUPER CRÍTICO: Aplicar tema no DOM ANTES do React renderizar
+      const immediateTheme = professionalThemes[savedTheme as keyof typeof professionalThemes]
+      if (immediateTheme) {
+        console.log('⚡⚡⚡ APLICANDO TEMA NO DOM ANTES DO PRIMEIRO RENDER')
+        document.body.style.setProperty('--background-color', immediateTheme.background, 'important')
+        document.body.style.setProperty('--surface-color', immediateTheme.surface, 'important')
+        document.body.style.setProperty('--text-color', immediateTheme.text, 'important')
+        document.body.style.setProperty('--border-color', immediateTheme.border, 'important')
+        document.body.classList.add(`theme-${savedTheme}`)
+        console.log('✅ DOM preparado com tema:', savedTheme)
+      }
+      
+      return savedTheme as 'light' | 'dark' | 'highContrast'
+    }
+    console.log('⚡ Nenhum tema salvo, usando light por padrão')
+    return 'light'
+  })
+  
   const [isThemeLoaded, setIsThemeLoaded] = useState(false)
 
   // 🔒 PROTEÇÃO: Validar temas na inicialização
@@ -248,13 +303,17 @@ export function useAccessibility() {
 
   // Carregar configurações salvas
   useEffect(() => {
+    console.log('\n🚀🚀🚀 ═══════════════════════════════════════════════')
+    console.log('🚀 INICIALIZAÇÃO DO SISTEMA DE TEMAS')
+    console.log('🚀🚀🚀 ═══════════════════════════════════════════════')
+    
     const savedSettings = localStorage.getItem('accessibility-settings')
     const savedTheme = localStorage.getItem('theme')
     
-    console.log('🔍 useAccessibility - Carregando configurações:', {
+    console.log('🔍 Verificando localStorage:', {
       savedSettings,
       savedTheme,
-      currentTheme: currentTheme
+      currentThemeInicial: currentTheme
     })
     
     if (savedSettings) {
@@ -268,13 +327,66 @@ export function useAccessibility() {
     }
     
     if (savedTheme && ['light', 'dark', 'highContrast'].includes(savedTheme)) {
+      console.log('🎨 Tema salvo encontrado:', savedTheme)
+      console.log('⚡ APLICANDO TEMA IMEDIATAMENTE (ANTES de marcar como loaded)')
+      
+      // 🔒 CORREÇÃO CRÍTICA: Aplicar tema ANTES de marcar como loaded
+      const immediateTheme = professionalThemes[savedTheme as keyof typeof professionalThemes]
+      if (immediateTheme) {
+        // Aplicar variáveis CSS IMEDIATAMENTE
+        document.body.style.setProperty('--primary-color', immediateTheme.primary, 'important')
+        document.body.style.setProperty('--secondary-color', immediateTheme.secondary, 'important')
+        document.body.style.setProperty('--background-color', immediateTheme.background, 'important')
+        document.body.style.setProperty('--surface-color', immediateTheme.surface, 'important')
+        document.body.style.setProperty('--text-color', immediateTheme.text, 'important')
+        document.body.style.setProperty('--text-secondary-color', immediateTheme.textSecondary, 'important')
+        document.body.style.setProperty('--border-color', immediateTheme.border, 'important')
+        document.body.style.setProperty('--success-color', immediateTheme.success, 'important')
+        document.body.style.setProperty('--warning-color', immediateTheme.warning, 'important')
+        document.body.style.setProperty('--error-color', immediateTheme.error, 'important')
+        document.body.style.setProperty('--info-color', immediateTheme.info, 'important')
+        
+        // Aplicar classe de tema
+        document.body.className = document.body.className.replace(/theme-\w+/g, '')
+        document.body.classList.add(`theme-${savedTheme}`)
+        
+        console.log('✅ Variáveis CSS aplicadas IMEDIATAMENTE na inicialização')
+        console.log('📊 Cores aplicadas:', {
+          background: immediateTheme.background,
+          surface: immediateTheme.surface,
+          text: immediateTheme.text
+        })
+      }
+      
       setCurrentTheme(savedTheme as 'light' | 'dark' | 'highContrast')
-      console.log('✅ Tema carregado do localStorage:', savedTheme)
+      console.log('✅ currentTheme definido para:', savedTheme)
     } else {
       console.log('⚠️ Nenhum tema salvo encontrado, usando padrão: light')
+      
+      // 🔒 CORREÇÃO: Aplicar tema light imediatamente também
+      const lightTheme = professionalThemes.light
+      document.body.style.setProperty('--background-color', lightTheme.background, 'important')
+      document.body.style.setProperty('--surface-color', lightTheme.surface, 'important')
+      document.body.style.setProperty('--text-color', lightTheme.text, 'important')
+      document.body.classList.add('theme-light')
+      console.log('✅ Tema light aplicado por padrão')
     }
     
+    console.log('🏁 Marcando tema como carregado (isThemeLoaded = true)')
     setIsThemeLoaded(true)
+    
+    // 🔒 GARANTIA ABSOLUTA: Disparar evento theme-changed NA INICIALIZAÇÃO
+    // Isso força todos os componentes a renderizarem com o tema correto desde o início
+    setTimeout(() => {
+      const temaAtual = localStorage.getItem('theme') || 'light'
+      console.log('📢 DISPARANDO evento theme-changed na INICIALIZAÇÃO com tema:', temaAtual)
+      window.dispatchEvent(new CustomEvent('theme-changed', { 
+        detail: { theme: temaAtual, timestamp: Date.now(), initialization: true } 
+      }))
+      console.log('✅ Evento de inicialização disparado')
+    }, 50) // Pequeno delay para garantir que componentes estejam montados
+    
+    console.log('🚀🚀🚀 ═══════════════════════════════════════════════\n')
   }, [])
 
   // Detectar preferências do sistema
@@ -514,8 +626,81 @@ export function useAccessibility() {
   }
 
   const setTheme = (theme: 'light' | 'dark' | 'highContrast') => {
+    console.log('\n🔥🔥🔥 ═══════════════════════════════════════════════')
+    console.log('🔥 setTheme CHAMADO')
+    console.log('🔥🔥🔥 ═══════════════════════════════════════════════')
+    console.log('📊 Tema SOLICITADO:', theme)
+    console.log('📊 Tema ATUAL:', currentTheme)
+    console.log('📊 São iguais?', theme === currentTheme)
+    console.log('📊 Estado COMPLETO ANTES:', { 
+      currentTheme, 
+      highContrast: settings.highContrast,
+      contrastLevel: settings.contrastLevel,
+      blueLightFilter: settings.blueLightFilter,
+      reducedMotion: settings.reducedMotion
+    })
+    
+    // 🔒 CORREÇÃO: Se tema é o mesmo, forçar re-aplicação na primeira chamada
+    if (theme === currentTheme) {
+      console.log('⚠️ ATENÇÃO: Tema solicitado é igual ao atual!')
+      console.log('🔧 Forçando re-aplicação para garantir que UI atualize')
+    }
+    
+    // 🔒 CORREÇÃO CRÍTICA: Limpar filtros ao trocar tema se não for highContrast
+    if (theme !== 'highContrast') {
+      console.log('🧹 Limpando alto contraste ao trocar para tema normal')
+      setSettings(prev => ({ ...prev, highContrast: false }))
+      
+      // Limpar classes de alto contraste imediatamente
+      document.body.classList.remove('high-contrast-active', 'high-contrast-custom')
+      console.log('✅ Classes removidas do body')
+    }
+    
+    console.log('🔄 Alterando currentTheme de', currentTheme, 'para', theme)
+    
+    // 🔒 CORREÇÃO: Se tema é igual, forçar re-render através de timestamp
+    if (theme === currentTheme) {
+      console.log('🔧 Tema igual detectado - forçando re-aplicação via evento')
+      
+      // Aplicar imediatamente no DOM
+      const immediateTheme = professionalThemes[theme as keyof typeof professionalThemes]
+      if (immediateTheme) {
+        console.log('⚡ Re-aplicando todas as variáveis CSS')
+        document.body.style.setProperty('--primary-color', immediateTheme.primary, 'important')
+        document.body.style.setProperty('--secondary-color', immediateTheme.secondary, 'important')
+        document.body.style.setProperty('--background-color', immediateTheme.background, 'important')
+        document.body.style.setProperty('--surface-color', immediateTheme.surface, 'important')
+        document.body.style.setProperty('--text-color', immediateTheme.text, 'important')
+        document.body.style.setProperty('--text-secondary-color', immediateTheme.textSecondary, 'important')
+        document.body.style.setProperty('--border-color', immediateTheme.border, 'important')
+        
+        // Remover e re-adicionar classe para forçar atualização
+        document.body.classList.remove(`theme-${theme}`)
+        setTimeout(() => {
+          document.body.classList.add(`theme-${theme}`)
+        }, 10)
+        
+        // Disparar evento para forçar re-render dos componentes
+        window.dispatchEvent(new CustomEvent('theme-changed', { 
+          detail: { theme, timestamp: Date.now(), forced: true } 
+        }))
+        console.log('📢 Evento theme-changed FORÇADO (mesmo tema)')
+      }
+      
+      // Mesmo assim, salvar no localStorage
+      localStorage.setItem('theme', theme)
+      console.log('✅ Tema re-aplicado mesmo sendo igual')
+      return // ← RETORNAR AQUI para não duplicar setCurrentTheme
+    }
+    
     setCurrentTheme(theme)
+    
+    console.log('💾 Salvando no localStorage: theme =', theme)
     localStorage.setItem('theme', theme)
+    
+    // Verificar se salvou corretamente
+    const savedTheme = localStorage.getItem('theme')
+    console.log('✅ Verificação localStorage: theme =', savedTheme, savedTheme === theme ? '✓ OK' : '✗ ERRO')
     
     // Anunciar mudança de tema
     const themeNames = {
@@ -526,8 +711,47 @@ export function useAccessibility() {
     announceToScreenReader(`Tema alterado para ${themeNames[theme]}`)
     
     if (theme === 'highContrast') {
+      console.log('🎨 Ativando highContrast nas settings')
       setSettings(prev => ({ ...prev, highContrast: true }))
     }
+    
+    console.log('✅✅✅ setTheme CONCLUÍDO')
+    console.log('📊 Novo tema:', theme)
+    console.log('📊 currentTheme será:', theme)
+    console.log('🔥🔥🔥 ═══════════════════════════════════════════════\n')
+    
+    // 🔒 GARANTIA 100%: Forçar aplicação IMEDIATA do tema no body
+    const immediateTheme = professionalThemes[theme as keyof typeof professionalThemes]
+    if (immediateTheme) {
+      console.log('⚡ APLICAÇÃO IMEDIATA - Forçando variáveis CSS agora')
+      document.body.style.setProperty('--primary-color', immediateTheme.primary, 'important')
+      document.body.style.setProperty('--secondary-color', immediateTheme.secondary, 'important')
+      document.body.style.setProperty('--background-color', immediateTheme.background, 'important')
+      document.body.style.setProperty('--surface-color', immediateTheme.surface, 'important')
+      document.body.style.setProperty('--text-color', immediateTheme.text, 'important')
+      document.body.style.setProperty('--border-color', immediateTheme.border, 'important')
+      console.log('✅ Variáveis CSS aplicadas IMEDIATAMENTE')
+    }
+    
+    // 🔒 VERIFICAÇÃO EXTRA: Forçar aplicação imediata
+    setTimeout(() => {
+      const verificacao = localStorage.getItem('theme')
+      console.log('🔍 VERIFICAÇÃO PÓS-EXECUÇÃO (100ms):', {
+        temaNoLocalStorage: verificacao,
+        temaEsperado: theme,
+        match: verificacao === theme
+      })
+      
+      // Verificar se as variáveis CSS foram aplicadas
+      const bgColor = document.body.style.getPropertyValue('--background-color')
+      const surfaceColor = document.body.style.getPropertyValue('--surface-color')
+      console.log('🔍 Variáveis CSS aplicadas:', {
+        backgroundColor: bgColor,
+        surfaceColor: surfaceColor,
+        esperadoBg: immediateTheme?.background,
+        esperadoSurface: immediateTheme?.surface
+      })
+    }, 100)
   }
 
   const getTheme = (): ThemeColors => {
@@ -623,39 +847,69 @@ export function useAccessibility() {
 
   // Aplicar tema e configurações globalmente
   useEffect(() => {
-    // 🔒 OTIMIZAÇÃO: Evitar re-aplicações desnecessárias usando um timestamp
+    console.log('\n🌈🌈🌈 ═══════════════════════════════════════════════')
+    console.log('🌈 useEffect [currentTheme, settings] EXECUTADO')
+    console.log('🌈🌈🌈 ═══════════════════════════════════════════════')
+    
+    // 🔒 CORREÇÃO: Na primeira execução, NÃO aplicar debounce
     const lastApplied = (window as any).__lastThemeApplied || 0
     const now = Date.now()
+    const isFirstRun = lastApplied === 0
     
-    // Se aplicou há menos de 100ms, ignorar (evita loops)
-    if (now - lastApplied < 100) {
-      console.log('⏭️  Pulando aplicação (muito recente)')
+    console.log('⏱️  Timestamp check:', {
+      agora: now,
+      ultimaAplicacao: lastApplied,
+      diferenca: now - lastApplied,
+      primeiraExecucao: isFirstRun,
+      devePular: !isFirstRun && (now - lastApplied) < 100
+    })
+    
+    // 🔒 PROTEÇÃO: Só pular se NÃO for primeira execução E aplicou há menos de 100ms
+    if (!isFirstRun && (now - lastApplied) < 100) {
+      console.log('⏭️  PULANDO aplicação (muito recente - menos de 100ms)')
+      console.log('🌈🌈🌈 ═══════════════════════════════════════════════\n')
       return
     }
     
-    (window as any).__lastThemeApplied = now
+    if (isFirstRun) {
+      console.log('🎬 PRIMEIRA EXECUÇÃO - aplicando tema imediatamente sem debounce')
+    }
     
-    console.log('🔄 useAccessibility - Aplicando configurações globais')
-    console.log('📊 Estado atual:', { currentTheme, settings })
+    (window as any).__lastThemeApplied = now
+    console.log('✅ Timestamp atualizado para:', now)
+    
+    console.log('🔄 Aplicando configurações globais...')
+    console.log('📊 currentTheme:', currentTheme)
+    console.log('📊 settings:', settings)
     
     const theme = getTheme()
     const fontSize = getFontSize()
     
+    console.log('🎨 Tema obtido de getTheme():', theme)
+    console.log('📏 Tamanho de fonte:', fontSize)
+    
     // 🔒 PROTEÇÃO: Garantir que o tema seja aplicado corretamente SEMPRE
     console.log('🎨 Aplicando tema:', currentTheme, theme)
+    console.log('🔍 Estado de filtros:', { 
+      highContrast: settings.highContrast, 
+      contrastLevel: settings.contrastLevel,
+      blueLightFilter: settings.blueLightFilter 
+    })
     
-    // Aplicar tema ao body
-    document.body.style.setProperty('--primary-color', theme.primary)
-    document.body.style.setProperty('--secondary-color', theme.secondary)
-    document.body.style.setProperty('--background-color', theme.background)
-    document.body.style.setProperty('--surface-color', theme.surface)
-    document.body.style.setProperty('--text-color', theme.text)
-    document.body.style.setProperty('--text-secondary-color', theme.textSecondary)
-    document.body.style.setProperty('--border-color', theme.border)
-    document.body.style.setProperty('--success-color', theme.success)
-    document.body.style.setProperty('--warning-color', theme.warning)
-    document.body.style.setProperty('--error-color', theme.error)
-    document.body.style.setProperty('--info-color', theme.info)
+    // 🔒 GARANTIA: Aplicar variáveis CSS do tema PRIMEIRO (prioridade máxima)
+    document.body.style.setProperty('--primary-color', theme.primary, 'important')
+    document.body.style.setProperty('--secondary-color', theme.secondary, 'important')
+    document.body.style.setProperty('--background-color', theme.background, 'important')
+    document.body.style.setProperty('--surface-color', theme.surface, 'important')
+    document.body.style.setProperty('--text-color', theme.text, 'important')
+    document.body.style.setProperty('--text-secondary-color', theme.textSecondary, 'important')
+    document.body.style.setProperty('--border-color', theme.border, 'important')
+    document.body.style.setProperty('--success-color', theme.success, 'important')
+    document.body.style.setProperty('--warning-color', theme.warning, 'important')
+    document.body.style.setProperty('--error-color', theme.error, 'important')
+    document.body.style.setProperty('--info-color', theme.info, 'important')
+    
+    console.log('✅ Variáveis CSS do tema aplicadas com !important')
     
     // Aplicar tamanho da fonte globalmente
     document.body.style.fontSize = fontSize
@@ -682,22 +936,74 @@ export function useAccessibility() {
     
     // 🔒 PROTEÇÃO: Aplicar configurações de contraste DEPOIS do tema
     // Isso garante que reducedMotion não afete o tema
+    console.log('🔧 Aplicando configurações de contraste...')
     applyContrastSettings(settings)
     
-    console.log('✅ Configurações aplicadas com sucesso')
+    console.log('✅✅✅ TODAS as configurações aplicadas com SUCESSO')
+    console.log('📊 Estado FINAL:', {
+      currentTheme,
+      temaAplicado: theme,
+      classesBody: document.body.className,
+      filtroBody: document.body.style.filter,
+      bgColor: document.body.style.getPropertyValue('--background-color'),
+      surfaceColor: document.body.style.getPropertyValue('--surface-color'),
+      textColor: document.body.style.getPropertyValue('--text-color')
+    })
+    console.log('🌈🌈🌈 ═══════════════════════════════════════════════\n')
+    
+    // 🔒 GARANTIA ABSOLUTA: Disparar evento customizado para forçar atualização de componentes
+    window.dispatchEvent(new CustomEvent('theme-changed', { 
+      detail: { theme: currentTheme, timestamp: Date.now() } 
+    }))
+    console.log('📢 Evento theme-changed disparado para todos os componentes')
   }, [currentTheme, settings])
 
   // Funções específicas para contraste
   const setContrastLevel = (level: 'normal' | 'light' | 'dark' | 'extreme') => {
+    console.log('🎚️ setContrastLevel:', level)
     updateSettings({ contrastLevel: level })
+    
+    // 🔒 PROTEÇÃO: Se mudando para 'normal' sem alto contraste, limpar filtros
+    if (level === 'normal' && !settings.highContrast && !settings.blueLightFilter) {
+      document.body.style.filter = 'none'
+      console.log('✅ ContrastLevel resetado para normal - filtros removidos, tema livre')
+    }
   }
 
   const toggleHighContrast = () => {
-    updateSettings({ highContrast: !settings.highContrast })
+    const newValue = !settings.highContrast
+    console.log('🎨 toggleHighContrast:', { from: settings.highContrast, to: newValue })
+    
+    // 🔒 PROTEÇÃO: Se desativando alto contraste, resetar contrastLevel para normal
+    if (!newValue) {
+      console.log('🧹 Desativando alto contraste - resetando contrastLevel para normal')
+      updateSettings({ 
+        highContrast: false,
+        contrastLevel: 'normal'  // Resetar para normal para garantir limpeza
+      })
+      
+      // Limpar imediatamente as classes e filtros
+      document.body.classList.remove('high-contrast-active', 'high-contrast-custom')
+      if (!settings.blueLightFilter) {
+        document.body.style.filter = 'none'
+        console.log('✅ Filtros completamente removidos - tema livre')
+      }
+    } else {
+      updateSettings({ highContrast: true })
+    }
   }
 
   const toggleBlueLightFilter = () => {
-    updateSettings({ blueLightFilter: !settings.blueLightFilter })
+    const newValue = !settings.blueLightFilter
+    console.log('🔵 toggleBlueLightFilter:', { from: settings.blueLightFilter, to: newValue })
+    
+    updateSettings({ blueLightFilter: newValue })
+    
+    // 🔒 PROTEÇÃO: Se desativando filtro azul E sem alto contraste, limpar filtros
+    if (!newValue && !settings.highContrast && settings.contrastLevel === 'normal') {
+      document.body.style.filter = 'none'
+      console.log('✅ Filtro azul removido - tema livre para funcionar')
+    }
   }
 
   const setBlueLightIntensity = (intensity: 'low' | 'medium' | 'high') => {

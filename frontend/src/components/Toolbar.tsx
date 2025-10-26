@@ -13,13 +13,38 @@ import {
 import { useAccessibility } from '../hooks/useAccessibility'
 
 export function Toolbar() {
-  // 🔒 BLOQUEIO: Usar getTheme() diretamente sem useState local
+  // 🔒 CORREÇÃO: Forçar re-renderização quando tema muda
   const { getTheme, currentTheme } = useAccessibility()
+  const [updateCount, setUpdateCount] = useState(0)
+  
+  // 🔒 GARANTIA 100%: Re-renderizar quando currentTheme muda
+  useEffect(() => {
+    console.log('🎨 Toolbar - Tema mudou para:', currentTheme)
+    setUpdateCount(prev => prev + 1) // Força re-render
+  }, [currentTheme])
+  
+  // 🔒 GARANTIA DUPLA: Escutar evento customizado theme-changed
+  useEffect(() => {
+    const handleThemeChange = (e: any) => {
+      console.log('📢 Toolbar - Recebeu evento theme-changed:', e.detail)
+      setUpdateCount(prev => prev + 1) // Força re-render adicional
+    }
+    
+    window.addEventListener('theme-changed', handleThemeChange)
+    console.log('👂 Toolbar - Escutando evento theme-changed')
+    
+    return () => {
+      window.removeEventListener('theme-changed', handleThemeChange)
+    }
+  }, [])
+  
   const theme = getTheme()
+  
+  console.log('🔄 Toolbar render #', updateCount, 'Tema:', currentTheme, 'Surface:', theme.surface, 'Text:', theme.text)
   
   // 🔒 BLOQUEIO: Log para debug (apenas desenvolvimento)
   useEffect(() => {
-    console.log('🎨 Toolbar - Tema atual:', currentTheme, theme)
+    console.log('🎨 Toolbar - Tema aplicado:', currentTheme, theme)
   }, [currentTheme, theme])
   
   const toolbarItems = [

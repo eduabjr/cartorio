@@ -38,6 +38,7 @@
 // ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
 
 import React, { useState, useEffect } from 'react'
+import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
 import { FuncionarioLookup } from '../components/FuncionarioLookup'
 import { funcionarioService, Funcionario } from '../services/FuncionarioService'
@@ -1219,14 +1220,14 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
 
                 <div style={{...fieldStyles, width: '25%'}}>
                 <label style={labelStyles}>Cidade</label>
-                <input
-                  type="text"
+                <CidadeAutocompleteInput
                   value={formData.cidade}
-                  onChange={(e) => handleInputChange('cidade', e.target.value)}
+                  onChange={(cidade) => handleInputChange('cidade', cidade)}
+                  uf={formData.uf}
+                  focusedField={focusedField}
                   onFocus={() => setFocusedField('cidade')}
                   onBlur={() => setFocusedField(null)}
-                  className="funcionario-input"
-                  style={getInputStyles('cidade')}
+                  inputStyles={getInputStyles('cidade')}
                 />
               </div>
 

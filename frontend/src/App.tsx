@@ -20,6 +20,7 @@ import { TipoDocumentoDigitalizadoPage } from './pages/TipoDocumentoDigitalizado
 import { CartorioSeadePage } from './pages/CartorioSeadePage'
 import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
 import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
+import { HospitalCemiterioPage } from './pages/HospitalCemiterioPage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { SystemStatus } from './components/SystemStatus'
@@ -76,7 +77,13 @@ function AppContent() {
   const [password, setPassword] = useState('admin123')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  // 🔒 CORREÇÃO CRÍTICA: Inicializar isDarkMode do localStorage ANTES do primeiro render
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme')
+    const isInitiallyDark = savedTheme === 'dark'
+    console.log('⚡ App.tsx - isDarkMode inicial:', isInitiallyDark, 'baseado em:', savedTheme)
+    return isInitiallyDark
+  })
   const [showConfiguracoes, setShowConfiguracoes] = useState(false)
   const [showAccessibilitySettings, setShowAccessibilitySettings] = useState(false)
   const [isTextualMenuExpanded, setIsTextualMenuExpanded] = useState(false)
@@ -105,11 +112,23 @@ function AppContent() {
   
   // Sincronizar isDarkMode com o tema do hook de acessibilidade
   useEffect(() => {
-    setIsDarkMode(accessibility.currentTheme === 'dark')
-        // Aplicar tema ao body com cor única
-        document.body.style.background = accessibility.currentTheme === 'dark' 
-          ? '#121212'
-          : '#E1E1E1'
+    console.log('\n🔄🔄🔄 ═══════════════════════════════════════════════')
+    console.log('🔄 App.tsx - Sincronizando isDarkMode')
+    console.log('🔄🔄🔄 ═══════════════════════════════════════════════')
+    console.log('📊 accessibility.currentTheme:', accessibility.currentTheme)
+    console.log('📊 isDarkMode ANTES:', isDarkMode)
+    
+    const shouldBeDark = accessibility.currentTheme === 'dark'
+    console.log('🎯 Deve ser dark?', shouldBeDark)
+    
+    setIsDarkMode(shouldBeDark)
+    console.log('✅ isDarkMode atualizado para:', shouldBeDark)
+    
+    // Aplicar tema ao body com cor única
+    const bgColor = accessibility.currentTheme === 'dark' ? '#121212' : '#E1E1E1'
+    document.body.style.background = bgColor
+    console.log('🎨 Background do body definido para:', bgColor)
+    console.log('🔄🔄🔄 ═══════════════════════════════════════════════\n')
   }, [accessibility.currentTheme])
 
   // Estados para navegação
@@ -123,16 +142,31 @@ function AppContent() {
       console.log('Página:', pageId)
       console.log('Props:', props)
       
+      // 🔒 CORREÇÃO: Mapear IDs de menu para IDs de página reais
+      const pageIdMapping: Record<string, string> = {
+        'config-sistema-cidade': 'cidade',
+        'config-sistema-pais': 'pais',
+        'config-sistema-cep': 'cep',
+        'config-sistema-ibge': 'ibge',
+        'config-sistema-feriados': 'feriados'
+      }
+      
+      const realPageId = pageIdMapping[pageId] || pageId
+      
+      if (realPageId !== pageId) {
+        console.log(`🔀 Mapeando '${pageId}' → '${realPageId}'`)
+      }
+      
       // Verificar se a página já está aberta
-      if (singleInstanceService.isOpen(pageId)) {
-        console.log(`🔄 Página ${pageId} já está aberta, fechando e reabrindo na posição original...`)
+      if (singleInstanceService.isOpen(realPageId)) {
+        console.log(`🔄 Página ${realPageId} já está aberta, fechando e reabrindo na posição original...`)
         
         // Fechar a página existente e reabrir na posição original
-        singleInstanceService.close(pageId)
+        singleInstanceService.close(realPageId)
         
         // Aguardar um momento para garantir que a página foi fechada
         setTimeout(() => {
-          setCurrentPage(pageId)
+          setCurrentPage(realPageId)
           setPageProps({ 
             ...props, 
             resetToOriginalPosition: true,
@@ -141,10 +175,10 @@ function AppContent() {
         }, 100)
         
         // Mostrar notificação
-        announcementService.announce(`Página ${pageId} foi reaberta na posição original`, { priority: 'normal' })
+        announcementService.announce(`Página ${realPageId} foi reaberta na posição original`, { priority: 'normal' })
       } else {
-        console.log(`🆕 Abrindo nova página ${pageId}...`)
-        setCurrentPage(pageId)
+        console.log(`🆕 Abrindo nova página ${realPageId}...`)
+        setCurrentPage(realPageId)
         setPageProps(props)
       }
     } catch (error) {
@@ -412,10 +446,25 @@ function AppContent() {
             })
             console.log('✅ Janela de Ofícios e Mandados aberta!')
           } },
-          { id: 'hospital', label: 'Hospital', icon: '', onClick: () => (window as any).navigateToPage?.('hospital') },
-          { id: 'cemiterio', label: 'Cemitério', icon: '', onClick: () => (window as any).navigateToPage?.('cemiterio') },
-          { id: 'funeraria', label: 'Funerária', icon: '', onClick: () => (window as any).navigateToPage?.('funeraria') },
-          { id: 'cadastro-livros', label: 'Cadastro de Livros', icon: '', onClick: () => (window as any).navigateToPage?.('cadastro-livros') },
+          { id: 'hospital-cemiterio', label: 'Hospital e Cemitério', icon: '', onClick: () => {
+            console.log('✅ HOSPITAL E CEMITÉRIO CLICADO! Abrindo janela...')
+            openWindow({
+              id: 'hospital-cemiterio-window',
+              type: 'hospital-cemiterio',
+              title: 'Cadastro de Hospitais e Cemitérios',
+              component: HospitalCemiterioPage,
+              props: { onClose: () => {} }
+            })
+            console.log('✅ Janela de Hospital e Cemitério aberta!')
+          }},
+          { id: 'funeraria', label: 'Funerária', icon: '', onClick: () => {
+            console.log('🔍 Clique em Funerária - chamando navigateToPage')
+            navigateToPage('funeraria')
+          }},
+          { id: 'cadastro-livros', label: 'Cadastro de Livros', icon: '', onClick: () => {
+            console.log('🔍 Clique em Cadastro de Livros - chamando navigateToPage')
+            navigateToPage('cadastro-livros')
+          }},
           {
             id: 'abertura-livros',
             label: 'Abertura de Livros',
@@ -497,11 +546,26 @@ function AppContent() {
             label: 'Configurações do Sistema', 
             icon: '', 
             submenu: [
-              { id: 'config-sistema-feriados', label: 'Feriados', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-feriados') },
-              { id: 'config-sistema-ibge', label: 'IBGE', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-ibge') },
-              { id: 'config-sistema-pais', label: 'País', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-pais') },
-              { id: 'config-sistema-cep', label: 'CEP', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-cep') },
-              { id: 'config-sistema-cidade', label: 'Cidade', icon: '', onClick: () => (window as any).navigateToPage?.('config-sistema-cidade') },
+              { id: 'config-sistema-feriados', label: 'Feriados', icon: '', onClick: () => {
+                console.log('🔍 Clique em Feriados - chamando navigateToPage')
+                navigateToPage('config-sistema-feriados')
+              }},
+              { id: 'config-sistema-ibge', label: 'IBGE', icon: '', onClick: () => {
+                console.log('🔍 Clique em IBGE - chamando navigateToPage')
+                navigateToPage('config-sistema-ibge')
+              }},
+              { id: 'config-sistema-pais', label: 'País', icon: '', onClick: () => {
+                console.log('🔍 Clique em País - chamando navigateToPage')
+                navigateToPage('config-sistema-pais')
+              }},
+              { id: 'config-sistema-cep', label: 'CEP', icon: '', onClick: () => {
+                console.log('🔍 Clique em CEP - chamando navigateToPage')
+                navigateToPage('config-sistema-cep')
+              }},
+              { id: 'config-sistema-cidade', label: 'Cidade', icon: '', onClick: () => {
+                console.log('🔍 Clique em Cidade - chamando navigateToPage')
+                navigateToPage('config-sistema-cidade')
+              }},
               { id: 'cadastros-tipos-documento', label: 'Tipos de Documento Digitalizado', icon: '', onClick: () => {
                 console.log('✅ Abrindo Tipos de Documento Digitalizado...')
                 openWindow({

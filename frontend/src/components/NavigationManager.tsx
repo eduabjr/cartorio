@@ -6,6 +6,9 @@ import { ConfiguracoesPage } from '../pages/ConfiguracoesPage'
 import { ConfiguracaoSistemaPage } from '../pages/ConfiguracaoSistemaPage'
 import { RecepcaoArquivoMaternidade } from './RecepcaoArquivoMaternidade'
 import { GenericModulePage } from '../pages/GenericModulePage'
+import { CidadePage } from '../pages/CidadePage'
+import { PaisPage } from '../pages/PaisPage'
+import { HospitalCemiterioPage } from '../pages/HospitalCemiterioPage'
 import { SingleInstanceWindow } from './SingleInstanceWindow'
 import { singleInstanceService } from '../services/SingleInstanceService'
 import { useAccessibility } from '../hooks/useAccessibility'
@@ -52,20 +55,10 @@ export function NavigationManager({ isDarkMode, user, currentPage, pageProps, on
       } 
     },
     'cidade': { 
-      component: GenericModulePage, 
-      props: { 
-        moduleName: 'Cidade', 
-        moduleIcon: '🏙️', 
-        moduleDescription: 'Cadastro de cidades' 
-      } 
+      component: CidadePage
     },
     'pais': { 
-      component: GenericModulePage, 
-      props: { 
-        moduleName: 'País', 
-        moduleIcon: '🌍', 
-        moduleDescription: 'Cadastro de países' 
-      } 
+      component: PaisPage
     },
     'cep': { 
       component: GenericModulePage, 
@@ -99,13 +92,8 @@ export function NavigationManager({ isDarkMode, user, currentPage, pageProps, on
         moduleDescription: 'Gestão de ofícios e mandados' 
       } 
     },
-    'hospital': { 
-      component: GenericModulePage, 
-      props: { 
-        moduleName: 'Hospital', 
-        moduleIcon: '🏥', 
-        moduleDescription: 'Cadastro de hospitais' 
-      } 
+    'hospital-cemiterio': { 
+      component: HospitalCemiterioPage
     },
     'cemiterio': { 
       component: GenericModulePage, 

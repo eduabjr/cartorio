@@ -13,6 +13,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
     updateSettings, 
     setTheme, 
     getTheme, 
+    currentTheme,
     setContrastLevel, 
     toggleHighContrast,
     toggleBlueLightFilter,
@@ -22,6 +23,28 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
   } = useAccessibility()
   const [modoDaltonismo, setModoDaltonismo] = useState(false)
   const [tipoDaltonismo, setTipoDaltonismo] = useState('protanopia')
+  const [updateCount, setUpdateCount] = useState(0)
+  
+  // 🔒 GARANTIA 100%: Re-renderizar quando tema muda
+  useEffect(() => {
+    console.log('🎨 ConfiguracoesPage - Tema mudou para:', currentTheme)
+    setUpdateCount(prev => prev + 1)
+  }, [currentTheme])
+  
+  // 🔒 GARANTIA DUPLA: Escutar evento theme-changed
+  useEffect(() => {
+    const handleThemeChange = (e: any) => {
+      console.log('📢 ConfiguracoesPage - Recebeu evento theme-changed:', e.detail)
+      setUpdateCount(prev => prev + 1)
+    }
+    
+    window.addEventListener('theme-changed', handleThemeChange)
+    console.log('👂 ConfiguracoesPage - Escutando evento theme-changed')
+    
+    return () => {
+      window.removeEventListener('theme-changed', handleThemeChange)
+    }
+  }, [])
 
   // Carregar configurações salvas
   useEffect(() => {
@@ -75,10 +98,13 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
   }
 
   const handleAnimacoesReduzidas = (ativo: boolean) => {
+    console.log('🎭 Movimento Reduzido alterado para:', ativo)
     updateSettings({ reducedMotion: ativo })
   }
 
   const theme = getTheme()
+  
+  console.log('🔄 ConfiguracoesPage render #', updateCount, 'Tema:', currentTheme, 'Background:', theme.background, 'Surface:', theme.surface)
 
   return (
     <>
@@ -262,6 +288,61 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                       transition: '0.3s',
                       borderRadius: '50%',
                       transform: settings.keyboardNavigation ? 'translateX(20px)' : 'translateX(0)'
+                    }} />
+                  </span>
+                </label>
+              </div>
+
+              {/* Movimento Reduzido */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 0',
+                borderBottom: `1px solid ${theme.border}`
+              }}>
+                <div>
+                  <span style={{ color: theme.text, fontSize: '14px', fontWeight: '500' }}>
+                    Movimento Reduzido
+                  </span>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
+                    Reduz animações e transições do sistema
+                  </p>
+                </div>
+                <label style={{
+                  position: 'relative',
+                  display: 'inline-block',
+                  width: '44px',
+                  height: '24px'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.reducedMotion}
+                    onChange={(e) => handleAnimacoesReduzidas(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{
+                    position: 'absolute',
+                    cursor: 'pointer',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: settings.reducedMotion ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
+                    transition: '0.3s',
+                    borderRadius: '24px'
+                  }}>
+                    <span style={{
+                      position: 'absolute',
+                      content: '""',
+                      height: '18px',
+                      width: '18px',
+                      left: '3px',
+                      bottom: '3px',
+                      background: '#D0D0D0',
+                      transition: '0.3s',
+                      borderRadius: '50%',
+                      transform: settings.reducedMotion ? 'translateX(20px)' : 'translateX(0)'
                     }} />
                   </span>
                 </label>
@@ -624,9 +705,26 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   type="checkbox"
                   checked={isDarkMode}
                   onChange={() => {
+                    console.log('\n💡💡💡 ═══════════════════════════════════════════════')
+                    console.log('💡 TOGGLE MODO ESCURO/CLARO ACIONADO')
+                    console.log('💡💡💡 ═══════════════════════════════════════════════')
+                    console.log('📊 Estado ANTES:', {
+                      isDarkMode,
+                      currentTheme,
+                      temaNoLocalStorage: localStorage.getItem('theme')
+                    })
+                    
                     const newTheme = isDarkMode ? 'light' : 'dark'
+                    console.log('🔄 Mudando de', isDarkMode ? 'dark' : 'light', 'para', newTheme)
+                    console.log('🎨 Chamando setTheme com:', newTheme)
+                    
                     setTheme(newTheme)
+                    
+                    console.log('📞 Chamando onThemeChange com:', !isDarkMode)
                     onThemeChange(!isDarkMode)
+                    
+                    console.log('✅ Toggle concluído - aguardando aplicação do tema')
+                    console.log('💡💡💡 ═══════════════════════════════════════════════\n')
                   }}
                   style={{ opacity: 0, width: 0, height: 0 }}
                 />

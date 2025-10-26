@@ -22,9 +22,35 @@ declare global {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  // 🔒 CORREÇÃO CRÍTICA: Forçar re-renderização quando tema muda
   const { getTheme, currentTheme } = useAccessibility()
-  const theme = getTheme()
+  const [updateCount, setUpdateCount] = useState(0)
   const [windowState, setWindowState] = useState<WindowState>('normal')
+  
+  // 🔒 GARANTIA 100%: Re-renderizar quando currentTheme muda
+  useEffect(() => {
+    console.log('🎨 Header - Tema mudou para:', currentTheme)
+    setUpdateCount(prev => prev + 1) // Força re-render
+  }, [currentTheme])
+  
+  // 🔒 GARANTIA DUPLA: Escutar evento customizado theme-changed
+  useEffect(() => {
+    const handleThemeChange = (e: any) => {
+      console.log('📢 Header - Recebeu evento theme-changed:', e.detail)
+      setUpdateCount(prev => prev + 1) // Força re-render adicional
+    }
+    
+    window.addEventListener('theme-changed', handleThemeChange)
+    console.log('👂 Header - Escutando evento theme-changed')
+    
+    return () => {
+      window.removeEventListener('theme-changed', handleThemeChange)
+    }
+  }, [])
+  
+  const theme = getTheme()
+  
+  console.log('🔄 Header render #', updateCount, 'Tema:', currentTheme, 'Surface:', theme.surface, 'Text:', theme.text)
 
   // Verificar ambiente ao montar
   useEffect(() => {

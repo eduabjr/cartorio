@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { viaCepService } from '../services/ViaCepService'
@@ -410,13 +411,14 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
           {/* Cidade */}
           <div>
             <label style={labelStyles}>Cidade</label>
-            <input
-              type="text"
+            <CidadeAutocompleteInput
               value={formData.cidade}
-              onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+              onChange={(cidade) => setFormData({ ...formData, cidade })}
+              uf={formData.uf}
+              focusedField={focusedField}
               onFocus={() => setFocusedField('cidade')}
               onBlur={() => setFocusedField(null)}
-              style={getInputStyles('cidade')}
+              inputStyles={getInputStyles('cidade')}
             />
           </div>
 

@@ -427,9 +427,9 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
     paddingBottom: '4px'
   }
 
-  const iconButtonStyles = {
+  const iconButtonStylesEdge = {
     position: 'absolute' as const,
-    right: '4px',
+    right: '1px',
     top: '50%',
     transform: 'translateY(-50%)',
     backgroundColor: 'transparent',
@@ -448,10 +448,20 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
     boxShadow: 'none'
   }
 
-  const getInputWithIconStyles = (fieldName: string) => ({
+  const getInputWithIconStylesEdge = (fieldName: string) => ({
     ...getInputStyles(fieldName),
-    paddingRight: '26px'
+    paddingRight: '21px'
   })
+
+  const getDateInputStyles = (fieldName: string) => {
+    const baseStyles = getInputStyles(fieldName)
+    return {
+      ...baseStyles,
+      position: 'relative' as const,
+      colorScheme: 'dark light',
+      paddingRight: '46px' // Espaço para calendário (18px) + espaço (8px) + lupa (18px) + margem (2px)
+    }
+  }
 
   const buttonStyles = {
     padding: '6px 12px',
@@ -512,6 +522,25 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
       resizable={false}
       headerColor={headerColor}
     >
+      <style>
+        {`
+          input[type="date"]::-webkit-calendar-picker-indicator {
+            opacity: 0.5;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            position: absolute;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            filter: invert(0.5);
+          }
+          input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 0.9;
+          }
+        `}
+      </style>
       <div style={{
         display: 'flex',
         flexDirection: 'column'
@@ -575,7 +604,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
           alignItems: 'center'
         }}>
           {/* Data */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '220px' }}>
             <label style={{ ...labelStyles, marginBottom: '0', minWidth: '50px' }}>Data</label>
             <div style={{ position: 'relative', flex: 1 }}>
               <input
@@ -584,10 +613,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                 onChange={(e) => setFormData({ ...formData, data: e.target.value })}
                 onFocus={() => setFocusedField('data')}
                 onBlur={() => setFocusedField(null)}
-                style={getInputWithIconStyles('data')}
+                style={getDateInputStyles('data')}
               />
               <button 
-                style={iconButtonStyles}
+                style={iconButtonStylesEdge}
                 title="Buscar data"
                 onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                 onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -622,10 +651,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                 onChange={(e) => setFormData({ ...formData, previsaoEntrega: e.target.value })}
                 onFocus={() => setFocusedField('previsaoEntrega')}
                 onBlur={() => setFocusedField(null)}
-                style={getInputWithIconStyles('previsaoEntrega')}
+                style={getDateInputStyles('previsaoEntrega')}
               />
               <button 
-                style={iconButtonStyles}
+                style={iconButtonStylesEdge}
                 title="Buscar data"
                 onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                 onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -641,7 +670,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
           alignItems: 'center'
         }}>
           {/* Protocolo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '220px' }}>
             <label style={{ ...labelStyles, marginBottom: '0', minWidth: '50px' }}>Protocolo</label>
             <div style={{ position: 'relative', flex: 1 }}>
               <input
@@ -650,10 +679,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                 onChange={(e) => setFormData({ ...formData, protocolo: e.target.value })}
                 onFocus={() => setFocusedField('protocolo')}
                 onBlur={() => setFocusedField(null)}
-                style={getInputWithIconStyles('protocolo')}
+                style={getInputWithIconStylesEdge('protocolo')}
               />
               <button 
-                style={iconButtonStyles}
+                style={iconButtonStylesEdge}
                 title="Buscar protocolo"
                 onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                 onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -683,12 +712,12 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
         <div style={sectionTitleStyles}>Arquivamento</div>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '200px 1fr',
+          gridTemplateColumns: '220px 1fr',
           gap: '8px',
           alignItems: 'center'
         }}>
           {/* Sequência */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '220px' }}>
             <label style={{ ...labelStyles, marginBottom: '0', minWidth: '50px' }}>Sequência</label>
             <div style={{ position: 'relative', flex: 1 }}>
               <input
@@ -697,10 +726,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                 onChange={(e) => setFormData({ ...formData, sequencia: e.target.value })}
                 onFocus={() => setFocusedField('sequencia')}
                 onBlur={() => setFocusedField(null)}
-                style={getInputWithIconStyles('sequencia')}
+                style={getInputWithIconStylesEdge('sequencia')}
               />
               <button 
-                style={iconButtonStyles}
+                style={iconButtonStylesEdge}
                 title="Buscar sequência"
                 onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                 onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -713,22 +742,14 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
             {/* Pasta */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
               <label style={{ ...labelStyles, marginBottom: '0', width: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Pasta</label>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <input
-                  type="text"
-                  value={formData.pasta}
-                  onChange={(e) => setFormData({ ...formData, pasta: e.target.value })}
-                  onFocus={() => setFocusedField('pasta')}
-                  onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStyles('pasta')}
-                />
-                <button 
-                  style={iconButtonStyles}
-                  title="Buscar pasta"
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                >🔍</button>
-              </div>
+              <input
+                type="text"
+                value={formData.pasta}
+                onChange={(e) => setFormData({ ...formData, pasta: e.target.value })}
+                onFocus={() => setFocusedField('pasta')}
+                onBlur={() => setFocusedField(null)}
+                style={{ ...getInputStyles('pasta'), flex: 1 }}
+              />
             </div>
 
             {/* Folha */}
@@ -758,14 +779,14 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
           {/* Linha 4: Grid com Ofício, Processo (esquerda) e Vara (direita) */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '200px 1fr',
+            gridTemplateColumns: '220px 1fr',
             gap: '8px',
             alignItems: 'start'
           }}>
             {/* Coluna Esquerda: Ofício e Processo */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
               {/* Ofício */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '220px' }}>
                 <label style={{ ...labelStyles, marginBottom: '0', minWidth: '50px' }}>Ofício</label>
                 <div style={{ position: 'relative', flex: 1 }}>
                   <input
@@ -774,10 +795,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                     onChange={(e) => setFormData({ ...formData, oficio: e.target.value })}
                     onFocus={() => setFocusedField('oficio')}
                     onBlur={() => setFocusedField(null)}
-                    style={getInputWithIconStyles('oficio')}
+                    style={getInputWithIconStylesEdge('oficio')}
                   />
                   <button 
-                    style={iconButtonStyles}
+                    style={iconButtonStylesEdge}
                     title="Buscar ofício"
                     onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                     onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -786,7 +807,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
               </div>
 
               {/* Processo */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '220px' }}>
                 <label style={{ ...labelStyles, marginBottom: '0', minWidth: '50px' }}>Processo</label>
                 <div style={{ position: 'relative', flex: 1 }}>
                   <input
@@ -795,10 +816,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                     onChange={(e) => setFormData({ ...formData, processo: e.target.value })}
                     onFocus={() => setFocusedField('processo')}
                     onBlur={() => setFocusedField(null)}
-                    style={getInputWithIconStyles('processo')}
+                    style={getInputWithIconStylesEdge('processo')}
                   />
                   <button 
-                    style={iconButtonStyles}
+                    style={iconButtonStylesEdge}
                     title="Buscar processo"
                     onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                     onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -808,8 +829,8 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
             </div>
 
             {/* Coluna Direita: Vara */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '100%', paddingTop: '0', width: '100%' }}>
-              <label style={{ ...labelStyles, marginBottom: '0', width: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', alignSelf: 'center' }}>Vara</label>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', width: '100%' }}>
+              <label style={{ ...labelStyles, marginBottom: '0', width: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingTop: '6px' }}>Vara</label>
               <textarea
                 value={formData.vara}
                 onChange={(e) => setFormData({ ...formData, vara: e.target.value })}
@@ -851,10 +872,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                   onChange={(e) => setFormData({ ...formData, parte1: e.target.value })}
                   onFocus={() => setFocusedField('parte1')}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStyles('parte1')}
+                  style={getInputWithIconStylesEdge('parte1')}
                 />
                 <button 
-                  style={iconButtonStyles}
+                  style={iconButtonStylesEdge}
                   title="Buscar parte 1"
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -872,10 +893,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                   onChange={(e) => setFormData({ ...formData, parte2: e.target.value })}
                   onFocus={() => setFocusedField('parte2')}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStyles('parte2')}
+                  style={getInputWithIconStylesEdge('parte2')}
                 />
                 <button 
-                  style={iconButtonStyles}
+                  style={iconButtonStylesEdge}
                   title="Buscar parte 2"
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -935,10 +956,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                   onChange={(e) => setFormData({ ...formData, cumprimentoData: e.target.value })}
                   onFocus={() => setFocusedField('cumprimentoData')}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStyles('cumprimentoData')}
+                  style={getDateInputStyles('cumprimentoData')}
                 />
                 <button 
-                  style={iconButtonStyles}
+                  style={iconButtonStylesEdge}
                   title="Buscar data"
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -956,10 +977,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                   onChange={(e) => setFormData({ ...formData, cumprimentoLivro: e.target.value })}
                   onFocus={() => setFocusedField('cumprimentoLivro')}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStyles('cumprimentoLivro')}
+                  style={getInputWithIconStylesEdge('cumprimentoLivro')}
                 />
                 <button 
-                  style={iconButtonStyles}
+                  style={iconButtonStylesEdge}
                   title="Buscar livro"
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -977,10 +998,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                   onChange={(e) => setFormData({ ...formData, cumprimentoFolhas: e.target.value })}
                   onFocus={() => setFocusedField('cumprimentoFolhas')}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStyles('cumprimentoFolhas')}
+                  style={getInputWithIconStylesEdge('cumprimentoFolhas')}
                 />
                 <button 
-                  style={iconButtonStyles}
+                  style={iconButtonStylesEdge}
                   title="Buscar folhas"
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -998,10 +1019,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                   onChange={(e) => setFormData({ ...formData, cumprimentoTermo: e.target.value })}
                   onFocus={() => setFocusedField('cumprimentoTermo')}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStyles('cumprimentoTermo')}
+                  style={getInputWithIconStylesEdge('cumprimentoTermo')}
                 />
                 <button 
-                  style={iconButtonStyles}
+                  style={iconButtonStylesEdge}
                   title="Buscar termo"
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}

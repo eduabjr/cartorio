@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useResponsive } from '../hooks/useResponsive'
 import { AccessibleButton } from '../components/AccessibleButton'
@@ -15,8 +15,33 @@ export function AccessibilitySettingsPage({ onClose, isDarkMode }: Accessibility
   const feedback = useFeedback()
   
   const [localSettings, setLocalSettings] = useState(accessibility.settings)
+  const [updateCount, setUpdateCount] = useState(0)
+  
+  // 🔒 GARANTIA 100%: Sincronizar localSettings quando accessibility.settings muda
+  useEffect(() => {
+    console.log('🎨 AccessibilitySettings - Settings atualizadas')
+    setLocalSettings(accessibility.settings)
+    setUpdateCount(prev => prev + 1)
+  }, [accessibility.settings])
+  
+  // 🔒 GARANTIA DUPLA: Escutar evento customizado theme-changed
+  useEffect(() => {
+    const handleThemeChange = (e: any) => {
+      console.log('📢 AccessibilitySettings - Recebeu evento theme-changed:', e.detail)
+      setUpdateCount(prev => prev + 1) // Força re-render
+    }
+    
+    window.addEventListener('theme-changed', handleThemeChange)
+    console.log('👂 AccessibilitySettings - Escutando evento theme-changed')
+    
+    return () => {
+      window.removeEventListener('theme-changed', handleThemeChange)
+    }
+  }, [])
 
   const theme = accessibility.getTheme()
+  
+  console.log('🔄 AccessibilitySettings render #', updateCount, 'Tema:', accessibility.currentTheme)
 
   const handleSettingChange = (setting: keyof typeof localSettings, value: any) => {
     setLocalSettings(prev => ({

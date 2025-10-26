@@ -6,13 +6,38 @@ export function MenuBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
   
-  // 🔒 BLOQUEIO: Usar getTheme() diretamente sem useState local
+  // 🔒 CORREÇÃO: Forçar re-renderização quando tema muda
   const { getTheme, currentTheme } = useAccessibility()
+  const [updateCount, setUpdateCount] = useState(0)
+  
+  // 🔒 GARANTIA 100%: Re-renderizar quando currentTheme muda
+  useEffect(() => {
+    console.log('🎨 MenuBar - Tema mudou para:', currentTheme)
+    setUpdateCount(prev => prev + 1) // Força re-render
+  }, [currentTheme])
+  
+  // 🔒 GARANTIA DUPLA: Escutar evento customizado theme-changed
+  useEffect(() => {
+    const handleThemeChange = (e: any) => {
+      console.log('📢 MenuBar - Recebeu evento theme-changed:', e.detail)
+      setUpdateCount(prev => prev + 1) // Força re-render adicional
+    }
+    
+    window.addEventListener('theme-changed', handleThemeChange)
+    console.log('👂 MenuBar - Escutando evento theme-changed')
+    
+    return () => {
+      window.removeEventListener('theme-changed', handleThemeChange)
+    }
+  }, [])
+  
   const theme = getTheme()
+  
+  console.log('🔄 MenuBar render #', updateCount, 'Tema:', currentTheme, 'Surface:', theme.surface, 'Text:', theme.text)
   
   // 🔒 BLOQUEIO: Log para debug (apenas desenvolvimento)
   useEffect(() => {
-    console.log('🎨 MenuBar - Tema atual:', currentTheme, theme)
+    console.log('🎨 MenuBar - Tema aplicado:', currentTheme, theme)
   }, [currentTheme, theme])
 
   const handleLogout = () => {

@@ -13,8 +13,37 @@ export function Layout() {
   const { user, isLoading } = useAuth()
   const navigate = useNavigate()
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
+  
+  // 🔒 CORREÇÃO CRÍTICA: Forçar re-renderização quando tema muda
   const { getTheme, currentTheme, isThemeLoaded } = useAccessibility()
+  const [updateCount, setUpdateCount] = useState(0)
+  
+  // 🔒 GARANTIA 100%: Re-renderizar quando currentTheme muda
+  useEffect(() => {
+    if (isThemeLoaded && currentTheme) {
+      console.log('🎨 Layout - Tema mudou para:', currentTheme)
+      setUpdateCount(prev => prev + 1) // Força re-render
+    }
+  }, [currentTheme, isThemeLoaded])
+  
+  // 🔒 GARANTIA DUPLA: Escutar evento customizado theme-changed
+  useEffect(() => {
+    const handleThemeChange = (e: any) => {
+      console.log('📢 Layout - Recebeu evento theme-changed:', e.detail)
+      setUpdateCount(prev => prev + 1) // Força re-render adicional
+    }
+    
+    window.addEventListener('theme-changed', handleThemeChange)
+    console.log('👂 Layout - Escutando evento theme-changed')
+    
+    return () => {
+      window.removeEventListener('theme-changed', handleThemeChange)
+    }
+  }, [])
+  
   const theme = getTheme()
+  
+  console.log('🔄 Layout render #', updateCount, 'Tema:', currentTheme, 'Background:', theme.background, 'Surface:', theme.surface)
 
 
   // Aguardar o tema estar carregado
