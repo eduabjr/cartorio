@@ -1506,7 +1506,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 🧹 Limpar
               </button>
 
-              {/* 5. Fechar */}
+              {/* 5. Retornar */}
               <button
                 type="button"
                 style={getButtonStyles('fechar')}
@@ -1514,7 +1514,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 onMouseEnter={() => setHoveredButton('fechar')}
                 onMouseLeave={() => setHoveredButton(null)}
               >
-                ❌ Fechar
+                🚪 Retornar
               </button>
             </div>
           </div>

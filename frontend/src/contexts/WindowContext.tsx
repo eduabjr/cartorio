@@ -10,6 +10,7 @@ export interface WindowInstance {
   zIndex: number
   isMinimized: boolean
   isMaximized: boolean
+  formData?: any // 🔒 Dados do formulário persistidos
 }
 
 interface WindowContextType {
@@ -19,6 +20,7 @@ interface WindowContextType {
   closeWindowByType: (type: string) => void
   bringToFront: (id: string) => void
   updateWindowPosition: (id: string, position: { x: number; y: number }) => void
+  updateWindowFormData: (id: string, formData: any) => void
   toggleMinimize: (id: string) => void
   toggleMaximize: (id: string) => void
   isWindowTypeOpen: (type: string) => boolean
@@ -45,9 +47,16 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
         
         console.log(`✅ Janela '${windowData.type}' trazida para frente com zIndex ${newZIndex}`)
         
+        // 🔒 CORREÇÃO: Preservar dados do formulário ao trazer para frente
         return prev.map(w => 
           w.id === existingWindow.id 
-            ? { ...w, zIndex: newZIndex, isMinimized: false } // Desminimizar se estava minimizada
+            ? { 
+                ...w, 
+                zIndex: newZIndex, 
+                isMinimized: false,
+                // Preservar dados existentes e mesclar com novos props se necessário
+                props: { ...w.props, ...windowData.props }
+              }
             : w
         )
       } else {
@@ -122,6 +131,16 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
     )
   }, [])
 
+  const updateWindowFormData = useCallback((id: string, formData: any) => {
+    setWindows(prev => 
+      prev.map(window => 
+        window.id === id 
+          ? { ...window, formData }
+          : window
+      )
+    )
+  }, [])
+
   const toggleMinimize = useCallback((id: string) => {
     setWindows(prev => 
       prev.map(window => 
@@ -150,6 +169,7 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
       closeWindowByType,
       bringToFront,
       updateWindowPosition,
+      updateWindowFormData,
       toggleMinimize,
       toggleMaximize,
       isWindowTypeOpen
@@ -162,7 +182,23 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
 export function useWindowManager() {
   const context = useContext(WindowContext)
   if (context === undefined) {
-    throw new Error('useWindowManager must be used within a WindowProvider')
+    // 🔒 FALLBACK: Retornar funções vazias em vez de erro
+    console.error('❌❌❌ useWindowManager usado fora do WindowProvider!')
+    console.error('📍 Stack trace:', new Error().stack)
+    
+    // Retornar funções vazias para não quebrar a aplicação
+    return {
+      windows: [],
+      openWindow: () => { console.warn('⚠️ openWindow chamado sem Provider') },
+      closeWindow: () => { console.warn('⚠️ closeWindow chamado sem Provider') },
+      closeWindowByType: () => { console.warn('⚠️ closeWindowByType chamado sem Provider') },
+      bringToFront: () => { console.warn('⚠️ bringToFront chamado sem Provider') },
+      updateWindowPosition: () => { console.warn('⚠️ updateWindowPosition chamado sem Provider') },
+      updateWindowFormData: () => { console.warn('⚠️ updateWindowFormData chamado sem Provider') },
+      toggleMinimize: () => { console.warn('⚠️ toggleMinimize chamado sem Provider') },
+      toggleMaximize: () => { console.warn('⚠️ toggleMaximize chamado sem Provider') },
+      isWindowTypeOpen: () => { console.warn('⚠️ isWindowTypeOpen chamado sem Provider'); return false }
+    }
   }
   return context
 }

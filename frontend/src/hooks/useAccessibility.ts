@@ -11,6 +11,8 @@ export interface AccessibilitySettings {
   fontSize: 'padrao' | 'grande'
   screenReader: boolean
   keyboardNavigation: boolean
+  autoLogoutEnabled: boolean
+  autoLogoutMinutes: number
 }
 
 export interface ThemeColors {
@@ -253,7 +255,9 @@ export function useAccessibility() {
           reducedMotion: false,
           fontSize: 'padrao' as const,
           screenReader: false,
-          keyboardNavigation: false
+          keyboardNavigation: false,
+          autoLogoutEnabled: true,
+          autoLogoutMinutes: 2
         }, ...parsed }
       } catch (e) {
         console.warn('❌ Erro ao parsear settings, usando padrão')
@@ -267,7 +271,9 @@ export function useAccessibility() {
       reducedMotion: false,
       fontSize: 'padrao',
       screenReader: false,
-      keyboardNavigation: false
+      keyboardNavigation: false,
+      autoLogoutEnabled: true,
+      autoLogoutMinutes: 2
     }
   })
 

@@ -515,7 +515,7 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
 
   return (
     <BasePage
-      title="Cadastro de Hospitais e Cemitérios"
+      title="Cadastro de Hospitais, Cemitérios e Funerárias"
       onClose={onClose}
       width="900px"
       height="650px"

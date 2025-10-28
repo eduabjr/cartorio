@@ -2957,14 +2957,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               type="button" 
               style={getDangerButtonStyles('fechar')} 
               onClick={() => {
-                console.log('🚪 BOTÃO FECHAR CLICADO!')
+                console.log('🚪 BOTÃO RETORNAR CLICADO!')
                 console.log('🔧 onClose function:', onClose)
                 onClose()
               }}
               onMouseEnter={() => setHoveredButton('fechar')}
               onMouseLeave={() => setHoveredButton(null)}
             >
-              ❌ Fechar
+              🚪 Retornar
             </button>
           </div>
 

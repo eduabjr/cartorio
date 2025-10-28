@@ -1064,7 +1064,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
               e.currentTarget.style.backgroundColor = '#6c757d'
             }}
           >
-            ❌ Fechar
+            🚪 Retornar
           </button>
         </div>
       </div>

@@ -624,7 +624,7 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
             ❌ Excluir
           </button>
 
-          {/* Fechar */}
+          {/* Retornar */}
           <button
             onClick={onClose}
             style={{
@@ -639,7 +639,7 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
               e.currentTarget.style.backgroundColor = '#6c757d'
             }}
           >
-            ❌ Fechar
+            🚪 Retornar
           </button>
         </div>
       </div>

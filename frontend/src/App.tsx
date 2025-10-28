@@ -16,8 +16,11 @@ import { MovableTabs } from './components/MovableTabs'
 import { ClientePage } from './pages/ClientePage'
 import { FuncionarioPage } from './pages/FuncionarioPage'
 import { FirmasPage } from './pages/FirmasPage'
-import { TipoDocumentoDigitalizadoPage } from './pages/TipoDocumentoDigitalizadoPage'
-import { TipoAtoPage } from './pages/TipoAtoPage'
+import { TiposCadastroPage } from './pages/TiposCadastroPage'
+import { LocalizacaoCadastroPage } from './pages/LocalizacaoCadastroPage'
+import { RecepcaoArquivoFunerariaPage } from './pages/RecepcaoArquivoFunerariaPage'
+import { RecepcaoArquivoMaternidadePage } from './pages/RecepcaoArquivoMaternidadePage'
+import { FeriadosPage } from './pages/FeriadosPage'
 import { CartorioSeadePage } from './pages/CartorioSeadePage'
 import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
 import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
@@ -26,7 +29,9 @@ import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { SystemStatus } from './components/SystemStatus'
 import { InstanceNotification } from './components/InstanceNotification'
+import { AutoLogoutWarning } from './components/AutoLogoutWarning'
 import { useAccessibility } from './hooks/useAccessibility'
+import { useAutoLogout } from './hooks/useAutoLogout'
 import { useWindowState } from './hooks/useWindowState'
 import { getRelativeFontSize } from './utils/fontUtils'
 import { announcementService } from './services/AnnouncementService'
@@ -42,7 +47,6 @@ interface User {
   role: string
 }
 
-// Componente para renderizar múltiplas janelas
 function WindowRenderer() {
   const { windows, closeWindow } = useWindowManager()
   
@@ -60,7 +64,6 @@ function WindowRenderer() {
             isMaximized={window.isMaximized}
             {...window.props}
             onClose={() => {
-              console.log('🔄 WindowRenderer onClose chamado para:', window.id)
               closeWindow(window.id)
             }}
           />
@@ -72,6 +75,7 @@ function WindowRenderer() {
 
 function AppContent() {
   const { openWindow } = useWindowManager()
+  
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [email, setEmail] = useState('admin@cartorio.com')
@@ -110,7 +114,6 @@ function AppContent() {
   const accessibility = useAccessibility()
   const windowState = useWindowState()
   
-  
   // Sincronizar isDarkMode com o tema do hook de acessibilidade
   useEffect(() => {
     console.log('\n🔄🔄🔄 ═══════════════════════════════════════════════')
@@ -143,11 +146,8 @@ function AppContent() {
       
       // 🔒 CORREÇÃO: Mapear IDs de menu para IDs de página reais
       const pageIdMapping: Record<string, string> = {
-        'config-sistema-cidade': 'cidade',
-        'config-sistema-pais': 'pais',
         'config-sistema-cep': 'cep',
-        'config-sistema-ibge': 'ibge',
-        'config-sistema-feriados': 'feriados'
+        'config-sistema-ibge': 'ibge'
       }
       
       const realPageId = pageIdMapping[pageId] || pageId
@@ -266,6 +266,13 @@ function AppContent() {
     setCurrentPage(null)
     setPageProps({})
   }
+
+  // Auto-logout por inatividade (DEPOIS da declaração de handleLogout)
+  const autoLogout = useAutoLogout({
+    enabled: accessibility.settings.autoLogoutEnabled,
+    timeoutMinutes: accessibility.settings.autoLogoutMinutes,
+    onLogout: handleLogout
+  })
 
   // Funções para MovableTabs
 
@@ -441,20 +448,16 @@ function AppContent() {
             })
             console.log('✅ Janela de Ofícios e Mandados aberta!')
           } },
-          { id: 'hospital-cemiterio', label: 'Hospital e Cemitério', icon: '', onClick: () => {
-            console.log('✅ HOSPITAL E CEMITÉRIO CLICADO! Abrindo janela...')
+          { id: 'hospital-cemiterio', label: 'Hospital, Cemitério e Funerária', icon: '', onClick: () => {
+            console.log('✅ HOSPITAL, CEMITÉRIO E FUNERÁRIA CLICADO! Abrindo janela...')
             openWindow({
               id: 'hospital-cemiterio-window',
               type: 'hospital-cemiterio',
-              title: 'Cadastro de Hospitais e Cemitérios',
+              title: 'Cadastro de Hospitais, Cemitérios e Funerárias',
               component: HospitalCemiterioPage,
               props: { onClose: () => {} }
             })
-            console.log('✅ Janela de Hospital e Cemitério aberta!')
-          }},
-          { id: 'funeraria', label: 'Funerária', icon: '', onClick: () => {
-            console.log('🔍 Clique em Funerária - chamando navigateToPage')
-            navigateToPage('funeraria')
+            console.log('✅ Janela de Hospital, Cemitério e Funerária aberta!')
           }},
           { id: 'cadastro-livros', label: 'Cadastro de Livros', icon: '', onClick: () => {
             console.log('🔍 Clique em Cadastro de Livros - chamando navigateToPage')
@@ -542,42 +545,40 @@ function AppContent() {
             icon: '', 
             submenu: [
               { id: 'config-sistema-feriados', label: 'Feriados', icon: '', onClick: () => {
-                console.log('🔍 Clique em Feriados - chamando navigateToPage')
-                navigateToPage('config-sistema-feriados')
+                console.log('✅ Abrindo Cadastro de Feriados...')
+                openWindow({
+                  id: 'feriados-window',
+                  type: 'feriados',
+                  title: 'Cadastro de Feriado',
+                  component: FeriadosPage,
+                  props: { onClose: () => {} }
+                })
               }},
               { id: 'config-sistema-ibge', label: 'IBGE', icon: '', onClick: () => {
                 console.log('🔍 Clique em IBGE - chamando navigateToPage')
                 navigateToPage('config-sistema-ibge')
               }},
-              { id: 'config-sistema-pais', label: 'País', icon: '', onClick: () => {
-                console.log('🔍 Clique em País - chamando navigateToPage')
-                navigateToPage('config-sistema-pais')
-              }},
               { id: 'config-sistema-cep', label: 'CEP', icon: '', onClick: () => {
                 console.log('🔍 Clique em CEP - chamando navigateToPage')
                 navigateToPage('config-sistema-cep')
               }},
-              { id: 'config-sistema-cidade', label: 'Cidade', icon: '', onClick: () => {
-                console.log('🔍 Clique em Cidade - chamando navigateToPage')
-                navigateToPage('config-sistema-cidade')
-              }},
-              { id: 'cadastros-tipos-ato', label: 'Tipo de Ato', icon: '', onClick: () => {
-                console.log('✅ Abrindo Tipo de Ato...')
+              { id: 'cadastros-localizacao', label: 'Localização (Cidade e País)', icon: '', onClick: () => {
+                console.log('✅ Abrindo Cadastro de Localização...')
                 openWindow({
-                  id: 'tipo-ato-window',
-                  type: 'tipo-ato',
-                  title: 'Cadastro de Tipo de Ato',
-                  component: TipoAtoPage,
+                  id: 'localizacao-cadastro-window',
+                  type: 'localizacao-cadastro',
+                  title: 'Cadastro de Localização',
+                  component: LocalizacaoCadastroPage,
                   props: { onClose: () => {} }
                 })
               } },
-              { id: 'cadastros-tipos-documento', label: 'Tipos de Documento Digitalizado', icon: '', onClick: () => {
-                console.log('✅ Abrindo Tipos de Documento Digitalizado...')
+              { id: 'cadastros-tipos', label: 'Digitalização (Ato e Documento)', icon: '', onClick: () => {
+                console.log('✅ Abrindo Cadastro de Digitalização...')
                 openWindow({
-                  id: 'tipo-doc-window',
-                  type: 'tipo-documento',
-                  title: 'Cadastro de Tipo de Documento Digitalizado',
-                  component: TipoDocumentoDigitalizadoPage,
+                  id: 'tipos-cadastro-window',
+                  type: 'tipos-cadastro',
+                  title: 'Cadastro de Digitalização',
+                  component: TiposCadastroPage,
                   props: { onClose: () => {} }
                 })
               } }
@@ -590,8 +591,26 @@ function AppContent() {
         label: 'Processos',
         icon: '',
         submenu: [
-          { id: 'recepcao-arquivo-funeraria', label: 'Recepção de Arquivo da Funerária', icon: '', onClick: () => (window as any).navigateToPage?.('recepcao-arquivo-funeraria') },
-          { id: 'recepcao-arquivo-maternidade', label: 'Recepção de Arquivo da Maternidade', icon: '', onClick: () => (window as any).navigateToPage?.('recepcao-arquivo-maternidade') }
+          { id: 'recepcao-arquivo-funeraria', label: 'Recepção de Arquivo da Funerária', icon: '', onClick: () => {
+            console.log('✅ Abrindo Recepção de Arquivo da Funerária...')
+            openWindow({
+              id: 'recepcao-funeraria-window',
+              type: 'recepcao-funeraria',
+              title: 'Recepção de Arquivo da Funerária',
+              component: RecepcaoArquivoFunerariaPage,
+              props: { onClose: () => {} }
+            })
+          } },
+          { id: 'recepcao-arquivo-maternidade', label: 'Recepção de Arquivo da Maternidade', icon: '', onClick: () => {
+            console.log('✅ Abrindo Recepção de Arquivo da Maternidade...')
+            openWindow({
+              id: 'recepcao-maternidade-window',
+              type: 'recepcao-maternidade',
+              title: 'Recepção de Arquivo da Maternidade',
+              component: RecepcaoArquivoMaternidadePage,
+              props: { onClose: () => {} }
+            })
+          } }
         ]
       },
       {
@@ -1065,6 +1084,7 @@ function AppContent() {
               setIsDarkMode(isDark)
               accessibility.setTheme(isDark ? 'dark' : 'light')
             }}
+            userRole={user?.role}
           />
         )}
 
@@ -1094,6 +1114,14 @@ function AppContent() {
 
         {/* Sistema de Múltiplas Janelas */}
         <WindowRenderer />
+
+        {/* Aviso de Logout Automático */}
+        {autoLogout.showWarning && (
+          <AutoLogoutWarning 
+            remainingSeconds={autoLogout.remainingTime}
+            onCancel={autoLogout.cancelLogout}
+          />
+        )}
       </div>
     )
   }

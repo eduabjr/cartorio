@@ -5,9 +5,10 @@ interface ConfiguracoesPageProps {
   onClose: () => void
   isDarkMode: boolean
   onThemeChange: (isDark: boolean) => void
+  userRole?: string
 }
 
-export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: ConfiguracoesPageProps) {
+export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole }: ConfiguracoesPageProps) {
   const { 
     settings, 
     updateSettings, 
@@ -24,6 +25,9 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
   const [modoDaltonismo, setModoDaltonismo] = useState(false)
   const [tipoDaltonismo, setTipoDaltonismo] = useState('protanopia')
   const [updateCount, setUpdateCount] = useState(0)
+  
+  // Verificar se o usuário é admin
+  const isAdmin = userRole === 'admin'
   
   // 🔒 GARANTIA 100%: Re-renderizar quando tema muda
   useEffect(() => {
@@ -1206,6 +1210,137 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
               </div>
             )}
 
+          </div>
+
+          {/* Coluna 3: Segurança */}
+          <div style={{
+            background: theme.background,
+            borderRadius: '10px',
+            padding: '16px',
+            border: `1px solid ${theme.border}`,
+            height: 'fit-content',
+            gridColumn: '1 / -1'
+          }}>
+            <h3 style={{ 
+              margin: '0 0 12px 0', 
+              fontSize: '16px', 
+              fontWeight: '600',
+              color: theme.text,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              🔒 Segurança
+            </h3>
+
+            {/* Logout Automático */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '8px 0',
+              borderBottom: `1px solid ${theme.border}`,
+              opacity: isAdmin ? 1 : 0.6
+            }}>
+              <div>
+                <span style={{ color: theme.text, fontSize: '14px', fontWeight: '500' }}>
+                  Logout Automático {!isAdmin && '🔒'}
+                </span>
+                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
+                  {isAdmin 
+                    ? 'Desconecta automaticamente após período de inatividade'
+                    : 'Apenas administradores podem alterar esta configuração'}
+                </p>
+              </div>
+              <label style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '44px',
+                height: '24px'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={settings.autoLogoutEnabled}
+                  onChange={(e) => isAdmin && updateSettings({ autoLogoutEnabled: e.target.checked })}
+                  disabled={!isAdmin}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: 'absolute',
+                  cursor: isAdmin ? 'pointer' : 'not-allowed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: settings.autoLogoutEnabled ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
+                  transition: '0.3s',
+                  borderRadius: '24px'
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    content: '""',
+                    height: '18px',
+                    width: '18px',
+                    left: '3px',
+                    bottom: '3px',
+                    background: '#D0D0D0',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                    transform: settings.autoLogoutEnabled ? 'translateX(20px)' : 'translateX(0)'
+                  }} />
+                </span>
+              </label>
+            </div>
+
+            {/* Tempo de Inatividade */}
+            {settings.autoLogoutEnabled && (
+              <div style={{ padding: '8px 0', opacity: isAdmin ? 1 : 0.6 }}>
+                <label htmlFor="autoLogoutMinutes" style={{ 
+                  color: theme.text, 
+                  fontSize: '14px', 
+                  fontWeight: '500',
+                  marginBottom: '6px',
+                  display: 'block'
+                }}>
+                  Tempo de Inatividade (minutos) {!isAdmin && '🔒'}
+                </label>
+                <select
+                  id="autoLogoutMinutes"
+                  value={settings.autoLogoutMinutes}
+                  onChange={(e) => isAdmin && updateSettings({ autoLogoutMinutes: parseInt(e.target.value) })}
+                  disabled={!isAdmin}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: '13px',
+                    border: 'none',
+                    borderRadius: '20px',
+                    background: isDarkMode ? '#3a3a3a' : '#f3f4f6',
+                    color: theme.text,
+                    cursor: isAdmin ? 'pointer' : 'not-allowed',
+                    outline: 'none',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 8px center',
+                    backgroundSize: '16px',
+                    paddingRight: '32px'
+                  }}
+                >
+                  <option value="2">2 minutos</option>
+                  <option value="5">5 minutos</option>
+                  <option value="10">10 minutos</option>
+                  <option value="15">15 minutos</option>
+                  <option value="30">30 minutos</option>
+                  <option value="60">1 hora</option>
+                  <option value="120">2 horas</option>
+                </select>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
+                  O sistema fará logout após {settings.autoLogoutMinutes} minuto(s) sem atividade
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
