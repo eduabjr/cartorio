@@ -5,6 +5,7 @@ import { useAccessibility } from '../hooks/useAccessibility'
 interface CidadeAutocompleteInputProps {
   value: string
   onChange: (cidade: string) => void
+  onUfChange?: (uf: string) => void
   uf: string
   focusedField?: string | null
   onFocus?: () => void
@@ -17,6 +18,7 @@ interface CidadeAutocompleteInputProps {
 export const CidadeAutocompleteInput: React.FC<CidadeAutocompleteInputProps> = ({
   value,
   onChange,
+  onUfChange,
   uf,
   focusedField,
   onFocus,
@@ -35,8 +37,12 @@ export const CidadeAutocompleteInput: React.FC<CidadeAutocompleteInputProps> = (
     autocomplete.buscarSugestoes(newValue, uf)
   }
 
-  const handleSelect = (cidade: string) => {
+  const handleSelect = (cidade: string, ufEncontrado?: string) => {
     onChange(cidade)
+    // Se encontrou UF e tem callback, atualizar UF também
+    if (ufEncontrado && onUfChange) {
+      onUfChange(ufEncontrado)
+    }
   }
 
   const handleFocus = () => {

@@ -23,7 +23,7 @@ declare global {
 
 export function Header({ onMenuClick }: HeaderProps) {
   // 🔒 CORREÇÃO CRÍTICA: Forçar re-renderização quando tema muda
-  const { getTheme, currentTheme } = useAccessibility()
+  const { getTheme, currentTheme, isThemeLoaded } = useAccessibility()
   const [updateCount, setUpdateCount] = useState(0)
   const [windowState, setWindowState] = useState<WindowState>('normal')
   
@@ -33,24 +33,47 @@ export function Header({ onMenuClick }: HeaderProps) {
     setUpdateCount(prev => prev + 1) // Força re-render
   }, [currentTheme])
   
-  // 🔒 GARANTIA DUPLA: Escutar evento customizado theme-changed
+  // 🔥 FORÇA BRUTA: Escutar TODOS os eventos de tema
   useEffect(() => {
     const handleThemeChange = (e: any) => {
-      console.log('📢 Header - Recebeu evento theme-changed:', e.detail)
-      setUpdateCount(prev => prev + 1) // Força re-render adicional
+      console.log('🔥 Header - Recebeu evento theme-changed:', e.detail)
+      setUpdateCount(prev => prev + 1)
+    }
+    
+    const handleForceUpdate = (e: any) => {
+      console.log('🔥 Header - Recebeu evento force-theme-update:', e.detail)
+      setUpdateCount(prev => prev + 1)
+    }
+    
+    const handleForceRender = (e: any) => {
+      console.log('🔥 Header - Recebeu evento theme-force-render:', e.detail)
+      setUpdateCount(prev => prev + 1)
     }
     
     window.addEventListener('theme-changed', handleThemeChange)
-    console.log('👂 Header - Escutando evento theme-changed')
+    window.addEventListener('force-theme-update', handleForceUpdate)
+    window.addEventListener('theme-force-render', handleForceRender)
+    console.log('🔥 Header - Escutando TODOS os eventos de tema')
     
     return () => {
       window.removeEventListener('theme-changed', handleThemeChange)
+      window.removeEventListener('force-theme-update', handleForceUpdate)
+      window.removeEventListener('theme-force-render', handleForceRender)
     }
   }, [])
   
   const theme = getTheme()
   
-  console.log('🔄 Header render #', updateCount, 'Tema:', currentTheme, 'Surface:', theme.surface, 'Text:', theme.text)
+  // 🔥 TESTE TEMPORÁRIO: Botão para forçar mudança de tema
+  const { setTheme } = useAccessibility()
+  
+  console.log('🔄 Header render #', updateCount, 'Tema:', currentTheme, 'isThemeLoaded:', isThemeLoaded, 'Surface:', theme.surface, 'Text:', theme.text)
+  
+  // 🚨 CORREÇÃO CRÍTICA: Aguardar tema estar carregado antes de renderizar
+  if (!isThemeLoaded) {
+    console.log('⏳ Header - Aguardando tema carregar...')
+    return null // Não renderizar até o tema estar pronto
+  }
 
   // Verificar ambiente ao montar
   useEffect(() => {
@@ -191,6 +214,28 @@ export function Header({ onMenuClick }: HeaderProps) {
         }}>
           CIVITAS
         </span>
+        
+        {/* 🔥 TESTE TEMPORÁRIO: Botão para testar mudança de tema */}
+        <button
+          onClick={() => {
+            console.log('🔥 TESTE: Clicou no botão de teste!')
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light'
+            console.log('🔥 TESTE: Mudando para tema:', newTheme)
+            setTheme(newTheme)
+          }}
+          style={{
+            marginLeft: '10px',
+            padding: '2px 6px',
+            fontSize: '10px',
+            background: '#FF6B6B',
+            color: 'white',
+            border: 'none',
+            borderRadius: '3px',
+            cursor: 'pointer'
+          }}
+        >
+          TESTE {currentTheme}
+        </button>
       </div>
 
       {/* Botões de Controle da Janela */}

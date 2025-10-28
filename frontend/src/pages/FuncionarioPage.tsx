@@ -1223,6 +1223,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 <CidadeAutocompleteInput
                   value={formData.cidade}
                   onChange={(cidade) => handleInputChange('cidade', cidade)}
+                  onUfChange={(uf) => handleInputChange('uf', uf)}
                   uf={formData.uf}
                   focusedField={focusedField}
                   onFocus={() => setFocusedField('cidade')}

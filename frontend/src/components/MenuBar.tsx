@@ -2,306 +2,133 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAccessibility } from '../hooks/useAccessibility'
 
+/**
+ * MENUBAR
+ * 🚨 CORREÇÃO: Removido React.memo para permitir re-renders quando tema muda
+ */
 export function MenuBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
-  
-  // 🔒 CORREÇÃO: Forçar re-renderização quando tema muda
-  const { getTheme, currentTheme } = useAccessibility()
-  const [updateCount, setUpdateCount] = useState(0)
-  
-  // 🔒 GARANTIA 100%: Re-renderizar quando currentTheme muda
-  useEffect(() => {
-    console.log('🎨 MenuBar - Tema mudou para:', currentTheme)
-    setUpdateCount(prev => prev + 1) // Força re-render
-  }, [currentTheme])
-  
-  // 🔒 GARANTIA DUPLA: Escutar evento customizado theme-changed
-  useEffect(() => {
-    const handleThemeChange = (e: any) => {
-      console.log('📢 MenuBar - Recebeu evento theme-changed:', e.detail)
-      setUpdateCount(prev => prev + 1) // Força re-render adicional
-    }
-    
-    window.addEventListener('theme-changed', handleThemeChange)
-    console.log('👂 MenuBar - Escutando evento theme-changed')
-    
-    return () => {
-      window.removeEventListener('theme-changed', handleThemeChange)
-    }
-  }, [])
-  
+  const [renderKey, setRenderKey] = useState(0)
+
+  // Buscar tema - SEMPRE chamar getTheme() diretamente
+  const { getTheme, currentTheme, isThemeLoaded } = useAccessibility()
   const theme = getTheme()
-  
-  console.log('🔄 MenuBar render #', updateCount, 'Tema:', currentTheme, 'Surface:', theme.surface, 'Text:', theme.text)
-  
-  // 🔒 BLOQUEIO: Log para debug (apenas desenvolvimento)
+
+  // 🔥 FORÇA BRUTA: Escutar mudanças de tema
   useEffect(() => {
-    console.log('🎨 MenuBar - Tema aplicado:', currentTheme, theme)
-  }, [currentTheme, theme])
+    console.log('🔥 MenuBar - Tema mudou para:', currentTheme)
+    setRenderKey(prev => prev + 1)
+  }, [currentTheme])
 
-  const handleLogout = () => {
-    // Implementar logout
-    console.log('Logout')
-  }
+  console.log('🔄 MenuBar render #', renderKey, '- Tema:', currentTheme, 'Surface:', theme.surface)
 
-  // 🔒 BLOQUEIO: Estilos sempre atualizados com o tema atual
-  const menuStyles: React.CSSProperties = {
-    background: theme.surface,
-    padding: '4px 24px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-    borderBottom: `1px solid ${theme.border}`,
-    transition: 'all 0.3s ease' // Transição suave na troca de tema
+  // 🚨 CORREÇÃO CRÍTICA: Aguardar tema estar carregado antes de renderizar
+  if (!isThemeLoaded) {
+    console.log('⏳ MenuBar - Aguardando tema carregar...')
+    return null // Não renderizar até o tema estar pronto
   }
 
   return (
-    <div>
-      {/* Menu Mobile Button */}
-      <div className="lg:hidden" style={menuStyles}>
-        <div className="flex justify-between items-center">
+    <div
+      className="sticky top-16 z-40 shadow-sm transition-colors duration-200"
+      style={{
+        backgroundColor: 'var(--surface-color)', // 🚨 CORREÇÃO: Usar variável CSS
+        borderBottom: '1px solid var(--border-color)', // 🚨 CORREÇÃO: Usar variável CSS
+      }}
+    >
+      <div className="max-w-full mx-auto px-4">
+        <div className="flex items-center justify-between h-12">
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center space-x-6">
+            <MenuButton
+              label="Cadastros"
+              onClick={() => navigate('/cadastros')}
+              theme={theme}
+            />
+            <MenuButton
+              label="Protocolo"
+              onClick={() => navigate('/protocolos')}
+              theme={theme}
+            />
+            <MenuButton
+              label="Lavratura"
+              onClick={() => navigate('/lavratura')}
+              theme={theme}
+            />
+            <MenuButton
+              label="Certidões"
+              onClick={() => navigate('/certidoes')}
+              theme={theme}
+            />
+            <MenuButton
+              label="Firmas"
+              onClick={() => navigate('/firmas')}
+              theme={theme}
+            />
+          </div>
+
+          {/* Mobile Menu Button */}
           <button
+            className="md:hidden px-3 py-2 rounded-md transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="flex items-center space-x-2 transition-colors duration-150"
-            style={{ color: theme.text }}
+            style={{ 
+              color: theme.text,
+              backgroundColor: isMobileMenuOpen ? theme.hover : 'transparent'
+            }}
           >
-            <span className="font-medium">Menu</span>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isMobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
           </button>
         </div>
-      </div>
 
-      {/* Menu Desktop */}
-      <div className="hidden lg:block" style={menuStyles}>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-8">
-            <button
-              onClick={() => navigate('/cadastros')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Cadastros</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/processos')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Processos</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/atendimento')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Atendimento</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/protocolo')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Protocolo</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/lavratura')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Lavratura</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/certidoes')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Certidões</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/firmas')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Firmas</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/livro-e')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Livro E</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/livro-comercial')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Livro Comercial</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/remessas')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Remessas</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/relatorios')}
-              className="flex items-center space-x-2 transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="font-medium">Relatórios</span>
-            </button>
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden py-2 space-y-1" style={{ borderTop: `1px solid ${theme.border}` }}>
+            <MobileMenuItem label="Cadastros" onClick={() => { navigate('/cadastros'); setIsMobileMenuOpen(false); }} theme={theme} />
+            <MobileMenuItem label="Protocolo" onClick={() => { navigate('/protocolos'); setIsMobileMenuOpen(false); }} theme={theme} />
+            <MobileMenuItem label="Lavratura" onClick={() => { navigate('/lavratura'); setIsMobileMenuOpen(false); }} theme={theme} />
+            <MobileMenuItem label="Certidões" onClick={() => { navigate('/certidoes'); setIsMobileMenuOpen(false); }} theme={theme} />
+            <MobileMenuItem label="Firmas" onClick={() => { navigate('/firmas'); setIsMobileMenuOpen(false); }} theme={theme} />
           </div>
-          
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors duration-150"
-              style={{ color: theme.text }}
-            >
-              <span className="text-sm">Sair</span>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
-
-      {/* Menu Mobile */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden" style={menuStyles}>
-          <div className="flex flex-col space-y-2">
-            <button
-              onClick={() => {
-                navigate('/cadastros')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Cadastros</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/processos')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Processos</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/atendimento')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Atendimento</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/protocolo')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Protocolo</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/lavratura')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Lavratura</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/certidoes')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Certidões</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/firmas')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Firmas</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/livro-e')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Livro E</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/livro-comercial')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Livro Comercial</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/remessas')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Remessas</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                navigate('/relatorios')
-                setIsMobileMenuOpen(false)
-              }}
-              className="flex items-center space-x-2 text-white hover:text-yellow-200 py-2 transition-colors duration-150"
-            >
-              <span className="font-medium">Relatórios</span>
-            </button>
-            
-            <div className="border-t border-white border-opacity-20 pt-2 mt-2">
-              <button
-                onClick={() => {
-                  handleLogout()
-                  setIsMobileMenuOpen(false)
-                }}
-                className="flex items-center space-x-1 px-3 py-2 text-white hover:text-red-200 hover:bg-red-500 hover:bg-opacity-20 rounded-lg transition-colors duration-150"
-              >
-                <span className="text-sm">Sair</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
-}
+})
+
+// ⚡ Sub-componentes memoizados
+const MenuButton = memo(({ label, onClick, theme }: any) => (
+  <button
+    onClick={onClick}
+    className="flex items-center space-x-2 transition-colors duration-150 hover:opacity-80"
+    style={{ color: theme.text }}
+  >
+    <span className="font-medium">{label}</span>
+  </button>
+))
+MenuButton.displayName = 'MenuButton'
+
+const MobileMenuItem = memo(({ label, onClick, theme }: any) => (
+  <button
+    onClick={onClick}
+    className="block w-full text-left px-3 py-2 rounded-md transition-colors"
+    style={{
+      color: theme.text,
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = theme.hover
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = 'transparent'
+    }}
+  >
+    {label}
+  </button>
+))
+MobileMenuItem.displayName = 'MobileMenuItem'

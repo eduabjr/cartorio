@@ -7,6 +7,7 @@ interface HospitalCemiterioPageProps {
 }
 
 interface Estabelecimento {
+  codigo: string
   descricao: string
   cep: string
   logradouro: string
@@ -22,8 +23,9 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
   const { currentTheme, getTheme } = useAccessibility()
   const theme = getTheme()
 
-  const [activeTab, setActiveTab] = useState<'hospitais' | 'cemiterios'>('hospitais')
+  const [activeTab, setActiveTab] = useState<'hospitais' | 'cemiterios' | 'funerarias'>('hospitais')
   const [formData, setFormData] = useState({
+    codigo: '0',
     descricao: '',
     logradouro: '',
     endereco: '',
@@ -61,6 +63,7 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
   useEffect(() => {
     setSelectedEstabelecimento(-1)
     setFormData({
+      codigo: '0',
       descricao: '',
       logradouro: '',
       endereco: '',
@@ -172,9 +175,13 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
     const saved = localStorage.getItem('cemiterios-cadastrados')
     return saved ? JSON.parse(saved) : []
   })
+  const [funerarias, setFunerarias] = useState<Estabelecimento[]>(() => {
+    const saved = localStorage.getItem('funerarias-cadastrados')
+    return saved ? JSON.parse(saved) : []
+  })
 
-  const estabelecimentos = activeTab === 'hospitais' ? hospitais : cemiterios
-  const setEstabelecimentos = activeTab === 'hospitais' ? setHospitais : setCemiterios
+  const estabelecimentos = activeTab === 'hospitais' ? hospitais : (activeTab === 'cemiterios' ? cemiterios : funerarias)
+  const setEstabelecimentos = activeTab === 'hospitais' ? setHospitais : (activeTab === 'cemiterios' ? setCemiterios : setFunerarias)
 
   // Persistir dados no localStorage
   useEffect(() => {
@@ -184,6 +191,10 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
   useEffect(() => {
     localStorage.setItem('cemiterios-cadastrados', JSON.stringify(cemiterios))
   }, [cemiterios])
+
+  useEffect(() => {
+    localStorage.setItem('funerarias-cadastrados', JSON.stringify(funerarias))
+  }, [funerarias])
 
   const tiposLogradouro = [
     'Rua',
@@ -268,11 +279,24 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
 
   // Selecionar sugestão
   const selecionarSugestao = (cidade: string) => {
-    setFormData({ ...formData, cidade })
+    // Buscar UF da cidade selecionada
+    let ufEncontrado = formData.uf // Manter UF atual se já houver
+    
+    // Se não tem UF selecionado, buscar qual estado tem essa cidade
+    if (!ufEncontrado) {
+      for (const [uf, cidades] of Object.entries(cidadesPorEstado)) {
+        if (cidades.includes(cidade)) {
+          ufEncontrado = uf
+          break
+        }
+      }
+    }
+    
+    setFormData({ ...formData, cidade, uf: ufEncontrado })
     setShowSugestoes(false)
     setSugestoesCidade([])
     setSugestaoSelecionada(-1)
-    console.log('✅ Cidade selecionada:', cidade)
+    console.log('✅ Cidade selecionada:', cidade, '| UF:', ufEncontrado)
   }
 
   // Navegar pelas sugestões com setas
@@ -313,6 +337,7 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
 
   const handleNovo = () => {
     setFormData({
+      codigo: '0',
       descricao: '',
       logradouro: '',
       endereco: '',
@@ -355,10 +380,12 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
       console.log('✅ Estabelecimento atualizado!')
       alert('✅ Estabelecimento atualizado com sucesso!')
     } else {
-      // Criando novo estabelecimento
-      setEstabelecimentos([...estabelecimentos, { ...formData }])
-      console.log('✅ Novo estabelecimento adicionado!')
-      alert('✅ Estabelecimento salvo com sucesso!')
+      // Criando novo estabelecimento - gerar código automaticamente
+      const novoCodigo = (estabelecimentos.length + 1).toString().padStart(3, '0')
+      const novoEstabelecimento = { ...formData, codigo: novoCodigo }
+      setEstabelecimentos([...estabelecimentos, novoEstabelecimento])
+      console.log('✅ Novo estabelecimento adicionado com código:', novoCodigo)
+      alert(`✅ Estabelecimento salvo com sucesso! Código: ${novoCodigo}`)
     }
 
     handleNovo()
@@ -382,6 +409,7 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
     setSelectedEstabelecimento(index)
     const estabelecimento = estabelecimentos[index]
     setFormData({
+      codigo: estabelecimento.codigo,
       descricao: estabelecimento.descricao,
       cep: estabelecimento.cep,
       logradouro: estabelecimento.logradouro,
@@ -537,15 +565,48 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
           >
             Cemitérios
           </button>
+          <button
+            onClick={() => setActiveTab('funerarias')}
+            style={tabStyles(activeTab === 'funerarias')}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'funerarias') {
+                e.currentTarget.style.backgroundColor = theme.border
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'funerarias') {
+                e.currentTarget.style.backgroundColor = theme.surface
+              }
+            }}
+          >
+            Funerárias
+          </button>
         </div>
 
         {/* Seção Cadastro */}
         <div style={sectionTitleStyles}>Cadastro / Manutenção</div>
 
-        {/* Linha 1: Descrição, CEP */}
+        {/* Linha 1: Código, Descrição */}
         <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ width: '120px' }}>
+            <label style={labelStyles}>Código</label>
+            <input
+              type="text"
+              value={formData.codigo}
+              readOnly
+              style={{ 
+                ...getInputStyles('codigo'), 
+                width: '100%',
+                backgroundColor: theme.surface,
+                cursor: 'not-allowed',
+                opacity: 0.8
+              }}
+            />
+          </div>
           <div style={{ flex: 1 }}>
-            <label style={labelStyles}>Descrição <span style={{ color: '#ff4444' }}>*</span></label>
+            <label style={labelStyles}>
+              {activeTab === 'funerarias' ? 'Descrição da Funerária' : 'Descrição do Estabelecimento'} <span style={{ color: '#ff4444' }}>*</span>
+            </label>
             <input
               type="text"
               value={formData.descricao}
@@ -569,20 +630,43 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
                 onBlur={() => setFocusedField(null)}
                 placeholder="00000-000"
                 maxLength={9}
-                style={{ ...getInputStyles('cep'), width: '100%', paddingRight: buscandoCEP ? '30px' : '8px' }}
+                style={{ ...getInputStyles('cep'), width: '100%', paddingRight: '30px' }}
               />
-              {buscandoCEP && (
-                <div style={{
+              <button
+                onClick={() => {
+                  console.log('🔍 Lupa clicada! CEP:', formData.cep)
+                  if (formData.cep.replace(/\D/g, '').length === 8 && !buscandoCEP) {
+                    buscarCEP(formData.cep)
+                  }
+                }}
+                style={{
                   position: 'absolute',
-                  right: '8px',
+                  right: '6px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  fontSize: '12px',
-                  color: theme.primary
-                }}>
-                  🔍
-                </div>
-              )}
+                  padding: '0px',
+                  fontSize: '14px',
+                  border: 'none',
+                  borderRadius: '0px',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent',
+                  color: theme.primary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'opacity 0.2s ease',
+                  zIndex: 1,
+                  width: '20px',
+                  height: '20px',
+                  outline: 'none',
+                  boxShadow: 'none'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                title="Buscar endereço por CEP"
+              >
+                🔍
+              </button>
             </div>
           </div>
         </div>
@@ -761,7 +845,7 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
               opacity: 0.5,
               fontSize: '12px'
             }}>
-              Nenhum {activeTab === 'hospitais' ? 'hospital' : 'cemitério'} cadastrado.
+              Nenhum {activeTab === 'hospitais' ? 'hospital' : (activeTab === 'cemiterios' ? 'cemitério' : 'funerária')} cadastrado.
               <br />
               Preencha os campos acima e clique em "Gravar".
             </div>
@@ -792,7 +876,7 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
         <div style={{
           display: 'flex',
           gap: '8px',
-          justifyContent: 'flex-end',
+          justifyContent: 'center',
           paddingTop: '8px',
           borderTop: `1px solid ${theme.border}`
         }}>
@@ -816,9 +900,22 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
           </button>
           <button
             onClick={handleExcluir}
-            style={buttonStyles}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#495057'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
+            disabled={selectedEstabelecimento < 0}
+            style={{
+              ...buttonStyles,
+              opacity: selectedEstabelecimento < 0 ? 0.5 : 1,
+              cursor: selectedEstabelecimento < 0 ? 'not-allowed' : 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              if (selectedEstabelecimento >= 0) {
+                e.currentTarget.style.backgroundColor = '#495057'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (selectedEstabelecimento >= 0) {
+                e.currentTarget.style.backgroundColor = '#6c757d'
+              }
+            }}
           >
             <span>❌</span>
             <span>Excluir</span>

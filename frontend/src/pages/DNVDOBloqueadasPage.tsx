@@ -414,6 +414,7 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
             <CidadeAutocompleteInput
               value={formData.cidade}
               onChange={(cidade) => setFormData({ ...formData, cidade })}
+              onUfChange={(uf) => setFormData({ ...formData, uf })}
               uf={formData.uf}
               focusedField={focusedField}
               onFocus={() => setFocusedField('cidade')}

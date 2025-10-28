@@ -36,8 +36,8 @@ export interface CidadeAutocompleteReturn {
   showSugestoes: boolean
   sugestaoSelecionada: number
   buscarSugestoes: (termoBusca: string, uf: string) => void
-  selecionarSugestao: (cidade: string, onSelect: (cidade: string) => void) => void
-  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, onSelect: (cidade: string) => void) => void
+  selecionarSugestao: (cidade: string, onSelect: (cidade: string, uf?: string) => void) => void
+  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, onSelect: (cidade: string, uf?: string) => void) => void
   limparSugestoes: () => void
   setSugestaoSelecionada: (index: number) => void
 }
@@ -80,15 +80,24 @@ export function useCidadeAutocomplete(): CidadeAutocompleteReturn {
     setSugestaoSelecionada(-1)
   }
 
-  const selecionarSugestao = (cidade: string, onSelect: (cidade: string) => void) => {
-    onSelect(cidade)
+  const selecionarSugestao = (cidade: string, onSelect: (cidade: string, uf?: string) => void) => {
+    // Buscar UF da cidade selecionada
+    let ufEncontrado = ''
+    for (const [uf, cidades] of Object.entries(cidadesPorEstado)) {
+      if (cidades.includes(cidade)) {
+        ufEncontrado = uf
+        break
+      }
+    }
+    
+    onSelect(cidade, ufEncontrado)
     setShowSugestoes(false)
     setSugestoes([])
     setSugestaoSelecionada(-1)
-    console.log('✅ Cidade selecionada:', cidade)
+    console.log('✅ Cidade selecionada:', cidade, '| UF:', ufEncontrado)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, onSelect: (cidade: string) => void) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, onSelect: (cidade: string, uf?: string) => void) => {
     if (!showSugestoes || sugestoes.length === 0) {
       return
     }

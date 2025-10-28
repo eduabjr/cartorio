@@ -8,6 +8,84 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 🚨 CORREÇÃO CRÍTICA: Aplicar tema ANTES do React carregar -->
+    <script>
+      (function() {
+        console.log('🚀🚀🚀 SCRIPT INLINE EXECUTANDO 🚀🚀🚀')
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        console.log('📦 Tema no localStorage:', savedTheme)
+        const themes = {
+          light: {
+            primary: '#FF8C00',
+            secondary: '#00A6A1',
+            accent: '#2196F3',
+            background: '#E0E0E0',
+            surface: '#FFFFFF',
+            text: '#212121',
+            textSecondary: '#2C2C2C',
+            border: '#D1D1D1',
+            success: '#00A6A1',
+            warning: '#f59e0b',
+            error: '#ef4444',
+            info: '#2196F3'
+          },
+          dark: {
+            primary: '#FF8C00',
+            secondary: '#A1D2D3',
+            accent: '#A1D2D3',
+            background: '#0a0a0a',
+            surface: '#1e1e1e',
+            text: '#C8C8C8',
+            textSecondary: '#9A9A9A',
+            border: '#3a3a3a',
+            success: '#10b981',
+            warning: '#f59e0b',
+            error: '#ef4444',
+            info: '#f19830'
+          }
+        };
+        
+        const theme = themes[savedTheme] || themes.light;
+        const root = document.documentElement;
+        
+        // Aplicar TODAS as variáveis CSS no :root (sempre disponível)
+        root.style.setProperty('--primary-color', theme.primary);
+        root.style.setProperty('--secondary-color', theme.secondary);
+        root.style.setProperty('--accent-color', theme.accent);
+        root.style.setProperty('--background-color', theme.background);
+        root.style.setProperty('--surface-color', theme.surface);
+        root.style.setProperty('--text-color', theme.text);
+        root.style.setProperty('--text-secondary-color', theme.textSecondary);
+        root.style.setProperty('--border-color', theme.border);
+        root.style.setProperty('--success-color', theme.success);
+        root.style.setProperty('--warning-color', theme.warning);
+        root.style.setProperty('--error-color', theme.error);
+        root.style.setProperty('--info-color', theme.info);
+        
+        console.log('✅ Variáveis CSS aplicadas no :root')
+        console.log('📊 Valores:', {
+          background: theme.background,
+          surface: theme.surface,
+          text: theme.text
+        })
+        
+        // 🚨 CORREÇÃO: Adicionar classe ao body quando ele existir
+        function addThemeClass() {
+          if (document.body) {
+            document.body.classList.add('theme-' + savedTheme);
+            console.log('✅ Tema aplicado ANTES do React:', savedTheme);
+          } else {
+            // Se body ainda não existe, aguardar
+            document.addEventListener('DOMContentLoaded', function() {
+              document.body.classList.add('theme-' + savedTheme);
+              console.log('✅ Tema aplicado no DOMContentLoaded:', savedTheme);
+            });
+          }
+        }
+        
+        addThemeClass();
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -2,14 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 
-interface TipoDocumento {
-  id: number
-  codigo: number
-  tipoAto: string
-  tipoDocumento: string
-  descricaoDetalhada: string
-}
-
 interface TipoAto {
   id: number
   codigo: number
@@ -17,110 +9,119 @@ interface TipoAto {
   observacoes: string
 }
 
-interface TipoDocumentoDigitalizadoPageProps {
+interface TipoAtoPageProps {
   onClose: () => void
 }
 
-// Função para carregar tipos de ato do localStorage
+// Função para salvar no localStorage
+const saveTiposAto = (tipos: TipoAto[]) => {
+  localStorage.setItem('tiposAto', JSON.stringify(tipos))
+}
+
+// Função para carregar do localStorage
 const loadTiposAto = (): TipoAto[] => {
   const stored = localStorage.getItem('tiposAto')
   if (stored) {
     return JSON.parse(stored)
   }
-  // Retorna tipos padrão se não houver cadastro
+  // Dados iniciais padrão
   return [
-    { id: 1, codigo: 1, descricao: 'Casamento', observacoes: '' },
-    { id: 2, codigo: 2, descricao: 'Nascimento', observacoes: '' },
-    { id: 3, codigo: 3, descricao: 'Óbito', observacoes: '' },
-    { id: 4, codigo: 4, descricao: 'Divórcio', observacoes: '' },
-    { id: 5, codigo: 5, descricao: 'Escritura', observacoes: '' },
-    { id: 6, codigo: 6, descricao: 'Procuração', observacoes: '' },
-    { id: 7, codigo: 7, descricao: 'Reconhecimento de Firma', observacoes: '' },
-    { id: 8, codigo: 8, descricao: 'Autenticação', observacoes: '' }
+    { id: 1, codigo: 1, descricao: 'Casamento', observacoes: 'Registro de casamento civil' },
+    { id: 2, codigo: 2, descricao: 'Nascimento', observacoes: 'Registro de nascimento' },
+    { id: 3, codigo: 3, descricao: 'Óbito', observacoes: 'Registro de óbito' },
+    { id: 4, codigo: 4, descricao: 'Divórcio', observacoes: 'Registro de divórcio' },
+    { id: 5, codigo: 5, descricao: 'Escritura', observacoes: 'Escritura pública' },
+    { id: 6, codigo: 6, descricao: 'Procuração', observacoes: 'Procuração pública' },
+    { id: 7, codigo: 7, descricao: 'Reconhecimento de Firma', observacoes: 'Reconhecimento de assinatura' },
+    { id: 8, codigo: 8, descricao: 'Autenticação', observacoes: 'Autenticação de documentos' }
   ]
 }
 
-export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitalizadoPageProps) {
+export function TipoAtoPage({ onClose }: TipoAtoPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   
   // Cor do header: teal no light, laranja no dark
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
 
-  // Carregar tipos de ato do cadastro
-  const [tiposAtoCadastrados, setTiposAtoCadastrados] = useState<TipoAto[]>([])
-
   // Estado para o formulário
   const [codigo, setCodigo] = useState(0)
-  const [tipoAto, setTipoAto] = useState('')
-  const [tipoDocumento, setTipoDocumento] = useState('')
-  const [descricaoDetalhada, setDescricaoDetalhada] = useState('')
+  const [descricao, setDescricao] = useState('')
+  const [observacoes, setObservacoes] = useState('')
   
   // Estado para os dados cadastrados
-  const [documentos, setDocumentos] = useState<TipoDocumento[]>([])
+  const [tiposAto, setTiposAto] = useState<TipoAto[]>([])
   
   // Estado para o item selecionado na grid
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
-  // Carregar tipos de ato ao montar o componente
+  // Carregar dados ao montar o componente
   useEffect(() => {
     const tipos = loadTiposAto()
-    setTiposAtoCadastrados(tipos)
-    if (tipos.length > 0 && !tipoAto) {
-      setTipoAto(tipos[0].descricao)
-    }
+    setTiposAto(tipos)
+    saveTiposAto(tipos) // Salva os padrões se não existirem
   }, [])
 
   // Função para criar novo registro
   const handleNovo = () => {
     setCodigo(0)
-    setTipoAto(tiposAtoCadastrados.length > 0 ? tiposAtoCadastrados[0].descricao : '')
-    setTipoDocumento('')
-    setDescricaoDetalhada('')
+    setDescricao('')
+    setObservacoes('')
     setSelectedId(null)
   }
 
   // Função para gravar registro
   const handleGravar = () => {
+    if (!descricao.trim()) {
+      alert('Por favor, preencha a descrição do tipo de ato.')
+      return
+    }
+
+    let novosTipos: TipoAto[]
+
     if (selectedId !== null) {
       // Editar registro existente
-      setDocumentos(documentos.map(doc => 
-        doc.id === selectedId 
-          ? { ...doc, tipoAto, tipoDocumento, descricaoDetalhada }
-          : doc
-      ))
+      novosTipos = tiposAto.map(tipo => 
+        tipo.id === selectedId 
+          ? { ...tipo, descricao, observacoes }
+          : tipo
+      )
     } else {
       // Criar novo registro
-      const novoCodigo = documentos.length > 0 ? Math.max(...documentos.map(d => d.codigo)) + 1 : 1
-      const novoDoc: TipoDocumento = {
+      const novoCodigo = tiposAto.length > 0 ? Math.max(...tiposAto.map(t => t.codigo)) + 1 : 1
+      const novoTipo: TipoAto = {
         id: Date.now(),
         codigo: novoCodigo,
-        tipoAto,
-        tipoDocumento,
-        descricaoDetalhada
+        descricao,
+        observacoes
       }
-      setDocumentos([...documentos, novoDoc])
+      novosTipos = [...tiposAto, novoTipo]
       setCodigo(novoCodigo)
     }
+
+    setTiposAto(novosTipos)
+    saveTiposAto(novosTipos)
+    alert('Tipo de Ato gravado com sucesso!')
   }
 
   // Função para excluir registro
   const handleExcluir = () => {
     if (selectedId !== null) {
-      if (confirm('Deseja realmente excluir este registro?')) {
-        setDocumentos(documentos.filter(doc => doc.id !== selectedId))
+      if (confirm('Deseja realmente excluir este tipo de ato?')) {
+        const novosTipos = tiposAto.filter(tipo => tipo.id !== selectedId)
+        setTiposAto(novosTipos)
+        saveTiposAto(novosTipos)
         handleNovo()
       }
     }
   }
 
   // Função para selecionar registro na grid
-  const handleSelectRow = (doc: TipoDocumento) => {
-    setSelectedId(doc.id)
-    setCodigo(doc.codigo)
-    setTipoAto(doc.tipoAto)
-    setTipoDocumento(doc.tipoDocumento)
-    setDescricaoDetalhada(doc.descricaoDetalhada)
+  const handleSelectRow = (tipo: TipoAto) => {
+    setSelectedId(tipo.id)
+    setCodigo(tipo.codigo)
+    setDescricao(tipo.descricao)
+    setObservacoes(tipo.observacoes)
   }
 
   // Estilos dos inputs
@@ -158,7 +159,7 @@ export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitali
 
   return (
     <BasePage
-      title="Cadastro de Tipo de Documento Digitalizado"
+      title="Cadastro de Tipo de Ato"
       onClose={onClose}
       width="700px"
       height="500px"
@@ -180,7 +181,7 @@ export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitali
           padding: '8px',
           backgroundColor: theme.surface
         }}>
-          {/* Linha 1: Código e Tipo do Ato */}
+          {/* Linha 1: Código */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '80px 1fr',
@@ -202,44 +203,26 @@ export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitali
               />
             </div>
 
-            {/* Tipo do Ato */}
+            {/* Descrição */}
             <div>
-              <label style={labelStyles}>Tipo do Ato</label>
-              <select
-                value={tipoAto}
-                onChange={(e) => setTipoAto(e.target.value)}
+              <label style={labelStyles}>Descrição do Tipo de Ato</label>
+              <input
+                type="text"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
                 style={inputStyles}
-              >
-                {tiposAtoCadastrados.length === 0 ? (
-                  <option value="">Nenhum tipo de ato cadastrado</option>
-                ) : (
-                  tiposAtoCadastrados.map(tipo => (
-                    <option key={tipo.id} value={tipo.descricao}>
-                      {tipo.descricao}
-                    </option>
-                  ))
-                )}
-              </select>
+                placeholder="Ex: Casamento, Nascimento, Óbito..."
+                maxLength={100}
+              />
             </div>
           </div>
 
-          {/* Linha 2: Tipo de Documento */}
-          <div style={{ marginBottom: '8px' }}>
-            <label style={labelStyles}>Tipo de Documento</label>
-            <input
-              type="text"
-              value={tipoDocumento}
-              onChange={(e) => setTipoDocumento(e.target.value)}
-              style={inputStyles}
-            />
-          </div>
-
-          {/* Linha 3: Descrição Detalhada */}
+          {/* Linha 2: Observações */}
           <div>
-            <label style={labelStyles}>Descrição Detalhada</label>
+            <label style={labelStyles}>Observações</label>
             <textarea
-              value={descricaoDetalhada}
-              onChange={(e) => setDescricaoDetalhada(e.target.value)}
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
               style={{
                 ...inputStyles,
                 height: 'auto',
@@ -248,6 +231,7 @@ export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitali
                 resize: 'vertical',
                 fontFamily: 'inherit'
               }}
+              placeholder="Informações adicionais sobre o tipo de ato..."
             />
           </div>
         </div>
@@ -278,9 +262,19 @@ export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitali
                   textAlign: 'left',
                   fontWeight: '600',
                   fontSize: '11px',
+                  borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                  width: '80px'
+                }}>
+                  Código
+                </th>
+                <th style={{
+                  padding: '6px 8px',
+                  textAlign: 'left',
+                  fontWeight: '600',
+                  fontSize: '11px',
                   borderRight: '1px solid rgba(255, 255, 255, 0.2)'
                 }}>
-                  Tipo do Ato
+                  Descrição
                 </th>
                 <th style={{
                   padding: '6px 8px',
@@ -288,32 +282,32 @@ export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitali
                   fontWeight: '600',
                   fontSize: '11px'
                 }}>
-                  Tipo de Documento
+                  Observações
                 </th>
               </tr>
             </thead>
             <tbody>
-              {documentos.map((doc, index) => (
+              {tiposAto.map((tipo, index) => (
                 <tr
-                  key={doc.id}
-                  onClick={() => handleSelectRow(doc)}
+                  key={tipo.id}
+                  onClick={() => handleSelectRow(tipo)}
                   style={{
-                    backgroundColor: selectedId === doc.id 
+                    backgroundColor: selectedId === tipo.id 
                       ? '#3b82f6' 
                       : index % 2 === 0 
                         ? theme.surface 
                         : theme.background,
-                    color: selectedId === doc.id ? 'white' : theme.text,
+                    color: selectedId === tipo.id ? 'white' : theme.text,
                     cursor: 'pointer',
                     borderBottom: `1px solid ${theme.border}`
                   }}
                   onMouseEnter={(e) => {
-                    if (selectedId !== doc.id) {
+                    if (selectedId !== tipo.id) {
                       e.currentTarget.style.backgroundColor = theme.border
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (selectedId !== doc.id) {
+                    if (selectedId !== tipo.id) {
                       e.currentTarget.style.backgroundColor = index % 2 === 0 
                         ? theme.surface 
                         : theme.background
@@ -324,12 +318,18 @@ export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitali
                     padding: '6px 8px',
                     borderRight: `1px solid ${theme.border}`
                   }}>
-                    {doc.tipoAto}
+                    {tipo.codigo}
+                  </td>
+                  <td style={{
+                    padding: '6px 8px',
+                    borderRight: `1px solid ${theme.border}`
+                  }}>
+                    {tipo.descricao}
                   </td>
                   <td style={{
                     padding: '6px 8px'
                   }}>
-                    {doc.tipoDocumento}
+                    {tipo.observacoes}
                   </td>
                 </tr>
               ))}
@@ -420,7 +420,7 @@ export function TipoDocumentoDigitalizadoPage({ onClose }: TipoDocumentoDigitali
               e.currentTarget.style.backgroundColor = '#6c757d'
             }}
           >
-            ❌ Fechar
+            ↩️ Retornar
           </button>
         </div>
       </div>

@@ -17,6 +17,7 @@ import { ClientePage } from './pages/ClientePage'
 import { FuncionarioPage } from './pages/FuncionarioPage'
 import { FirmasPage } from './pages/FirmasPage'
 import { TipoDocumentoDigitalizadoPage } from './pages/TipoDocumentoDigitalizadoPage'
+import { TipoAtoPage } from './pages/TipoAtoPage'
 import { CartorioSeadePage } from './pages/CartorioSeadePage'
 import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
 import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
@@ -124,10 +125,8 @@ function AppContent() {
     setIsDarkMode(shouldBeDark)
     console.log('✅ isDarkMode atualizado para:', shouldBeDark)
     
-    // Aplicar tema ao body com cor única
-    const bgColor = accessibility.currentTheme === 'dark' ? '#121212' : '#E1E1E1'
-    document.body.style.background = bgColor
-    console.log('🎨 Background do body definido para:', bgColor)
+    // 🚨 CORREÇÃO CRÍTICA: Não aplicar cor fixa - usar variável CSS para não sobrescrever o tema
+    console.log('🎨 Deixando background do body usar var(--background-color) do tema')
     console.log('🔄🔄🔄 ═══════════════════════════════════════════════\n')
   }, [accessibility.currentTheme])
 
@@ -310,13 +309,9 @@ function AppContent() {
       setIsLoggedIn(true)
     }
     
-    // Definir tema inicial
-    if (savedTheme) {
-      const isDark = savedTheme === 'dark'
-      document.body.style.background = isDark 
-        ? '#121212'
-        : '#E1E1E1'
-    }
+    // 🚨 CORREÇÃO CRÍTICA: Não definir background fixo na inicialização
+    // O useAccessibility já aplica var(--background-color) no body
+    console.log('🎨 Tema inicial já aplicado por useAccessibility')
   }, [])
 
   // Monitorar mudanças no tema
@@ -566,6 +561,16 @@ function AppContent() {
                 console.log('🔍 Clique em Cidade - chamando navigateToPage')
                 navigateToPage('config-sistema-cidade')
               }},
+              { id: 'cadastros-tipos-ato', label: 'Tipo de Ato', icon: '', onClick: () => {
+                console.log('✅ Abrindo Tipo de Ato...')
+                openWindow({
+                  id: 'tipo-ato-window',
+                  type: 'tipo-ato',
+                  title: 'Cadastro de Tipo de Ato',
+                  component: TipoAtoPage,
+                  props: { onClose: () => {} }
+                })
+              } },
               { id: 'cadastros-tipos-documento', label: 'Tipos de Documento Digitalizado', icon: '', onClick: () => {
                 console.log('✅ Abrindo Tipos de Documento Digitalizado...')
                 openWindow({
@@ -928,11 +933,11 @@ function AppContent() {
     return (
       <div style={{
         height: '100vh',
-        background: accessibility.currentTheme === 'dark' ? theme.background : '#E0E0E0',
+        background: 'var(--background-color)', // 🚨 CORREÇÃO: Usar variável CSS
         display: 'flex',
         flexDirection: 'column',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        color: theme.text,
+        color: 'var(--text-color)', // 🚨 CORREÇÃO: Usar variável CSS
         overflow: 'hidden'  // Mantém hidden aqui - o scroll é no main
       }}>
 
@@ -941,7 +946,7 @@ function AppContent() {
                background: accessibility.currentTheme === 'dark' ? '#004D40' : '#00796B',
                backdropFilter: 'blur(20px)',
                padding: '4px 16px',
-               borderBottom: `1px solid ${theme.border}`,
+               borderBottom: '1px solid var(--border-color)', // 🚨 CORREÇÃO: Usar variável CSS
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
           height: '32px',
           minHeight: '32px',
@@ -1022,7 +1027,7 @@ function AppContent() {
           className="main-content-area"
           style={{
             flex: 1,
-            background: theme.background,
+            background: 'var(--background-color)', // 🚨 CORREÇÃO: Usar variável CSS em vez de theme.background
             position: 'relative',
             marginTop: '120px', // Espaço para os dois menus
             overflow: 'auto',   // ← ATIVA O SCROLL!

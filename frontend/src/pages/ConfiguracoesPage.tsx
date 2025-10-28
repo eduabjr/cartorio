@@ -31,18 +31,32 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
     setUpdateCount(prev => prev + 1)
   }, [currentTheme])
   
-  // 🔒 GARANTIA DUPLA: Escutar evento theme-changed
+  // 🔥 FORÇA BRUTA: Escutar TODOS os eventos de tema
   useEffect(() => {
     const handleThemeChange = (e: any) => {
-      console.log('📢 ConfiguracoesPage - Recebeu evento theme-changed:', e.detail)
+      console.log('🔥 ConfiguracoesPage - Recebeu evento theme-changed:', e.detail)
+      setUpdateCount(prev => prev + 1)
+    }
+    
+    const handleForceUpdate = (e: any) => {
+      console.log('🔥 ConfiguracoesPage - Recebeu evento force-theme-update:', e.detail)
+      setUpdateCount(prev => prev + 1)
+    }
+    
+    const handleForceRender = (e: any) => {
+      console.log('🔥 ConfiguracoesPage - Recebeu evento theme-force-render:', e.detail)
       setUpdateCount(prev => prev + 1)
     }
     
     window.addEventListener('theme-changed', handleThemeChange)
-    console.log('👂 ConfiguracoesPage - Escutando evento theme-changed')
+    window.addEventListener('force-theme-update', handleForceUpdate)
+    window.addEventListener('theme-force-render', handleForceRender)
+    console.log('🔥 ConfiguracoesPage - Escutando TODOS os eventos de tema')
     
     return () => {
       window.removeEventListener('theme-changed', handleThemeChange)
+      window.removeEventListener('force-theme-update', handleForceUpdate)
+      window.removeEventListener('theme-force-render', handleForceRender)
     }
   }, [])
 
@@ -124,12 +138,12 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
+      background: 'transparent', // 🚨 CORREÇÃO: Fundo transparente para ver mudanças de tema!
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 10000,
-      backdropFilter: 'blur(5px)'
+      backdropFilter: 'none' // 🚨 CORREÇÃO: Sem blur para ver o fundo!
     }}>
       <div className="config-container" style={{
         background: theme.surface,
@@ -139,8 +153,8 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
         maxWidth: '800px',
         width: '95%',
         maxHeight: '85vh',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        border: `1px solid ${theme.border}`
+        boxShadow: '0 50px 100px -20px rgba(0, 0, 0, 0.5), 0 0 0 2px ' + theme.border, // 🚨 Sombra maior para destacar
+        border: `2px solid ${theme.border}` // 🚨 Borda mais grossa
       }}>
         {/* Header */}
         <div style={{
@@ -705,8 +719,9 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                   type="checkbox"
                   checked={isDarkMode}
                   onChange={() => {
-                    console.log('\n💡💡💡 ═══════════════════════════════════════════════')
-                    console.log('💡 TOGGLE MODO ESCURO/CLARO ACIONADO')
+                    console.log('\n')
+                    console.log('💡💡💡 ═══════════════════════════════════════════════')
+                    console.log('💡💡💡 TOGGLE MODO ESCURO/CLARO CLICADO!')
                     console.log('💡💡💡 ═══════════════════════════════════════════════')
                     console.log('📊 Estado ANTES:', {
                       isDarkMode,
@@ -723,7 +738,7 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange }: Config
                     console.log('📞 Chamando onThemeChange com:', !isDarkMode)
                     onThemeChange(!isDarkMode)
                     
-                    console.log('✅ Toggle concluído - aguardando aplicação do tema')
+                    console.log('✅ Toggle concluído!')
                     console.log('💡💡💡 ═══════════════════════════════════════════════\n')
                   }}
                   style={{ opacity: 0, width: 0, height: 0 }}

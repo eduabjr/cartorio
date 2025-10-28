@@ -2530,6 +2530,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               <CidadeAutocompleteInput
                 value={formData.cidade}
                 onChange={(cidade) => handleInputWithLimit('cidade', cidade, 50)}
+                onUfChange={(uf) => handleInputChange('ufEndereco', uf)}
                 uf={formData.uf}
                 inputStyles={inputStyles}
                 maxLength={50}

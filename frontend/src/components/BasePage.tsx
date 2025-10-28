@@ -69,11 +69,14 @@ export function BasePage({
 
   // Função para trazer janela para frente
   const handleBringToFront = () => {
+    console.log('🔼 Trazendo janela para frente:', title)
     if (windowId) {
       bringToFront(windowId)
     } else {
-      // Se não tem windowId, incrementa zIndex localmente
-      setZIndex(prev => prev + 10)
+      // Se não tem windowId, usar timestamp como zIndex para garantir que seja único e maior
+      const newZIndex = 1000 + Date.now() % 10000
+      console.log('📊 Novo zIndex:', newZIndex)
+      setZIndex(newZIndex)
     }
   }
 
