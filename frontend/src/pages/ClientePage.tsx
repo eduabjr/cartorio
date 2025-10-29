@@ -50,6 +50,52 @@ import { useFieldValidation } from '../hooks/useFieldValidation'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
 // import { useTJSPApi } from '../hooks/useTJSPApi'
 
+// CSS específico para dropdowns de países com scroll pequeno quando expandido
+const paisDropdownCSS = `
+  .pais-select {
+    /* Mantém o estilo normal quando fechado */
+    height: auto;
+  }
+  
+  .pais-select option {
+    padding: 2px 4px;
+    font-size: 12px;
+    line-height: 1.1;
+  }
+  
+  /* Quando o dropdown está expandido (focado), limita a altura e adiciona scroll */
+  .pais-select:focus {
+    max-height: 80px !important;
+    overflow-y: auto !important;
+    scroll-behavior: smooth !important;
+  }
+  
+  /* Estilo específico para o dropdown expandido */
+  .pais-select[size="1"]:focus {
+    max-height: 80px !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Scrollbar personalizada para ficar mais discreta */
+  .pais-select::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .pais-select::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  
+  .pais-select::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+  }
+  
+  .pais-select::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+`
+
 // Definições de tipos para APIs do Electron
 declare global {
   interface Window {
@@ -354,6 +400,18 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
     gerarQRCode()
   }, [seloSelecionado])
+  
+  // Adicionar CSS específico para dropdowns de países
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = paisDropdownCSS
+    document.head.appendChild(style)
+    
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
+  
   const [cartaoHabilitado, setCartaoHabilitado] = useState(true)
   
   const [formData, setFormData] = useState({
@@ -803,7 +861,18 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
     if (camposVazios.length > 0) {
       const listaCampos = camposVazios.map(item => item.label).join(', ')
-      console.log(`❌ Por favor, preencha os seguintes campos obrigatórios: ${listaCampos}`)
+      const mensagem = `Por favor, preencha os seguintes campos obrigatórios:\n\n${listaCampos}`
+      
+      console.log(`❌ ${mensagem}`)
+      alert(mensagem)
+      
+      // Focar no primeiro campo vazio se possível
+      const primeiroCampo = camposVazios[0].campo
+      const elemento = document.querySelector(`input[name="${primeiroCampo}"], select[name="${primeiroCampo}"]`)
+      if (elemento instanceof HTMLElement) {
+        elemento.focus()
+      }
+      
       return
     }
 
@@ -826,6 +895,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     // Simula salvamento
     console.log('Dados a serem gravados:', { ...formData, codigo: codigoFinal })
     console.log('💾 Cliente gravado com sucesso!')
+    
+    alert(`✅ Cliente gravado com sucesso!\n\nCódigo: ${codigoFinal}\nNome: ${formData.nome}`)
   }
 
   // Função para limpar os campos
@@ -1767,6 +1838,20 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     flexShrink: 1  // 🔒 FIXO - Encolhe proporcionalmente
   }
 
+  // Estilos específicos para dropdowns de países com scroll pequeno quando expandido
+  const paisSelectStyles = {
+    ...selectStyles,
+    // Altura máxima quando o dropdown está expandido (scroll pequeno)
+    maxHeight: '80px',
+    // Scroll automático quando necessário
+    overflowY: 'auto' as const,
+    // Garante que o scroll funcione bem
+    scrollBehavior: 'smooth' as const,
+    // Estilo adicional para melhor controle
+    position: 'relative' as const,
+    zIndex: 1000
+  }
+
   const buttonStyles = {
     padding: '10px 16px',
     border: 'none',
@@ -2237,7 +2322,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               <select
                 value={formData.pais}
                 onChange={(e) => handleInputChange('pais', e.target.value)}
-                style={selectStyles}
+                style={paisSelectStyles}
+                className="pais-select"
+                size={1}
               >
                 <option value="">Selecione</option>
                 <option value="AF">AF - Afeganistão</option>
@@ -2672,7 +2759,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               <select
                 value={formData.paisEndereco}
                 onChange={(e) => handleInputChange('paisEndereco', e.target.value)}
-                style={selectStyles}
+                style={paisSelectStyles}
+                className="pais-select"
+                size={1}
               >
                 <option value="">Selecione</option>
                 <option value="AF">AF - Afeganistão</option>

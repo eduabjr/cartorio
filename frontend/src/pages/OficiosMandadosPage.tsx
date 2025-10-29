@@ -376,6 +376,13 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
     resetPosition()
   }, [currentImageIndex])
 
+  // Redirecionar para aba de Cadastro se estiver na Digitalização e não houver ofício registrado
+  useEffect(() => {
+    if (activeTab === 'digitalizacao' && !selectedId) {
+      setActiveTab('cadastro')
+    }
+  }, [selectedId, activeTab])
+
   // Cor de foco dinâmica baseada no tema
   const focusColor = currentTheme === 'dark' ? '#ffd4a3' : '#ffedd5'
   const focusTextColor = currentTheme === 'dark' ? '#1a1a1a' : '#000000'
@@ -590,18 +597,28 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
             Cadastro / Manutenção
           </button>
           <button
-            onClick={() => setActiveTab('digitalizacao')}
-            style={getTabStyles(activeTab === 'digitalizacao')}
+            onClick={() => {
+              if (selectedId) {
+                setActiveTab('digitalizacao')
+              }
+            }}
+            disabled={!selectedId}
+            style={{
+              ...getTabStyles(activeTab === 'digitalizacao'),
+              cursor: selectedId ? 'pointer' : 'not-allowed',
+              opacity: selectedId ? 1 : 0.5
+            }}
             onMouseEnter={(e) => {
-              if (activeTab !== 'digitalizacao') {
+              if (activeTab !== 'digitalizacao' && selectedId) {
                 e.currentTarget.style.backgroundColor = currentTheme === 'dark' ? '#333' : '#e9ecef'
               }
             }}
             onMouseLeave={(e) => {
-              if (activeTab !== 'digitalizacao') {
+              if (activeTab !== 'digitalizacao' && selectedId) {
                 e.currentTarget.style.backgroundColor = 'transparent'
               }
             }}
+            title={!selectedId ? 'Grave um ofício primeiro para usar a digitalização' : 'Digitalização de documentos'}
           >
             Digitalização
           </button>
@@ -1083,9 +1100,24 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
           </button>
           <button
             onClick={handleExcluir}
-            style={buttonStyles}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#495057'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
+            disabled={!selectedId}
+            style={{
+              ...buttonStyles,
+              backgroundColor: selectedId ? '#6c757d' : '#4b5563',
+              cursor: selectedId ? 'pointer' : 'not-allowed',
+              opacity: selectedId ? 1 : 0.5
+            }}
+            onMouseEnter={(e) => {
+              if (selectedId) {
+                e.currentTarget.style.backgroundColor = '#495057'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (selectedId) {
+                e.currentTarget.style.backgroundColor = '#6c757d'
+              }
+            }}
+            title={!selectedId ? 'Selecione um ofício para excluir' : 'Excluir ofício'}
           >
             <span>❌</span>
             <span>Excluir</span>

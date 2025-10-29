@@ -26,6 +26,7 @@ import { CartorioSeadePage } from './pages/CartorioSeadePage'
 import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
 import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
 import { HospitalCemiterioPage } from './pages/HospitalCemiterioPage'
+import { CadastroLivrosPage } from './pages/CadastroLivrosPage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { SystemStatus } from './components/SystemStatus'
@@ -469,8 +470,15 @@ function AppContent() {
             console.log('✅ Janela de Hospital, Cemitério e Funerária aberta!')
           }},
           { id: 'cadastro-livros', label: 'Cadastro de Livros', icon: '', onClick: () => {
-            console.log('🔍 Clique em Cadastro de Livros - chamando navigateToPage')
-            navigateToPage('cadastro-livros')
+            console.log('✅ CADASTRO DE LIVROS CLICADO! Abrindo janela...')
+            openWindow({
+              id: 'cadastro-livros-window',
+              type: 'cadastro-livros',
+              title: 'Cadastro de Livros',
+              component: CadastroLivrosPage,
+              props: { onClose: () => {} }
+            })
+            console.log('✅ Janela de Cadastro de Livros aberta!')
           }},
           {
             id: 'abertura-livros',
