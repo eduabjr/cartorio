@@ -13,7 +13,7 @@ export function LoginPage() {
   const [forceUpdate, setForceUpdate] = useState(0)
   const { login } = useAuth()
   const navigate = useNavigate()
-  const { currentTheme, settings, isThemeLoaded } = useAccessibility()
+  const { currentTheme, isThemeLoaded } = useAccessibility()
 
   // Forçar re-renderização quando o tema mudar
   useEffect(() => {

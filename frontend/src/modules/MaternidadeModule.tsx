@@ -235,8 +235,8 @@ export function MaternidadeModule() {
                 fontWeight: '500',
                 transition: 'all 0.2s ease'
               }}
-              onMouseOver={(e) => e.target.style.background = theme.buttonHover}
-              onMouseOut={(e) => e.target.style.background = theme.buttonBg}
+              onMouseOver={(e) => e.currentTarget.style.background = theme.buttonHover}
+              onMouseOut={(e) => e.currentTarget.style.background = theme.buttonBg}
             >
               {isDarkMode ? '☀️ Claro' : '🌙 Escuro'}
             </button>
@@ -297,14 +297,14 @@ export function MaternidadeModule() {
               }}
               onMouseOver={(e) => {
                 if (activeTab !== tab.id) {
-                  e.target.style.background = theme.buttonBg
-                  e.target.style.color = 'white'
+                  e.currentTarget.style.background = theme.buttonBg
+                  e.currentTarget.style.color = 'white'
                 }
               }}
               onMouseOut={(e) => {
                 if (activeTab !== tab.id) {
-                  e.target.style.background = 'transparent'
-                  e.target.style.color = theme.text
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = theme.text
                 }
               }}
             >
@@ -855,8 +855,8 @@ export function MaternidadeModule() {
                   transition: 'all 0.2s ease',
                   boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
                 }}
-                onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-                onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 💾 Salvar Registro de Nascimento
               </button>
@@ -1015,8 +1015,8 @@ export function MaternidadeModule() {
                 transition: 'all 0.2s ease',
                 boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
               }}
-              onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
             >
               📤 Exportar Registros Pendentes
             </button>
@@ -1145,8 +1145,8 @@ export function MaternidadeModule() {
                       fontWeight: '500',
                       transition: 'all 0.2s ease'
                     }}
-                    onMouseOver={(e) => e.target.style.background = theme.buttonHover}
-                    onMouseOut={(e) => e.target.style.background = theme.buttonBg}
+                    onMouseOver={(e) => e.currentTarget.style.background = theme.buttonHover}
+                    onMouseOut={(e) => e.currentTarget.style.background = theme.buttonBg}
                   >
                     💾 Fazer Backup
                   </button>
@@ -1185,8 +1185,8 @@ export function MaternidadeModule() {
                       fontWeight: '500',
                       transition: 'all 0.2s ease'
                     }}
-                    onMouseOver={(e) => e.target.style.background = 'rgba(245, 158, 11, 1)'}
-                    onMouseOut={(e) => e.target.style.background = 'rgba(245, 158, 11, 0.8)'}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(245, 158, 11, 1)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(245, 158, 11, 0.8)'}
                   >
                     📁 Restaurar Backup
                   </button>
@@ -1223,8 +1223,8 @@ export function MaternidadeModule() {
                     fontWeight: '500',
                     transition: 'all 0.2s ease'
                   }}
-                  onMouseOver={(e) => e.target.style.background = 'rgba(239, 68, 68, 1)'}
-                  onMouseOut={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.8)'}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 1)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.8)'}
                 >
                   🗑️ Limpar Todos os Dados
                 </button>

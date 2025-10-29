@@ -21,8 +21,8 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // ⚡ Cache por 5 minutos
-      cacheTime: 1000 * 60 * 5,
+      // ⚡ Cache por 5 minutos (gcTime = garbage collection time)
+      gcTime: 1000 * 60 * 5,
 
       // ⚡ Dados ficam "frescos" por 1 minuto
       staleTime: 1000 * 60,

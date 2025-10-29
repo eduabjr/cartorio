@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 
@@ -25,7 +25,7 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
     return saved ? JSON.parse(saved) : []
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [codigo, setCodigo] = useState('')
+  const [codigo, setCodigo] = useState('0')
   const [descricao, setDescricao] = useState('')
   const [data, setData] = useState('')
 
@@ -66,21 +66,21 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
 
   const handleNovo = () => {
     setSelectedId(null)
-    setCodigo('')
+    setCodigo('0')
     setDescricao('')
     setData('')
   }
 
   const handleGravar = () => {
     if (!descricao.trim() || !data.trim()) {
-      alert('Por favor, preencha todos os campos obrigatórios (Descrição e Data).')
+      console.log('⚠️ Por favor, preencha todos os campos obrigatórios (Descrição e Data).')
       return
     }
 
     // Validar formato da data (DD/MM/YYYY)
     const regexData = /^(\d{2})\/(\d{2})\/(\d{4})$/
     if (!regexData.test(data)) {
-      alert('Data inválida. Use o formato DD/MM/AAAA (ex: 25/12/2024)')
+      console.log('⚠️ Data inválida. Use o formato DD/MM/AAAA (ex: 25/12/2024)')
       return
     }
 
@@ -90,27 +90,32 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
           ? { ...f, descricao, data }
           : f
       ))
-      alert('Feriado atualizado com sucesso!')
+      console.log('✅ Feriado atualizado!')
     } else {
+      // Gerar código sequencial
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoFeriado')
+      const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      const novoCodigo = proximoCodigo.toString().padStart(3, '0')
+      localStorage.setItem('ultimoCodigoFeriado', proximoCodigo.toString())
+      
       const novoFeriado: Feriado = {
         id: Date.now().toString(),
-        codigo: (feriados.length + 1).toString().padStart(3, '0'),
+        codigo: novoCodigo,
         descricao,
         data
       }
       setFeriados(prev => [...prev, novoFeriado])
-      alert('Feriado cadastrado com sucesso!')
+      console.log('✅ Feriado cadastrado! Código:', novoCodigo)
     }
     handleNovo()
   }
 
   const handleExcluir = () => {
     if (selectedId) {
-      if (confirm('Deseja realmente excluir este feriado?')) {
-        setFeriados(prev => prev.filter(f => f.id !== selectedId))
-        handleNovo()
-        alert('Feriado excluído com sucesso!')
-      }
+      setFeriados(prev => prev.filter(f => f.id !== selectedId))
+      handleNovo()
+      console.log('✅ Feriado excluído.')
     }
   }
 
@@ -153,11 +158,18 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
               type="text"
               value={codigo}
               readOnly
+              disabled
+              onKeyDown={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
               style={{
                 ...inputStyles,
-                backgroundColor: theme.border,
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                color: currentTheme === 'dark' ? '#666' : '#999',
                 cursor: 'not-allowed',
-                width: '100px'
+                width: '100px',
+                opacity: 0.7
               }}
             />
           </div>

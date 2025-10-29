@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
-import { cartorioSeadeService, CartorioSeadeAPI } from '../services/CartorioSeadeService'
+import { cartorioSeadeService } from '../services/CartorioSeadeService'
 import { cnpjService } from '../services/CNPJService'
 import { viaCepService } from '../services/ViaCepService'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
@@ -101,15 +101,19 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
       ))
       alert('✅ Cartório atualizado com sucesso!')
     } else {
-      // Criar novo registro
-      const novoCodigo = cartorios.length > 0 ? String(Math.max(...cartorios.map(c => parseInt(c.codigo) || 0)) + 1) : '1'
+      // Criar novo registro com código sequencial
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoCartorio')
+      const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      localStorage.setItem('ultimoCodigoCartorio', proximoCodigo.toString())
+      
       const novoCartorio: CartorioSeade = {
         id: Date.now(),
-        codigo: formData.codigo || novoCodigo,
-        ...formData
+        ...formData,
+        codigo: proximoCodigo.toString()
       }
       setCartorios([...cartorios, novoCartorio])
-      alert('✅ Cartório cadastrado com sucesso!')
+      console.log('✅ Cartório cadastrado! Código:', proximoCodigo)
     }
   }
 
@@ -173,8 +177,8 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
     }
   }
 
-  // Função para buscar por código
-  const handleBuscarCodigo = async () => {
+  // Função para buscar por código (não utilizada - busca feita pela tabela)
+  /*const handleBuscarCodigo = async () => {
     const codigo = prompt('Digite o código do cartório:')
     if (!codigo) return
     
@@ -207,7 +211,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
       console.error('Erro ao buscar cartório:', error)
       alert('❌ Erro ao buscar cartório!')
     }
-  }
+  }*/
 
   // Função para buscar por número SEADE
   const handleBuscarSeade = async () => {
@@ -389,8 +393,6 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
     boxShadow: focusedField === fieldName ? `0 0 0 1000px ${focusColor} inset` : 'none'
   })
 
-  const inputStyles = getInputStyles('')
-
   const labelStyles = {
     fontSize: '11px',
     fontWeight: '600' as const,
@@ -453,9 +455,6 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
     lineHeight: '18px'
   })
 
-  const inputWithIconStyles = getInputWithIconStyles('')
-  const selectStyles = getSelectStyles('')
-
   return (
     <BasePage
       title="Cadastro de Cartório (SEADE)"
@@ -500,26 +499,24 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
             {/* Código */}
             <div>
               <label style={labelStyles}>Código</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  value={formData.codigo}
-                  onChange={(e) => {
-                    // Permite apenas números
-                    const valor = e.target.value.replace(/\D/g, '')
-                    setFormData({ ...formData, codigo: valor })
-                  }}
-                  onFocus={() => setFocusedField('codigo')}
-                  onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStyles('codigo')}
-                />
-                <button 
-                  onClick={handleBuscarCodigo} 
-                  style={iconButtonStyles}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                >🔍</button>
-              </div>
+              <input
+                type="text"
+                value={formData.codigo}
+                readOnly
+                disabled
+                onKeyDown={(e) => e.preventDefault()}
+                onPaste={(e) => e.preventDefault()}
+                onCut={(e) => e.preventDefault()}
+                onDrop={(e) => e.preventDefault()}
+                style={{
+                  ...getInputWithIconStyles('codigo'),
+                  backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                  color: currentTheme === 'dark' ? '#666' : '#999',
+                  cursor: 'not-allowed',
+                  opacity: 0.7,
+                  width: '100px'
+                }}
+              />
             </div>
 
             {/* Número SEADE */}

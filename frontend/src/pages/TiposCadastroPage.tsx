@@ -10,20 +10,9 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   
-  const [activeTab, setActiveTab] = useState<'tipoAto' | 'tipoDocumento'>('tipoAto')
+  const [activeTab, setActiveTab] = useState<'tipoAto' | 'tipoDocumento' | 'acessoRapido'>('tipoAto')
   
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
-  
-  const buttonStyles = {
-    padding: '6px 16px',
-    fontSize: '11px',
-    fontWeight: '600' as const,
-    border: 'none',
-    borderRadius: '3px',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    minWidth: '90px'
-  }
 
   const tabStyles = (isActive: boolean) => ({
     padding: '8px 20px',
@@ -56,7 +45,7 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
         padding: '8px'
       }}>
         {/* Abas */}
-        <div style={{ display: 'flex', gap: '0px', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <button
             onClick={() => setActiveTab('tipoAto')}
             style={tabStyles(activeTab === 'tipoAto')}
@@ -73,6 +62,20 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
           >
             Tipo de Ato
           </button>
+          
+          {/* Seta de Fluxo */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: headerColor,
+            textShadow: `0 0 10px ${headerColor}40`
+          }}>
+            ➡️
+          </div>
+          
           <button
             onClick={() => setActiveTab('tipoDocumento')}
             style={tabStyles(activeTab === 'tipoDocumento')}
@@ -89,14 +92,46 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
           >
             Tipo de Documento Digitalizado
           </button>
+          
+          {/* Seta de Fluxo */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: headerColor,
+            textShadow: `0 0 10px ${headerColor}40`
+          }}>
+            ➡️
+          </div>
+          
+          <button
+            onClick={() => setActiveTab('acessoRapido')}
+            style={tabStyles(activeTab === 'acessoRapido')}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'acessoRapido') {
+                e.currentTarget.style.backgroundColor = theme.border
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'acessoRapido') {
+                e.currentTarget.style.backgroundColor = theme.surface
+              }
+            }}
+          >
+            ⚡ Acesso Rápido
+          </button>
         </div>
 
         {/* Conteúdo da aba ativa */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {activeTab === 'tipoAto' ? (
             <TipoAtoContent onClose={onClose} />
-          ) : (
+          ) : activeTab === 'tipoDocumento' ? (
             <TipoDocumentoContent onClose={onClose} />
+          ) : (
+            <AcessoRapidoContent onClose={onClose} />
           )}
         </div>
       </div>
@@ -127,6 +162,8 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
 
   const saveTiposAto = (tipos: any[]) => {
     localStorage.setItem('tiposAto', JSON.stringify(tipos))
+    // Notificar outras janelas sobre a atualização
+    window.dispatchEvent(new CustomEvent('tipos-atualizados'))
   }
 
   const handleNovo = () => {
@@ -138,7 +175,7 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
 
   const handleGravar = () => {
     if (!descricao.trim()) {
-      alert('Por favor, preencha a descrição do tipo de ato.')
+      console.log('⚠️ Por favor, preencha a descrição do tipo de ato.')
       return
     }
 
@@ -166,17 +203,16 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
 
     setTiposAto(novosTipos)
     saveTiposAto(novosTipos)
-    alert('✅ Tipo de Ato gravado com sucesso!')
+    console.log('✅ Tipo de Ato gravado com sucesso!')
   }
 
   const handleExcluir = () => {
     if (selectedId !== null) {
-      if (confirm('Deseja realmente excluir este tipo de ato?')) {
-        const novosTipos = tiposAto.filter(tipo => tipo.id !== selectedId)
-        setTiposAto(novosTipos)
-        saveTiposAto(novosTipos)
-        handleNovo()
-      }
+      const novosTipos = tiposAto.filter(tipo => tipo.id !== selectedId)
+      setTiposAto(novosTipos)
+      saveTiposAto(novosTipos)
+      handleNovo()
+      console.log('✅ Tipo de Ato excluído.')
     }
   }
 
@@ -247,10 +283,17 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
               type="text"
               value={codigo}
               readOnly
+              disabled
+              onKeyDown={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
               style={{
                 ...inputStyles,
-                backgroundColor: theme.border,
-                cursor: 'not-allowed'
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                color: currentTheme === 'dark' ? '#666' : '#999',
+                cursor: 'not-allowed',
+                opacity: 0.7
               }}
             />
           </div>
@@ -543,6 +586,8 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
 
   const saveTiposDocumento = (tipos: any[]) => {
     localStorage.setItem('tiposDocumento', JSON.stringify(tipos))
+    // Notificar outras janelas sobre a atualização
+    window.dispatchEvent(new CustomEvent('tipos-atualizados'))
   }
 
   const handleNovo = () => {
@@ -555,12 +600,12 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
 
   const handleGravar = () => {
     if (!tipoAtoSelecionado.trim()) {
-      alert('⚠️ Por favor, selecione um Tipo de Ato da lista.')
+      console.log('⚠️ Por favor, selecione um Tipo de Ato da lista.')
       return
     }
 
     if (!nomeDocumento.trim()) {
-      alert('⚠️ Por favor, preencha o nome do documento.')
+      console.log('⚠️ Por favor, preencha o nome do documento.')
       return
     }
 
@@ -571,7 +616,7 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
       t.id !== selectedId
     )
     if (tipoExistente) {
-      alert('⚠️ Já existe um Tipo de Documento com este Tipo de Ato e Nome.')
+      console.log('⚠️ Já existe um Tipo de Documento com este Tipo de Ato e Nome.')
       return
     }
 
@@ -598,17 +643,16 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
 
     setTiposDocumento(novosTipos)
     saveTiposDocumento(novosTipos)
-    alert('✅ Tipo de Documento gravado com sucesso!')
+    console.log('✅ Tipo de Documento gravado com sucesso!')
   }
 
   const handleExcluir = () => {
     if (selectedId !== null) {
-      if (confirm('Deseja realmente excluir este tipo de documento?')) {
-        const novosTipos = tiposDocumento.filter(tipo => tipo.id !== selectedId)
-        setTiposDocumento(novosTipos)
-        saveTiposDocumento(novosTipos)
-        handleNovo()
-      }
+      const novosTipos = tiposDocumento.filter(tipo => tipo.id !== selectedId)
+      setTiposDocumento(novosTipos)
+      saveTiposDocumento(novosTipos)
+      handleNovo()
+      console.log('✅ Tipo de Documento excluído.')
     }
   }
 
@@ -680,10 +724,17 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
               type="text"
               value={codigo}
               readOnly
+              disabled
+              onKeyDown={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
               style={{
                 ...inputStyles,
-                backgroundColor: theme.border,
-                cursor: 'not-allowed'
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                color: currentTheme === 'dark' ? '#666' : '#999',
+                cursor: 'not-allowed',
+                opacity: 0.7
               }}
             />
           </div>
@@ -956,6 +1007,326 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
           }}
         >
           ❌ Excluir
+        </button>
+
+        <button
+          onClick={onClose}
+          style={{
+            ...buttonStyles,
+            backgroundColor: '#6c757d',
+            color: 'white'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#495057'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#6c757d'
+          }}
+        >
+          🚪 Retornar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Conteúdo de Acesso Rápido
+function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
+  const { getTheme, currentTheme } = useAccessibility()
+  const theme = getTheme()
+  
+  const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
+
+  // Carregar tipos de ato (apenas leitura - sem setter necessário)
+  const [tiposAto] = useState<any[]>(() => {
+    const stored = localStorage.getItem('tiposAto')
+    return stored ? JSON.parse(stored) : []
+  })
+
+  // Carregar tipos de documento (apenas leitura - sem setter necessário)
+  const [tiposDocumento] = useState<any[]>(() => {
+    const stored = localStorage.getItem('tiposDocumento')
+    return stored ? JSON.parse(stored) : []
+  })
+
+  // Carregar documentos marcados como acesso rápido
+  const [acessoRapido, setAcessoRapido] = useState<any[]>(() => {
+    const stored = localStorage.getItem('acessoRapido')
+    return stored ? JSON.parse(stored) : []
+  })
+
+  const [tipoAtoSelecionado, setTipoAtoSelecionado] = useState('')
+
+  // Filtrar documentos por tipo de ato selecionado
+  const documentosFiltrados = tipoAtoSelecionado 
+    ? tiposDocumento.filter(doc => doc.tipoAto === tipoAtoSelecionado)
+    : []
+
+  // Verificar se um documento está marcado como acesso rápido
+  const isAcessoRapido = (docId: string) => {
+    return acessoRapido.some(item => item.documentoId === docId)
+  }
+
+  // Toggle acesso rápido para um documento
+  const toggleAcessoRapido = (doc: any) => {
+    let novosAcessos: any[]
+    
+    if (isAcessoRapido(doc.id)) {
+      // Remover
+      novosAcessos = acessoRapido.filter(item => item.documentoId !== doc.id)
+    } else {
+      // Adicionar
+      novosAcessos = [
+        ...acessoRapido,
+        {
+          id: Date.now() + Math.random(),
+          tipoAto: doc.tipoAto,
+          documentoId: doc.id,
+          nomeDocumento: doc.nomeDocumento
+        }
+      ]
+    }
+    
+    setAcessoRapido(novosAcessos)
+  }
+
+  const handleGravar = () => {
+    localStorage.setItem('acessoRapido', JSON.stringify(acessoRapido))
+    window.dispatchEvent(new CustomEvent('acesso-rapido-atualizado'))
+    console.log('✅ Configurações de Acesso Rápido gravadas.')
+  }
+
+  const labelStyles = {
+    fontSize: '11px',
+    fontWeight: '600' as const,
+    marginBottom: '4px',
+    color: theme.text,
+    display: 'block'
+  }
+
+  const inputStyles = {
+    width: '100%',
+    padding: '4px 6px',
+    fontSize: '12px',
+    border: `1px solid ${theme.border}`,
+    borderRadius: '3px',
+    backgroundColor: theme.background,
+    color: theme.text,
+    outline: 'none',
+    height: '28px',
+    boxSizing: 'border-box' as const
+  }
+
+  const buttonStyles = {
+    padding: '6px 16px',
+    fontSize: '11px',
+    fontWeight: '600' as const,
+    border: 'none',
+    borderRadius: '3px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minWidth: '90px'
+  }
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      gap: '8px'
+    }}>
+      {/* Cabeçalho com descrição */}
+      <div style={{
+        border: `1px solid ${theme.border}`,
+        borderRadius: '4px',
+        padding: '12px',
+        backgroundColor: theme.surface
+      }}>
+        <div style={{
+          fontSize: '13px',
+          fontWeight: '600',
+          color: theme.text,
+          marginBottom: '8px'
+        }}>
+          ⚡ Configurar Acesso Rápido
+        </div>
+        <div style={{
+          fontSize: '11px',
+          color: theme.textSecondary,
+          lineHeight: '1.5'
+        }}>
+          Marque os documentos que deseja criar automaticamente ao usar o botão "Acesso Rápido" 
+          na tela de Controle de Digitalização. Selecione um Tipo de Ato e marque os documentos desejados.
+        </div>
+      </div>
+
+      {/* Seletor de Tipo de Ato */}
+      <div style={{
+        border: `1px solid ${theme.border}`,
+        borderRadius: '4px',
+        padding: '8px',
+        backgroundColor: theme.surface
+      }}>
+        <label style={labelStyles}>Tipo de Ato (Relacionado)</label>
+        <select
+          value={tipoAtoSelecionado}
+          onChange={(e) => setTipoAtoSelecionado(e.target.value)}
+          style={{
+            ...inputStyles,
+            cursor: 'pointer'
+          }}
+          disabled={tiposAto.length === 0}
+        >
+          <option value="">
+            {tiposAto.length === 0 
+              ? '⚠️ Nenhum Tipo de Ato cadastrado.' 
+              : 'Selecione um Tipo de Ato...'}
+          </option>
+          {tiposAto.map((tipo) => (
+            <option key={tipo.id} value={tipo.descricao}>
+              {tipo.descricao}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Lista de documentos com checkboxes */}
+      <div style={{
+        flex: 1,
+        border: `1px solid ${theme.border}`,
+        borderRadius: '4px',
+        overflow: 'auto',
+        backgroundColor: theme.surface
+      }}>
+        {!tipoAtoSelecionado ? (
+          <div style={{
+            padding: '40px 20px',
+            textAlign: 'center',
+            color: theme.textSecondary,
+            fontSize: '13px',
+            fontStyle: 'italic'
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '8px', opacity: 0.3 }}>⚡</div>
+            <div>Selecione um Tipo de Ato para ver os documentos disponíveis</div>
+          </div>
+        ) : documentosFiltrados.length === 0 ? (
+          <div style={{
+            padding: '40px 20px',
+            textAlign: 'center',
+            color: theme.textSecondary,
+            fontSize: '13px',
+            fontStyle: 'italic'
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '8px', opacity: 0.3 }}>📄</div>
+            <div>Nenhum documento cadastrado para "{tipoAtoSelecionado}"</div>
+          </div>
+        ) : (
+          <div style={{ padding: '12px' }}>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: theme.text,
+              marginBottom: '12px',
+              paddingBottom: '8px',
+              borderBottom: `1px solid ${theme.border}`
+            }}>
+              Documentos de "{tipoAtoSelecionado}" - Marque para Acesso Rápido:
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {documentosFiltrados.map((doc) => (
+                <label
+                  key={doc.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px',
+                    backgroundColor: isAcessoRapido(doc.id) ? `${headerColor}20` : theme.background,
+                    border: `1px solid ${isAcessoRapido(doc.id) ? headerColor : theme.border}`,
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = isAcessoRapido(doc.id) 
+                      ? `${headerColor}30` 
+                      : theme.border
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = isAcessoRapido(doc.id) 
+                      ? `${headerColor}20` 
+                      : theme.background
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isAcessoRapido(doc.id)}
+                    onChange={() => toggleAcessoRapido(doc)}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <div style={{
+                    flex: 1,
+                    fontSize: '12px',
+                    fontWeight: isAcessoRapido(doc.id) ? '600' : '400',
+                    color: theme.text
+                  }}>
+                    {doc.nomeDocumento}
+                    {isAcessoRapido(doc.id) && (
+                      <span style={{ 
+                        marginLeft: '8px', 
+                        fontSize: '14px',
+                        color: headerColor 
+                      }}>
+                        ⚡
+                      </span>
+                    )}
+                  </div>
+                  {doc.observacoes && (
+                    <div style={{
+                      fontSize: '10px',
+                      color: theme.textSecondary,
+                      fontStyle: 'italic',
+                      maxWidth: '200px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {doc.observacoes}
+                    </div>
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Botões de Ação */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        justifyContent: 'center',
+        paddingTop: '4px'
+      }}>
+        <button
+          onClick={handleGravar}
+          style={{
+            ...buttonStyles,
+            backgroundColor: '#10b981',
+            color: 'white'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#059669'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#10b981'
+          }}
+        >
+          💾 Gravar
         </button>
 
         <button

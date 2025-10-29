@@ -41,11 +41,12 @@ function createMainWindow() {
   // Carregar a aplicação
   if (isDev) {
     // Modo desenvolvimento - carregar do servidor local
-    mainWindow.loadURL('http://localhost:3000')
+    mainWindow.loadURL('http://localhost:3000#autoOpen=controle-digitalizacao')
     mainWindow.webContents.openDevTools()
   } else {
     // Modo produção - carregar arquivos estáticos
-    mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'))
+    const indexPath = path.join(__dirname, '../frontend/dist/index.html')
+    mainWindow.loadFile(indexPath, { hash: 'autoOpen=controle-digitalizacao' })
   }
 
   // Remover menu nativo completamente

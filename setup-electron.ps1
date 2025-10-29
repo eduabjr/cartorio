@@ -60,9 +60,9 @@ try {
 # 5. Instalar dependências do Electron
 Write-Host "`n5. Instalando dependencias do Electron..." -ForegroundColor Yellow
 try {
-    cd electron
+    Set-Location electron
     npm install
-    cd ..
+    Set-Location ..
     Write-Host "✅ Dependencias do Electron instaladas." -ForegroundColor Green
 } catch {
     Write-Host "❌ Erro ao instalar dependencias do Electron." -ForegroundColor Red
@@ -108,9 +108,9 @@ Write-Host "   • Verifique se o dispositivo e reconhecido pelo sistema operaci
 # 9. Testar instalação
 Write-Host "`n9. Testando instalacao do Electron..." -ForegroundColor Yellow
 try {
-    cd electron
-    $testResult = npm run start --dry-run
-    cd ..
+    Set-Location electron
+    $null = npm run start --dry-run
+    Set-Location ..
     Write-Host "✅ Electron configurado corretamente." -ForegroundColor Green
 } catch {
     Write-Host "⚠️ Erro ao testar Electron. Verifique as dependencias." -ForegroundColor DarkYellow

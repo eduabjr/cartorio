@@ -439,10 +439,6 @@ select {
 }
 
 /* Otimizações para leitores de tela */
-.screen-reader-optimized {
-  /* Garantir que elementos interativos sejam acessíveis */
-}
-
 .screen-reader-optimized button,
 .screen-reader-optimized textarea {
   min-height: 44px; /* Tamanho mínimo recomendado para toque */

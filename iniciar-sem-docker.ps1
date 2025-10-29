@@ -23,7 +23,7 @@ Write-Host "[1/7] Verificando MySQL..." -ForegroundColor Yellow
 
 # Testar conexão MySQL
 try {
-    $mysqlTest = & "C:\xampp\mysql\bin\mysql.exe" -u root -e "SELECT 1;" 2>&1
+    $null = & "C:\xampp\mysql\bin\mysql.exe" -u root -e "SELECT 1;" 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  OK - MySQL conectado" -ForegroundColor Green
     } else {

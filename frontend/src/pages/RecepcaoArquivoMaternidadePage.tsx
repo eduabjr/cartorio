@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 
@@ -20,6 +20,7 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
   
   const [caminhoArquivo, setCaminhoArquivo] = useState('')
   const [nascidos, setNascidos] = useState<Nascido[]>([])
+  const [importingIndex, setImportingIndex] = useState<number | null>(null)
 
   const buttonStyles = {
     padding: '8px 16px',
@@ -54,66 +55,98 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
       input.click()
     } catch (error) {
       console.error('Erro ao selecionar arquivo:', error)
-      alert('Erro ao selecionar arquivo.')
     }
   }
 
-  const processarArquivo = async (file?: File) => {
+  const processarArquivo = async (_file?: File) => {
     try {
       // Em produção, aqui seria feito o parse do JSON real
       // Por enquanto, simula a importação de dados
       
       const dadosSimulados: Nascido[] = [
-        { id: '1', transferido: true, nome: 'MARIA CLARA SANTOS OLIVEIRA' },
-        { id: '2', transferido: true, nome: 'JOÃO PEDRO SILVA COSTA' },
-        { id: '3', transferido: true, nome: 'ANA JULIA RODRIGUES SOUZA' },
-        { id: '4', transferido: true, nome: 'MIGUEL HENRIQUE ALVES LIMA' },
-        { id: '5', transferido: true, nome: 'SOFIA GABRIELA FERREIRA PINTO' },
-        { id: '6', transferido: true, nome: 'LUCAS MATHEUS PEREIRA SANTOS' },
-        { id: '7', transferido: true, nome: 'VALENTINA ISABELLA MARTINS ROCHA' },
-        { id: '8', transferido: true, nome: 'GABRIEL EDUARDO SOUSA MENDES' },
-        { id: '9', transferido: true, nome: 'ALICE BEATRIZ CARVALHO DIAS' },
-        { id: '10', transferido: true, nome: 'RAFAEL GUSTAVO ARAUJO BARBOSA' },
-        { id: '11', transferido: true, nome: 'LAURA VITÓRIA RIBEIRO CARDOSO' },
-        { id: '12', transferido: true, nome: 'DAVI LUCAS NASCIMENTO FREITAS' },
-        { id: '13', transferido: true, nome: 'HELENA SOPHIA CAMPOS MELO' },
-        { id: '14', transferido: true, nome: 'PEDRO HENRIQUE GOMES TEIXEIRA' },
-        { id: '15', transferido: true, nome: 'ISABELA MARIA MONTEIRO VIEIRA' },
-        { id: '16', transferido: true, nome: 'ARTHUR LORENZO CORREIA NUNES' },
-        { id: '17', transferido: true, nome: 'MANUELA CECÍLIA DUARTE RAMOS' },
-        { id: '18', transferido: true, nome: 'BERNARDO FELIPE MOREIRA Castro' },
-        { id: '19', transferido: true, nome: 'MARIANA LETÍCIA BARROS AZEVEDO' },
-        { id: '20', transferido: true, nome: 'ENZO GABRIEL LOPES FARIAS' }
+        { id: '1', transferido: false, nome: 'MARIA CLARA SANTOS OLIVEIRA' },
+        { id: '2', transferido: false, nome: 'JOÃO PEDRO SILVA COSTA' },
+        { id: '3', transferido: false, nome: 'ANA JULIA RODRIGUES SOUZA' },
+        { id: '4', transferido: false, nome: 'MIGUEL HENRIQUE ALVES LIMA' },
+        { id: '5', transferido: false, nome: 'SOFIA GABRIELA FERREIRA PINTO' },
+        { id: '6', transferido: false, nome: 'LUCAS MATHEUS PEREIRA SANTOS' },
+        { id: '7', transferido: false, nome: 'VALENTINA ISABELLA MARTINS ROCHA' },
+        { id: '8', transferido: false, nome: 'GABRIEL EDUARDO SOUSA MENDES' },
+        { id: '9', transferido: false, nome: 'ALICE BEATRIZ CARVALHO DIAS' },
+        { id: '10', transferido: false, nome: 'RAFAEL GUSTAVO ARAUJO BARBOSA' },
+        { id: '11', transferido: false, nome: 'LAURA VITÓRIA RIBEIRO CARDOSO' },
+        { id: '12', transferido: false, nome: 'DAVI LUCAS NASCIMENTO FREITAS' },
+        { id: '13', transferido: false, nome: 'HELENA SOPHIA CAMPOS MELO' },
+        { id: '14', transferido: false, nome: 'PEDRO HENRIQUE GOMES TEIXEIRA' },
+        { id: '15', transferido: false, nome: 'ISABELA MARIA MONTEIRO VIEIRA' },
+        { id: '16', transferido: false, nome: 'ARTHUR LORENZO CORREIA NUNES' },
+        { id: '17', transferido: false, nome: 'MANUELA CECÍLIA DUARTE RAMOS' },
+        { id: '18', transferido: false, nome: 'BERNARDO FELIPE MOREIRA Castro' },
+        { id: '19', transferido: false, nome: 'MARIANA LETÍCIA BARROS AZEVEDO' },
+        { id: '20', transferido: false, nome: 'ENZO GABRIEL LOPES FARIAS' }
       ]
 
+      // Inicializar lista com todos desmarcados
       setNascidos(dadosSimulados)
-      alert(`✅ Arquivo carregado com sucesso!\n\n${dadosSimulados.length} registros encontrados.`)
+      
+      // Animar importação item por item
+      for (let i = 0; i < dadosSimulados.length; i++) {
+        setImportingIndex(i)
+        await new Promise(resolve => setTimeout(resolve, 200)) // 200ms por item
+        
+        // Marcar item como transferido
+        setNascidos(prev => prev.map((item, idx) => 
+          idx === i ? { ...item, transferido: true } : item
+        ))
+      }
+      
+      setImportingIndex(null)
+      console.log(`✅ Arquivo carregado com sucesso! ${dadosSimulados.length} registros encontrados.`)
     } catch (error) {
-      console.error('Erro ao processar arquivo:', error)
-      alert('Erro ao processar o arquivo JSON.')
+      console.error('Erro ao processar o arquivo JSON:', error)
+      setImportingIndex(null)
     }
   }
 
-  const handleImportarArquivo = async () => {
+  // Função não utilizada - importação automática ao selecionar arquivo
+  /*const handleImportarArquivo = async () => {
     if (!caminhoArquivo) {
-      alert('Por favor, selecione um arquivo JSON primeiro.')
+      console.log('⚠️ Nenhum arquivo selecionado.')
       return
     }
 
     // Processar arquivo novamente (caso o usuário clique manualmente)
     await processarArquivo()
+  }*/
+
+  const handleBaixarSelecionados = async () => {
+    const selecionados = nascidos.filter(n => n.transferido)
+    
+    if (selecionados.length === 0) {
+      console.log('⚠️ Nenhum registro selecionado para baixar.')
+      return
+    }
+
+    console.log(`✅ Baixando ${selecionados.length} registro(s) selecionado(s):`)
+    
+    // Animar baixando cada item selecionado
+    for (let i = 0; i < nascidos.length; i++) {
+      // Só processar se estiver selecionado
+      if (nascidos[i].transferido) {
+        setImportingIndex(i)
+        await new Promise(resolve => setTimeout(resolve, 300)) // 300ms por item
+        console.log(`  - ${nascidos[i].nome}`)
+      }
+    }
+    
+    setImportingIndex(null)
+    console.log('✅ Download concluído!')
   }
 
   const handleLimpar = () => {
-    if (nascidos.length > 0) {
-      if (confirm('Deseja realmente limpar todos os dados importados?')) {
-        setNascidos([])
-        setCaminhoArquivo('')
-        alert('Dados limpos com sucesso!')
-      }
-    } else {
-      setCaminhoArquivo('')
-    }
+    setNascidos([])
+    setCaminhoArquivo('')
+    console.log('✅ Dados limpos.')
   }
 
   const handleMarcarTodos = () => {
@@ -238,6 +271,16 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
                       fontWeight: '600',
                       fontSize: '12px',
                       borderRight: `1px solid rgba(255,255,255,0.2)`,
+                      width: '50px'
+                    }}>
+                      
+                    </th>
+                    <th style={{
+                      padding: '10px',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      fontSize: '12px',
+                      borderRight: `1px solid rgba(255,255,255,0.2)`,
                       width: '120px'
                     }}>
                       Transferido
@@ -269,6 +312,22 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
                           : theme.background
                       }}
                     >
+                      <td style={{
+                        padding: '8px',
+                        textAlign: 'center',
+                        borderRight: `1px solid ${theme.border}`
+                      }}>
+                        {importingIndex === index && (
+                          <div style={{
+                            fontSize: '20px',
+                            fontWeight: 'bold',
+                            color: headerColor,
+                            animation: 'pulse 0.5s ease-in-out infinite'
+                          }}>
+                            ➡️
+                          </div>
+                        )}
+                      </td>
                       <td style={{
                         padding: '8px',
                         textAlign: 'center',
@@ -381,7 +440,7 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
           </button>
 
           <button
-            onClick={handleImportarArquivo}
+            onClick={nascidos.length > 0 ? handleBaixarSelecionados : handleSelecionarArquivo}
             style={{
               ...buttonStyles,
               backgroundColor: theme.primary,
@@ -394,7 +453,7 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
               e.currentTarget.style.opacity = '1'
             }}
           >
-            📂 Importar Arquivo
+            {nascidos.length > 0 ? '⬇️ Baixar Selecionados' : '📂 Importar Arquivo'}
           </button>
 
           <button
@@ -427,7 +486,7 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
               color: theme.text,
               fontWeight: '600'
             }}>
-              Registros: {nascidos.length}
+              Registros: {nascidos.length} | Selecionados: {nascidos.filter(n => n.transferido).length}
             </div>
           )}
         </div>

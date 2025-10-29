@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { nvdaService } from '../services/NVDAService'
-import { validateTheme, runThemeValidationTests } from '../utils/themeValidator'
+import { runThemeValidationTests } from '../utils/themeValidator'
 
 export interface AccessibilitySettings {
   highContrast: boolean
@@ -294,9 +294,9 @@ export function useAccessibility() {
     return 'light'
   })
   
-  // 🔒 CORREÇÃO CRÍTICA: Inicializar como true pois as variáveis CSS já foram aplicadas
+  // 🔒 CORREÇÃO CRÍTICA: Sempre true pois as variáveis CSS já foram aplicadas
   // no useState initializer do currentTheme (linhas 282-291)
-  const [isThemeLoaded, setIsThemeLoaded] = useState(true)
+  const isThemeLoaded = true
 
   // 🔒 PROTEÇÃO: Validar temas na inicialização
   useEffect(() => {

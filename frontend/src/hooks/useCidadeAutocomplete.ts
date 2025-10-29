@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // Base de cidades brasileiras (principais cidades por estado)
 const cidadesPorEstado: Record<string, string[]> = {

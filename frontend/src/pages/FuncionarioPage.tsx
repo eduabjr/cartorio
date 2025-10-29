@@ -42,7 +42,6 @@ import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
 import { FuncionarioLookup } from '../components/FuncionarioLookup'
 import { funcionarioService, Funcionario } from '../services/FuncionarioService'
-import { CepService, CepData } from '../services/CepService'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
 import { useFieldValidation } from '../hooks/useFieldValidation'
@@ -50,10 +49,9 @@ import { validarCPF, formatCPF } from '../utils/cpfValidator'
 
 interface FuncionarioPageProps {
   onClose: () => void
-  resetToOriginalPosition?: () => void
 }
 
-export function FuncionarioPage({ onClose, resetToOriginalPosition }: FuncionarioPageProps) {
+export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   
@@ -66,10 +64,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     ordemSinalPublico: '99',
     emAtividade: true,
     nome: '',
-    logradouro: '',
+    nomeMin: '',
+    prenome: '',
     endereco: '',
-    numero: '',
-    complemento: '',
     bairro: '',
     cidade: '',
     cep: '',
@@ -79,24 +76,31 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     celular: '',
     nascimento: '',
     rg: '',
-    orgaoRg: '',
+    orgaoRg: '',  // Campo adicional não no tipo Funcionario (compatibilidade UI)
     mae: '',
     cpf: '',
     pai: '',
+    cargo: '',
     assinante: false,
+    cargoMin: '',
     cargoCivil: '',
+    cargoMin2: '',
     salario: '',
+    comissao: '',
     admissao: '',
     demissao: '',
     login: '',
     senha: '',
-    observacao: ''
+    observacao: '',
+    // Campos adicionais não no tipo Funcionario (compatibilidade UI)
+    logradouro: '',
+    numero: '',
+    complemento: ''
   })
 
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
   const [showLookup, setShowLookup] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingCep, setIsLoadingCep] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
 
   // 🎨 Adicionar estilos CSS dinâmicos para foco (mais robusto que inline)
@@ -138,7 +142,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   // ✨ Hook de validação com regras globais
   const { 
     handleChange: handleFieldChange, 
-    getValue, 
     getError,
     loadingCEP 
   } = useFieldValidation(formData, setFormData)
@@ -157,14 +160,14 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     }
   }
 
-  // Função para formatar CEP
-  const formatCEP = (value: string) => {
+  // Função para formatar CEP (não utilizada - formatação feita pelo hook de validação)
+  /*const formatCEP = (value: string) => {
     const numbers = value.replace(/\D/g, '')
     if (numbers.length <= 8) {
       return numbers.replace(/(\d{5})(\d{3})/, '$1-$2')
     }
     return value
-  }
+  }*/
 
   // Função para formatar telefone
   const formatTelefone = (value: string) => {
@@ -190,8 +193,8 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     handleInputChange(field, formattedValue)
   }
 
-  // Função para buscar CEP
-  const handleBuscarCep = async (cep: string) => {
+  // Função para buscar CEP (não utilizada - busca de CEP feita pelo hook de validação)
+  /*const handleBuscarCep = async (cep: string) => {
     if (!CepService.validarCep(cep)) {
       return
     }
@@ -224,7 +227,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     } finally {
       setIsLoadingCep(false)
     }
-  }
+  }*/
 
   // Função para escanear documento com câmera/scanner
   const handleScanner = () => {
@@ -284,37 +287,50 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     try {
       // Validar dados obrigatórios
       if (!formData.nome.trim()) {
-        alert('Nome é obrigatório!')
+        console.log('❌ Nome é obrigatório!')
         return
       }
 
       if (!formData.cpf.trim()) {
-        alert('CPF é obrigatório!')
+        console.log('❌ CPF é obrigatório!')
         return
       }
 
       if (!funcionarioService.validateCPF(formData.cpf)) {
-        alert('CPF inválido!')
+        console.log('❌ CPF inválido!')
         return
       }
 
       if (formData.email && !funcionarioService.validateEmail(formData.email)) {
-        alert('Email inválido!')
+        console.log('❌ Email inválido!')
         return
       }
 
-      // Salvar funcionário
-      const response = await funcionarioService.createFuncionario(formData)
+      // Gerar código sequencial se novo registro (código vazio)
+      let codigoFinal = formData.codigo
+      if (!formData.codigo || formData.codigo === '0' || formData.codigo === '') {
+        const ultimoCodigo = localStorage.getItem('ultimoCodigoFuncionario')
+        const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+        
+        codigoFinal = proximoCodigo.toString()
+        localStorage.setItem('ultimoCodigoFuncionario', codigoFinal)
+        
+        setFormData(prev => ({ ...prev, codigo: codigoFinal }))
+        console.log('🆔 Código gerado:', codigoFinal)
+      }
+
+      // Salvar funcionário (remover campos extras de UI antes de enviar)
+      const { orgaoRg, logradouro, numero, complemento, ...funcionarioData } = formData
+      const response = await funcionarioService.createFuncionario({...funcionarioData, codigo: codigoFinal})
       
       if (response.success) {
-        alert(response.message || 'Funcionário salvo com sucesso!')
+        console.log(response.message || 'Funcionário salvo com sucesso!')
         handleClear() // Limpar formulário após salvar
       } else {
-        alert(response.error || 'Erro ao salvar funcionário!')
+        console.log(response.error || 'Erro ao salvar funcionário!')
       }
     } catch (error) {
       console.error('Erro ao salvar funcionário:', error)
-      alert('Erro ao salvar funcionário!')
     } finally {
       setIsLoading(false)
     }
@@ -323,7 +339,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
   // Função para criar novo funcionário
   const handleNew = () => {
     handleClear()
-    alert('✅ Formulário limpo para novo cadastro')
+    console.log('✅ Formulário limpo para novo cadastro')
   }
 
   // Função para limpar formulário
@@ -333,10 +349,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       ordemSinalPublico: '99',
       emAtividade: true,
       nome: '',
-      logradouro: '',
+      nomeMin: '',
+      prenome: '',
       endereco: '',
-      numero: '',
-      complemento: '',
       bairro: '',
       cidade: '',
       cep: '',
@@ -350,14 +365,21 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       mae: '',
       cpf: '',
       pai: '',
+      cargo: '',
       assinante: false,
+      cargoMin: '',
       cargoCivil: '',
+      cargoMin2: '',
       salario: '',
+      comissao: '',
       admissao: '',
       demissao: '',
       login: '',
       senha: '',
-      observacao: ''
+      observacao: '',
+      logradouro: '',
+      numero: '',
+      complemento: ''
     })
   }
 
@@ -608,10 +630,9 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       ...formData,
       codigo: funcionario.codigo,
       nome: funcionario.nome,
-      logradouro: funcionario.logradouro || '',
+      nomeMin: funcionario.nomeMin,
+      prenome: funcionario.prenome,
       endereco: funcionario.endereco,
-      numero: funcionario.numero || '',
-      complemento: funcionario.complemento || '',
       bairro: funcionario.bairro,
       cidade: funcionario.cidade,
       cep: funcionario.cep,
@@ -621,18 +642,26 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
       celular: funcionario.celular,
       nascimento: funcionario.nascimento,
       rg: funcionario.rg,
-      orgaoRg: funcionario.orgaoRg || '',
       mae: funcionario.mae,
       cpf: funcionario.cpf,
       pai: funcionario.pai,
+      cargo: funcionario.cargo,
       assinante: funcionario.assinante,
+      cargoMin: funcionario.cargoMin,
       cargoCivil: funcionario.cargoCivil,
+      cargoMin2: funcionario.cargoMin2,
       salario: funcionario.salario,
+      comissao: funcionario.comissao,
       admissao: funcionario.admissao,
       demissao: funcionario.demissao,
       login: funcionario.login,
       senha: funcionario.senha,
-      observacao: funcionario.observacao
+      observacao: funcionario.observacao,
+      // Campos extras de UI não vindos do backend
+      orgaoRg: '',
+      logradouro: '',
+      numero: '',
+      complemento: ''
     })
   }
 
@@ -653,13 +682,13 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     boxSizing: 'border-box'
   }
 
-  const titleStyles: React.CSSProperties = {
+  /*const titleStyles: React.CSSProperties = {
     fontSize: getRelativeFontSize(18),
     fontWeight: 'bold',
     marginBottom: '4px',  // Reduzido de 10px para 4px
     color: theme.text,
     textAlign: 'center'
-  }
+  }*/
 
 
   // 🔒 BLOQUEIO: formContainerStyles - NÃO MODIFICAR padding ou flexShrink
@@ -698,7 +727,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     minWidth: '0'  // Permite encolher completamente
   }
 
-  const rowStyles: React.CSSProperties = {
+  /*const rowStyles: React.CSSProperties = {
     display: 'flex',
     gap: '4px',  // Reduzido de 6px para 4px
     marginBottom: '1px',  // Reduzido de 2px para 1px
@@ -706,7 +735,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     flexWrap: 'nowrap',  // NÃO quebra linha - mantém campos juntos
     minWidth: '0',
     flexShrink: 1  // Permite encolher proporcionalmente
-  }
+  }*/
 
   // 🔒 BLOQUEIO: row1Styles - NUNCA modificar flexWrap, gap ou justifyContent
   const row1Styles: React.CSSProperties = {
@@ -835,16 +864,16 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     display: 'flex',
     justifyContent: 'center',
     gap: '12px',  // Reduzido de 14px para 12px
-    marginTop: '-4px',  // Reduzido de -2px para -4px (sobe mais os botões)
-    paddingTop: '2px',  // Mantido
+    marginTop: '8px',  // Espaço entre formulário e botões
+    paddingTop: '8px',  // Padding superior
     borderTop: `1px solid ${theme.border}`,
     flexWrap: 'nowrap' as const,  // 🔒 FIXO - NÃO quebra - botões ficam na mesma linha
     flexShrink: 0,  // 🔒 FIXO - Botões não encolhem
-    minHeight: '36px'  // Reduzido de 40px para 36px
+    minHeight: '40px'  // Aumentado para acomodar botões maiores
   }
 
   const buttonStyles: React.CSSProperties = {
-    padding: '6px 12px',  // Reduzido de 10px 16px para 6px 12px
+    padding: '10px 18px',  // Aumentado para botões maiores
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer',
@@ -873,7 +902,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     color: '#dc2626' // Vermelho para "Em atividade?"
   }
 
-  const lookupButtonStyles: React.CSSProperties = {
+  /*const lookupButtonStyles: React.CSSProperties = {
     padding: '2px 6px',
     border: 'none',
     borderRadius: '3px',
@@ -893,7 +922,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     backgroundColor: theme.border,
     color: theme.text,
     boxSizing: 'border-box'
-  }
+  }*/
 
   const iconButtonStyles = {
     position: 'absolute' as const,
@@ -939,7 +968,6 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
     <BasePage
       title="Funcionário"
       onClose={onClose}
-      resetToOriginalPosition={resetToOriginalPosition}
       headerColor={headerColor}
       height="540px"  // Reduzido de 600px para 540px
       width="900px"
@@ -986,8 +1014,21 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                   <input
                     type="text"
                     value={formData.codigo}
-                    onChange={(e) => handleInputChange('codigo', e.target.value)}
-                      style={{...inputStyles, flex: 1, minWidth: '50px'}}
+                    readOnly
+                    disabled
+                    onKeyDown={(e) => e.preventDefault()}
+                    onPaste={(e) => e.preventDefault()}
+                    onCut={(e) => e.preventDefault()}
+                    onDrop={(e) => e.preventDefault()}
+                    style={{
+                      ...inputStyles, 
+                      flex: 1, 
+                      minWidth: '50px',
+                      backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                      color: currentTheme === 'dark' ? '#666' : '#999',
+                      cursor: 'not-allowed',
+                      opacity: 0.7
+                    }}
                     placeholder="0"
                   />
                 </div>
@@ -1042,7 +1083,7 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                     <input
                       type="text"
                       value={formData.nome}
-                      onChange={(e) => handleInputChange('nome', e.target.value)}
+                      onChange={(e) => handleInputChange('nome', e.target.value.toUpperCase())}
                       onFocus={() => setFocusedField('nome')}
                       onBlur={() => setFocusedField(null)}
                       className="funcionario-input"
@@ -1270,11 +1311,11 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 <input
                   type="text"
                   value={formData.pai}
-                  onChange={(e) => handleInputChange('pai', e.target.value)}
+                  onChange={(e) => handleInputChange('pai', e.target.value.toUpperCase())}
                   onFocus={() => setFocusedField('pai')}
                   onBlur={() => setFocusedField(null)}
                   className="funcionario-input"
-                  style={getInputStyles('pai')}
+                  style={{...getInputStyles('pai'), textTransform: 'uppercase'}}
                 />
               </div>
 
@@ -1283,11 +1324,11 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 <input
                   type="text"
                   value={formData.mae}
-                  onChange={(e) => handleInputChange('mae', e.target.value)}
+                  onChange={(e) => handleInputChange('mae', e.target.value.toUpperCase())}
                   onFocus={() => setFocusedField('mae')}
                   onBlur={() => setFocusedField(null)}
                   className="funcionario-input"
-                  style={getInputStyles('mae')}
+                  style={{...getInputStyles('mae'), textTransform: 'uppercase'}}
                 />
                 </div>
               </div>
@@ -1392,16 +1433,18 @@ export function FuncionarioPage({ onClose, resetToOriginalPosition }: Funcionari
                 <div style={{...fieldStyles, width: '25%'}}>
                 <label style={labelStyles}>Salário</label>
                 <input
-                  type="number"
+                  type="text"
                   value={formData.salario}
-                  onChange={(e) => handleInputChange('salario', e.target.value)}
+                  onChange={(e) => {
+                    // Permite apenas números e vírgula/ponto
+                    const valor = e.target.value.replace(/[^\d.,]/g, '')
+                    handleInputChange('salario', valor)
+                  }}
                   onFocus={() => setFocusedField('salario')}
                   onBlur={() => setFocusedField(null)}
                   className="funcionario-input"
                   style={getInputStyles('salario')}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
+                  placeholder="0,00"
                 />
               </div>
 

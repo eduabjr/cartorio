@@ -39,7 +39,6 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
 
   const [selectedEstabelecimento, setSelectedEstabelecimento] = useState<number>(-1)
   const [focusedField, setFocusedField] = useState<string | null>(null)
-  const [updateCount, setUpdateCount] = useState(0)
   const [buscandoCEP, setBuscandoCEP] = useState(false)
   const [sugestoesCidade, setSugestoesCidade] = useState<string[]>([])
   const [showSugestoes, setShowSugestoes] = useState(false)
@@ -47,13 +46,11 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
 
   useEffect(() => {
     console.log('🎨 HospitalCemiterioPage - Tema mudou para:', currentTheme)
-    setUpdateCount(prev => prev + 1)
   }, [currentTheme])
 
   useEffect(() => {
     const handleThemeChange = (e: any) => {
       console.log('📢 HospitalCemiterioPage - Recebeu evento theme-changed:', e.detail)
-      setUpdateCount(prev => prev + 1)
     }
     window.addEventListener('theme-changed', handleThemeChange)
     return () => window.removeEventListener('theme-changed', handleThemeChange)
@@ -113,7 +110,6 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
 
       if (data.erro) {
         console.log('❌ CEP não encontrado')
-        alert('⚠️ CEP não encontrado!')
         setBuscandoCEP(false)
         return
       }
@@ -153,7 +149,6 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
       setBuscandoCEP(false)
     } catch (error) {
       console.error('❌ Erro ao buscar CEP:', error)
-      alert('⚠️ Erro ao buscar CEP. Verifique sua conexão.')
       setBuscandoCEP(false)
     }
   }
@@ -357,15 +352,15 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
   const handleGravar = () => {
     // Validar campos obrigatórios
     if (!formData.descricao.trim()) {
-      alert('⚠️ Campo "Descrição" é obrigatório!')
+      console.log('⚠️ Campo "Descrição" é obrigatório!')
       return
     }
     if (!formData.cidade.trim()) {
-      alert('⚠️ Campo "Cidade" é obrigatório!')
+      console.log('⚠️ Campo "Cidade" é obrigatório!')
       return
     }
     if (!formData.uf.trim()) {
-      alert('⚠️ Campo "UF" é obrigatório!')
+      console.log('⚠️ Campo "UF" é obrigatório!')
       return
     }
 
@@ -378,14 +373,17 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
       novosEstabelecimentos[selectedEstabelecimento] = { ...formData }
       setEstabelecimentos(novosEstabelecimentos)
       console.log('✅ Estabelecimento atualizado!')
-      alert('✅ Estabelecimento atualizado com sucesso!')
     } else {
-      // Criando novo estabelecimento - gerar código automaticamente
-      const novoCodigo = (estabelecimentos.length + 1).toString().padStart(3, '0')
+      // Criando novo estabelecimento - gerar código sequencial
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoEstabelecimento')
+      const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      const novoCodigo = proximoCodigo.toString().padStart(3, '0')
+      localStorage.setItem('ultimoCodigoEstabelecimento', proximoCodigo.toString())
+      
       const novoEstabelecimento = { ...formData, codigo: novoCodigo }
       setEstabelecimentos([...estabelecimentos, novoEstabelecimento])
-      console.log('✅ Novo estabelecimento adicionado com código:', novoCodigo)
-      alert(`✅ Estabelecimento salvo com sucesso! Código: ${novoCodigo}`)
+      console.log('✅ Estabelecimento salvo! Código:', novoCodigo)
     }
 
     handleNovo()
@@ -393,16 +391,14 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
 
   const handleExcluir = () => {
     if (selectedEstabelecimento < 0) {
-      alert('⚠️ Selecione um estabelecimento para excluir!')
+      console.log('⚠️ Selecione um estabelecimento para excluir!')
       return
     }
 
-    if (confirm('⚠️ Deseja realmente excluir este estabelecimento?')) {
-      const novosEstabelecimentos = estabelecimentos.filter((_, index) => index !== selectedEstabelecimento)
-      setEstabelecimentos(novosEstabelecimentos)
-      handleNovo()
-      alert('✅ Estabelecimento excluído com sucesso!')
-    }
+    const novosEstabelecimentos = estabelecimentos.filter((_, index) => index !== selectedEstabelecimento)
+    setEstabelecimentos(novosEstabelecimentos)
+    handleNovo()
+    console.log('✅ Estabelecimento excluído.')
   }
 
   const handleSelecionarEstabelecimento = (index: number) => {
@@ -594,12 +590,18 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
               type="text"
               value={formData.codigo}
               readOnly
+              disabled
+              onKeyDown={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
               style={{ 
                 ...getInputStyles('codigo'), 
                 width: '100%',
-                backgroundColor: theme.surface,
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                color: currentTheme === 'dark' ? '#666' : '#999',
                 cursor: 'not-allowed',
-                opacity: 0.8
+                opacity: 0.7
               }}
             />
           </div>

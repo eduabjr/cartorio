@@ -44,7 +44,6 @@ export function MaternidadePage() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
-  const [syncStatus, setSyncStatus] = useState<{ sucesso: number, erro: number } | null>(null)
   const [nascimentos, setNascimentos] = useState<NascimentoData[]>([])
 
   useEffect(() => {
@@ -96,7 +95,6 @@ export function MaternidadePage() {
     setIsLoading(true)
     try {
       const resultado = await offlineService.sincronizar()
-      setSyncStatus(resultado)
       await carregarNascimentos()
       await verificarConexao()
       alert(`🔄 Sincronização concluída!\n✅ Sucessos: ${resultado.sucesso}\n❌ Erros: ${resultado.erro}`)

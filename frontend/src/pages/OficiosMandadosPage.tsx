@@ -42,6 +42,9 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
 
   // Estado para campo em foco
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  
+  // Estado para controlar se há um registro selecionado
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   // Estado para controlar a aba ativa
   const [activeTab, setActiveTab] = useState<'cadastro' | 'digitalizacao'>('cadastro')
@@ -80,20 +83,39 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
       cumprimentoFolhas: '',
       cumprimentoTermo: ''
     })
+    setSelectedId(null)
   }
 
   // Função para gravar registro
   const handleGravar = () => {
+    // Gerar sequência automática se novo registro
+    let sequenciaFinal = formData.sequencia
+    if (!selectedId || formData.sequencia === '') {
+      const ultimaSequencia = localStorage.getItem('ultimaSequenciaOficio')
+      const proximaSequencia = ultimaSequencia ? parseInt(ultimaSequencia) + 1 : 1
+      
+      sequenciaFinal = proximaSequencia.toString()
+      localStorage.setItem('ultimaSequenciaOficio', sequenciaFinal)
+      
+      const newId = Date.now().toString()
+      setSelectedId(newId)
+      setFormData(prev => ({ ...prev, sequencia: sequenciaFinal }))
+      console.log('🆔 Sequência gerada:', sequenciaFinal)
+    }
+    
     console.log('Salvando ofício/mandado:', formData)
-    alert('✅ Ofício/Mandado salvo com sucesso!')
+    console.log('✅ Ofício/Mandado salvo com sucesso!')
   }
 
   // Função para excluir registro
   const handleExcluir = () => {
-    if (confirm('⚠️ Deseja realmente excluir este ofício/mandado?')) {
-      handleNovo()
-      alert('✅ Ofício/Mandado excluído com sucesso!')
+    if (!selectedId) {
+      console.log('⚠️ Nenhum ofício/mandado selecionado para excluir.')
+      return
     }
+    
+    handleNovo()
+    console.log('✅ Ofício/Mandado excluído.')
   }
 
   // Funções para Digitalização
@@ -869,10 +891,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                 <input
                   type="text"
                   value={formData.parte1}
-                  onChange={(e) => setFormData({ ...formData, parte1: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, parte1: e.target.value.toUpperCase() })}
                   onFocus={() => setFocusedField('parte1')}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStylesEdge('parte1')}
+                  style={{...getInputWithIconStylesEdge('parte1'), textTransform: 'uppercase'}}
                 />
                 <button 
                   style={iconButtonStylesEdge}
@@ -890,10 +912,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
                 <input
                   type="text"
                   value={formData.parte2}
-                  onChange={(e) => setFormData({ ...formData, parte2: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, parte2: e.target.value.toUpperCase() })}
                   onFocus={() => setFocusedField('parte2')}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputWithIconStylesEdge('parte2')}
+                  style={{...getInputWithIconStylesEdge('parte2'), textTransform: 'uppercase'}}
                 />
                 <button 
                   style={iconButtonStylesEdge}

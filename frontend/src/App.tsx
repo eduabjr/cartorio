@@ -21,6 +21,7 @@ import { LocalizacaoCadastroPage } from './pages/LocalizacaoCadastroPage'
 import { RecepcaoArquivoFunerariaPage } from './pages/RecepcaoArquivoFunerariaPage'
 import { RecepcaoArquivoMaternidadePage } from './pages/RecepcaoArquivoMaternidadePage'
 import { FeriadosPage } from './pages/FeriadosPage'
+import { ControleDigitalizacaoPage } from './pages/ControleDigitalizacaoPage'
 import { CartorioSeadePage } from './pages/CartorioSeadePage'
 import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
 import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
@@ -321,6 +322,32 @@ function AppContent() {
     console.log('🎨 Tema inicial já aplicado por useAccessibility')
   }, [])
 
+  // ⚡ Verificar hash da URL para abrir Controle de Digitalização automaticamente
+  useEffect(() => {
+    if (!isLoggedIn) return
+
+    const hash = window.location.hash
+    console.log('🔍 Hash da URL:', hash)
+    
+    if (hash.includes('autoOpen=controle-digitalizacao')) {
+      console.log('🚀 Auto-abrindo Controle de Digitalização...')
+      
+      // Aguardar um momento para garantir que tudo está carregado
+      setTimeout(() => {
+        openWindow({
+          id: 'controle-digitalizacao-window',
+          type: 'controle-digitalizacao',
+          title: 'Controle de Digitalização de Imagens',
+          component: ControleDigitalizacaoPage,
+          props: { onClose: () => {} }
+        })
+        
+        // Limpar o hash da URL
+        window.history.replaceState(null, '', window.location.pathname)
+      }, 500)
+    }
+  }, [isLoggedIn, openWindow])
+
   // Monitorar mudanças no tema
 
 
@@ -364,24 +391,6 @@ function AppContent() {
           <div className="text-lg">Carregando sistema...</div>
         </div>
       )
-    }
-    const theme = {
-      background: accessibilityTheme.background,
-      cardBg: accessibilityTheme.surface,
-      text: accessibilityTheme.text,
-      textSecondary: accessibilityTheme.textSecondary,
-      border: accessibilityTheme.border,
-      buttonBg: accessibilityTheme.primary,
-      buttonHover: accessibilityTheme.accent,
-      menuActive: accessibilityTheme.primary + '20',
-      primary: accessibilityTheme.primary,
-      secondary: accessibilityTheme.secondary,
-      accent: accessibilityTheme.accent,
-      surface: accessibilityTheme.surface,
-      success: accessibilityTheme.success,
-      warning: accessibilityTheme.warning,
-      error: accessibilityTheme.error,
-      info: accessibilityTheme.info
     }
 
     // Configuração do Menu Textual (Menu 1) - TODOS OS SUBMENUS ORIGINAIS RESTAURADOS
@@ -763,7 +772,16 @@ function AppContent() {
         label: 'Digitalização',
         icon: '',
         submenu: [
-          { id: 'digitalizacao-controle', label: 'Controle de Digitalização', icon: '', onClick: () => (window as any).navigateToPage?.('digitalizacao-controle') },
+          { id: 'digitalizacao-controle', label: 'Controle de Digitalização', icon: '', onClick: () => {
+            console.log('✅ Abrindo Controle de Digitalização...')
+            openWindow({
+              id: 'controle-digitalizacao-window',
+              type: 'controle-digitalizacao',
+              title: 'Controle de Digitalização de Imagens',
+              component: ControleDigitalizacaoPage,
+              props: { onClose: () => {} }
+            })
+          } },
           { id: 'digitalizacao-exclusao', label: 'Exclusão de Registros e Imagens Digitalizadas', icon: '', onClick: () => (window as any).navigateToPage?.('digitalizacao-exclusao') }
         ]
       },
@@ -944,7 +962,16 @@ function AppContent() {
       { id: 'casamento', label: 'Casamento', icon: '💍', onClick: () => (window as any).navigateToPage?.('casamento') },
       { id: 'obito', label: 'Óbito', icon: '⚰️', onClick: () => (window as any).navigateToPage?.('obito') },
       { id: 'livro', label: 'Livro e', icon: '📖', onClick: () => (window as any).navigateToPage?.('livro') },
-      { id: 'digitalizacao', label: 'Digitalização', icon: <ScannerIcon size={28} />, onClick: () => (window as any).navigateToPage?.('digitalizacao') },
+      { id: 'digitalizacao', label: 'Digitalização', icon: <ScannerIcon size={28} />, onClick: () => {
+        console.log('🖨️ Abrindo Controle de Digitalização...')
+        openWindow({
+          id: 'controle-digitalizacao-window',
+          type: 'controle-digitalizacao',
+          title: 'Controle de Digitalização de Imagens',
+          component: ControleDigitalizacaoPage,
+          props: { onClose: () => {} }
+        })
+      } },
       { id: 'login', label: 'Logoff', icon: '🔐', onClick: () => console.log('Logoff clicado') },
       { id: 'logout', label: 'Sair', icon: '🚪', onClick: handleLogout }
     ]

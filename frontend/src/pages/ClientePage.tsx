@@ -41,7 +41,7 @@ import { BasePage } from '../components/BasePage'
 import { OCRProgress } from '../components/OCRProgress'
 import { ScannerConfig } from '../components/ScannerConfig'
 import { WebScannerConfig } from '../components/WebScannerConfig'
-import { extractDocumentData, ExtractedData } from '../utils/ocrUtils'
+import { ExtractedData } from '../utils/ocrUtils'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { scannerService } from '../services/ScannerService'
 import { ocrService } from '../services/OCRService'
@@ -129,7 +129,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   
   const [activeTab, setActiveTab] = useState('cadastro')
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [_focusedField, setFocusedField] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState({ isVisible: false, progress: 0, status: '' })
   const [showScannerConfig, setShowScannerConfig] = useState(false)
   const [isWebEnvironment, setIsWebEnvironment] = useState(false)
@@ -219,7 +219,6 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     
     const focusColor = theme.background === '#1a1a1a' ? '#ffd4a3' : '#ffedd5'
     const textColor = theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000'
-    const hoverBg = theme.background === '#1a1a1a' ? '#2a2a2a' : '#f5f5f5'
     
     if (!styleElement) {
       styleElement = document.createElement('style')
@@ -355,13 +354,15 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
     gerarQRCode()
   }, [seloSelecionado])
+  const [cartaoHabilitado, setCartaoHabilitado] = useState(true)
+  
   const [formData, setFormData] = useState({
     codigo: '0',
     nome: '',
     atendente: '',
     assinanteCartao: '',
-    numeroCartao: '',
-    sexo: 'IGNORADO',
+    numeroCartao: '0',
+    sexo: '',
     cpf: '',
     rg: '',
     orgaoRg: '',
@@ -370,7 +371,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     uf: '',
     pais: '',
     nacionalidade: '',
-    estadoCivil: 'IGNORADO',
+    estadoCivil: '',
     pai: '',
     mae: '',
     cep: '',
@@ -391,10 +392,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
   // ✨ Hook de validação com regras globais
   const { 
-    handleChange: handleValidatedChange, 
-    getValue, 
-    getError,
-    loadingCEP 
+    handleChange: handleValidatedChange
   } = useFieldValidation(formData, setFormData)
 
   const handleInputChange = (field: string, value: string) => {
@@ -724,17 +722,34 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
 
 
+  // Função para gerar número de cartão sequencial
+  const handleGerarNumeroCartao = () => {
+    if (!cartaoHabilitado) {
+      console.log('⚠️ Marque a opção "Cartão" primeiro.')
+      return
+    }
+    
+    const ultimoNumero = localStorage.getItem('ultimoNumeroCartao')
+    const proximoNumero = ultimoNumero ? parseInt(ultimoNumero) + 1 : 1
+    
+    const numeroGerado = proximoNumero.toString().padStart(10, '0')
+    localStorage.setItem('ultimoNumeroCartao', proximoNumero.toString())
+    
+    handleInputChange('numeroCartao', numeroGerado)
+    console.log('🎫 Número de cartão gerado:', numeroGerado)
+  }
+
   // Função para iniciar um novo cadastro
   const handleNovo = () => {
     setFormData({
       codigo: '0',
       nome: '',
-      numeroCartao: '',
+      numeroCartao: '0',
       cpf: '',
       rg: '',
       orgaoRg: '',
       nascimento: '',
-      estadoCivil: 'IGNORADO',
+      estadoCivil: '',
       naturalidade: '',
       nacionalidade: '',
       profissao: '',
@@ -757,32 +772,60 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       email: '',
       atendente: '',
       assinanteCartao: '',
-      sexo: 'IGNORADO'
+      sexo: ''
     })
     console.log('📄 Novo cadastro iniciado! Formulário limpo.')
   }
 
   // Função para gravar os dados
   const handleGravar = () => {
-    // Validação básica
-    if (!formData.nome || !formData.cpf) {
-      console.log('❌ Por favor, preencha pelo menos Nome e CPF!')
-      alert('❌ Por favor, preencha pelo menos Nome e CPF!')
+    // Validação de campos obrigatórios
+    const camposObrigatorios = [
+      { campo: 'nome', label: 'Nome' },
+      { campo: 'cpf', label: 'CPF' },
+      { campo: 'nascimento', label: 'Data de Nascimento' },
+      { campo: 'estadoCivil', label: 'Estado Civil' },
+      { campo: 'cep', label: 'CEP' },
+      { campo: 'logradouro', label: 'Logradouro' },
+      { campo: 'endereco', label: 'Endereço' },
+      { campo: 'numero', label: 'Número' },
+      { campo: 'bairro', label: 'Bairro' },
+      { campo: 'cidade', label: 'Cidade' },
+      { campo: 'ufEndereco', label: 'UF' },
+      { campo: 'telefone', label: 'Telefone' },
+      { campo: 'profissao', label: 'Profissão' }
+    ]
+
+    const camposVazios = camposObrigatorios.filter(item => {
+      const valor = formData[item.campo as keyof typeof formData]
+      return !valor || (typeof valor === 'string' && valor.trim() === '')
+    })
+
+    if (camposVazios.length > 0) {
+      const listaCampos = camposVazios.map(item => item.label).join(', ')
+      console.log(`❌ Por favor, preencha os seguintes campos obrigatórios: ${listaCampos}`)
       return
     }
 
-    // Gera ID único se ainda não foi gerado (código = '0')
+    // Gera código sequencial se ainda não foi gerado (código = '0')
     let codigoFinal = formData.codigo
     if (formData.codigo === '0') {
-      codigoFinal = 'CLI' + Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+      // Buscar o último código usado
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoCliente')
+      const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      codigoFinal = proximoCodigo.toString()
+      
+      // Salvar novo último código
+      localStorage.setItem('ultimoCodigoCliente', codigoFinal)
+      
       setFormData(prev => ({ ...prev, codigo: codigoFinal }))
-      console.log('🆔 ID gerado automaticamente:', codigoFinal)
+      console.log('🆔 Código gerado:', codigoFinal)
     }
 
     // Simula salvamento
     console.log('Dados a serem gravados:', { ...formData, codigo: codigoFinal })
     console.log('💾 Cliente gravado com sucesso!')
-    alert(`✅ Cliente gravado com sucesso!\n\n🆔 ID: ${codigoFinal}`)
   }
 
   // Função para limpar os campos
@@ -791,12 +834,12 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       ...prev,
       codigo: '0',
       nome: '',
-      numeroCartao: '',
+      numeroCartao: '0',
       cpf: '',
       rg: '',
       orgaoRg: '',
       nascimento: '',
-      estadoCivil: 'IGNORADO',
+      estadoCivil: '',
       naturalidade: '',
       nacionalidade: '',
       profissao: '',
@@ -819,7 +862,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       email: '',
       atendente: '',
       assinanteCartao: '',
-      sexo: 'IGNORADO'
+      sexo: ''
     }))
     console.log('🧹 Campos limpos!')
   }
@@ -1066,8 +1109,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     }
   }
 
-  // Scanner via Image Capture API
-  const startImageCaptureScanning = async () => {
+  // Scanner via Image Capture API (não utilizada - funcionalidade futura)
+  /*const startImageCaptureScanning = async () => {
     try {
       // Obter dispositivos de mídia
       const devices = await navigator.mediaDevices.enumerateDevices()
@@ -1116,10 +1159,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       console.error('❌ Erro Image Capture:', error)
       throw error
     }
-  }
+  }*/
 
-  // Scanner via WebUSB API
-  const startWebUSBScanning = async () => {
+  // Scanner via WebUSB API (não utilizada - funcionalidade futura)
+  /*const startWebUSBScanning = async () => {
     try {
       // Solicitar acesso a dispositivos USB
       const device = await (navigator as any).usb.requestDevice({
@@ -1144,10 +1187,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       console.error('❌ Erro WebUSB:', error)
       throw error
     }
-  }
+  }*/
 
-  // Configurações reais do scanner
-  const showRealScannerConfig = async (scanner: any) => {
+  // Configurações reais do scanner (não utilizada - funcionalidade futura)
+  /*const showRealScannerConfig = async (scanner: any) => {
     const resolution = prompt('📐 Resolução (DPI):', '300')
     const colorMode = prompt('🎨 Modo de cor (Color/Grayscale/Black&White):', 'Color')
     const pageSize = prompt('📄 Tamanho da página (A4/Letter/Legal):', 'A4')
@@ -1164,7 +1207,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       format: 'JPEG',
       quality: 90
     }
-  }
+  }*/
 
   // Digitalização real via Electron (não utilizada - substituída por performRealScanOCR)
   /*
@@ -1207,8 +1250,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   }
   */
 
-  // Digitalização via USB
-  const performUSBScan = async (device: any) => {
+  // Digitalização via USB (não utilizada - funcionalidade futura)
+  /*const performUSBScan = async (device: any) => {
     try {
       // Implementação específica para protocolo USB do scanner
       // Cada fabricante tem seu próprio protocolo
@@ -1242,10 +1285,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         console.warn('Aviso ao fechar dispositivo USB:', e)
       }
     }
-  }
+  }*/
 
-  // Adicionar documento digitalizado à lista
-  const addScannedDocument = async (file: File, source: string, config?: any) => {
+  // Adicionar documento digitalizado à lista (não utilizada - funções de scan comentadas)
+  /*const addScannedDocument = async (file: File, source: string, config?: any) => {
     const scannedDocument = {
       id: Date.now(),
       nome: file.name,
@@ -1265,7 +1308,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     setRotacao(0)
     
     console.log('✅ Documento adicionado:', scannedDocument)
-  }
+  }*/
 
   const handleExcluirDocumento = () => {
     if (outrosDocumentos.length > 0 && documentoAtual >= 0) {
@@ -1639,17 +1682,17 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     alignItems: 'center',
     marginTop: '0px',
     paddingTop: '0px',
-    verticalAlign: 'top',
-    position: 'relative' as const,
-    top: '0px',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    minWidth: 0
   }
 
-  // 🔒 BLOQUEIO: getInputStyles - NÃO MODIFICAR minWidth ou flexShrink
-  const getInputStyles = (fieldName: string) => {
+  // Componente para label com asterisco vermelho (campo obrigatório)
+  const RequiredLabel = ({ children }: { children: string }) => (
+    <label style={labelStyles}>
+      {children} <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>
+    </label>
+  )
+
+  // 🔒 BLOQUEIO: getInputStyles - NÃO MODIFICAR minWidth ou flexShrink (não utilizada)
+  /*const getInputStyles = (fieldName: string) => {
     const focusColor = theme.background === '#1a1a1a' ? '#ffd4a3' : '#ffedd5'
     return {
       padding: '3px 10px',
@@ -1672,7 +1715,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       WebkitTextFillColor: focusedField === fieldName ? (theme.background === '#1a1a1a' ? '#1a1a1a' : '#000000') : theme.text,
       boxShadow: focusedField === fieldName ? `0 0 0 1000px ${focusColor} inset` : 'none'
     }
-  }
+  }*/
 
   const inputStyles = {
     padding: '3px 10px',
@@ -1854,7 +1897,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           color: theme.text, 
           width: '100%', 
           height: '100%',
-          minHeight: '580px',  // Altura mínima = altura da janela
+          minHeight: 'auto',  // Ajusta ao conteúdo
           padding: '8px',
           overflowY: activeTab === 'cadastro' ? 'auto' : 'hidden',  // Scroll apenas em cadastro
           overflowX: 'auto',  // Scroll horizontal quando menor que tamanho padrão
@@ -1919,26 +1962,35 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 <input
                   type="text"
                   value={formData.codigo}
-                  onChange={(e) => {
-                    // Permite apenas números
-                    const valor = e.target.value.replace(/\D/g, '')
-                    handleInputWithLimit('codigo', valor, 10)
+                  readOnly
+                  disabled
+                  onKeyDown={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  onDrop={(e) => e.preventDefault()}
+                  style={{
+                    ...inputStyles, 
+                    flex: 1, 
+                    minWidth: '50px', 
+                    height: '24px',
+                    backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                    color: currentTheme === 'dark' ? '#666' : '#999',
+                    cursor: 'not-allowed',
+                    opacity: 0.7
                   }}
-                  style={{...inputStyles, flex: 1, minWidth: '50px', height: '24px'}}
                   maxLength={10}
                 />
-                <button type="button" style={{...secondaryButtonStyles, height: '24px'}}>...</button>
               </div>
             </div>
 
             {/* Campo Nome */}
             <div style={{display: 'flex', flexDirection: 'column', flex: '0.7', minWidth: '100px'}}>
-              <label style={{fontSize: '12px', color: theme.text, marginBottom: '2px', height: '18px', lineHeight: '18px'}}>Nome *</label>
+              <label style={{fontSize: '12px', color: theme.text, marginBottom: '2px', height: '18px', lineHeight: '18px'}}>Nome <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span></label>
               <div style={{display: 'flex', gap: '6px', alignItems: 'center', height: '24px'}}>
                 <input
                   type="text"
                   value={formData.nome}
-                  onChange={(e) => handleInputWithLimit('nome', e.target.value, 100)}
+                  onChange={(e) => handleInputWithLimit('nome', e.target.value.toUpperCase(), 100)}
                   style={{...inputStyles, flex: 1, height: '24px'}}
                   maxLength={100}
                   required
@@ -1954,7 +2006,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 <div style={{display: 'flex', alignItems: 'center', gap: '2px', height: '24px'}}>
                   <input 
                     type="checkbox" 
-                    defaultChecked 
+                    checked={cartaoHabilitado}
+                    onChange={(e) => {
+                      setCartaoHabilitado(e.target.checked)
+                      if (!e.target.checked) {
+                        handleInputChange('numeroCartao', '')
+                      }
+                    }}
                     style={{ 
                       margin: 0,
                       padding: 0,
@@ -1963,7 +2021,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                       boxShadow: 'none',
                       width: '14px', 
                       height: '14px',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      cursor: 'pointer'
                     }} 
                   />
                   <span style={{fontSize: '11px', color: theme.text, whiteSpace: 'nowrap', lineHeight: '24px'}}>Cartão</span>
@@ -1972,14 +2031,47 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                   type="text"
                   value={formData.numeroCartao}
                   onChange={(e) => {
-                    // Permite apenas números
-                    const valor = e.target.value.replace(/\D/g, '')
-                    handleInputChange('numeroCartao', valor)
+                    if (cartaoHabilitado) {
+                      // Permite apenas números
+                      const valor = e.target.value.replace(/\D/g, '')
+                      handleInputChange('numeroCartao', valor)
+                    }
                   }}
-                  style={{...inputStyles, flex: 1, minWidth: '30px', height: '24px'}}
+                  disabled={!cartaoHabilitado}
+                  onKeyDown={(e) => !cartaoHabilitado && e.preventDefault()}
+                  onPaste={(e) => !cartaoHabilitado && e.preventDefault()}
+                  onCut={(e) => !cartaoHabilitado && e.preventDefault()}
+                  onDrop={(e) => !cartaoHabilitado && e.preventDefault()}
+                  style={{
+                    ...inputStyles, 
+                    flex: 1, 
+                    minWidth: '30px', 
+                    height: '24px',
+                    backgroundColor: !cartaoHabilitado 
+                      ? (currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0')
+                      : inputStyles.backgroundColor,
+                    color: !cartaoHabilitado 
+                      ? (currentTheme === 'dark' ? '#666' : '#999')
+                      : inputStyles.color,
+                    cursor: !cartaoHabilitado ? 'not-allowed' : 'text',
+                    opacity: !cartaoHabilitado ? 0.7 : 1
+                  }}
                   maxLength={20}
                 />
-                <button type="button" style={{...secondaryButtonStyles, height: '24px', minWidth: '25px', padding: '3px 6px'}}>...</button>
+                <button 
+                  type="button" 
+                  onClick={handleGerarNumeroCartao}
+                  disabled={!cartaoHabilitado}
+                  title="Gerar número de cartão sequencial"
+                  style={{
+                    ...secondaryButtonStyles, 
+                    height: '24px', 
+                    minWidth: '25px', 
+                    padding: '3px 6px',
+                    opacity: !cartaoHabilitado ? 0.5 : 1,
+                    cursor: !cartaoHabilitado ? 'not-allowed' : 'pointer'
+                  }}
+                >...</button>
               </div>
             </div>
           </div>
@@ -1993,14 +2085,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 onChange={(e) => handleInputChange('sexo', e.target.value)}
                 style={selectStyles}
               >
-                <option value="IGNORADO">IGNORADO</option>
+                <option value="">Selecione</option>
                 <option value="MASCULINO">MASCULINO</option>
                 <option value="FEMININO">FEMININO</option>
               </select>
             </div>
 
         <div style={fieldStyles}>
-          <label style={labelStyles}>CPF *</label>
+          <RequiredLabel>CPF</RequiredLabel>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <input
               type="text"
@@ -2022,7 +2114,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                   // Valida CPF
                   const validacao = validarCPF(valor)
                   if (!validacao.isValid) {
-                    alert(`❌ CPF inválido!\n\n${validacao.error}`)
+                    console.log(`❌ CPF inválido! ${validacao.error}`)
                   }
                 }
               }}
@@ -2062,7 +2154,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             <div style={fieldStyles}>
-              <label style={labelStyles}>Data de Nascimento *</label>
+              <RequiredLabel>Data de Nascimento</RequiredLabel>
               <input
                 type="date"
                 value={formData.nascimento}
@@ -2076,14 +2168,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           {/* Linha 3: Estado Civil, Naturalidade, UF, País, Nacionalidade */}
           <div style={rowStyles}>
             <div style={fieldStyles}>
-              <label style={labelStyles}>Estado Civil *</label>
+              <RequiredLabel>Estado Civil</RequiredLabel>
               <select
                 value={formData.estadoCivil}
                 onChange={(e) => handleInputChange('estadoCivil', e.target.value)}
                 style={selectStyles}
                 required
               >
-                <option value="IGNORADO">IGNORADO</option>
+                <option value="">Selecione</option>
                 <option value="SOLTEIRO">SOLTEIRO</option>
                 <option value="CASADO">CASADO</option>
                 <option value="DIVORCIADO">DIVORCIADO</option>
@@ -2416,8 +2508,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               <input
                 type="text"
                 value={formData.pai}
-                onChange={(e) => handleInputWithLimit('pai', e.target.value, 100)}
-                style={inputStyles}
+                onChange={(e) => handleInputWithLimit('pai', e.target.value.toUpperCase(), 100)}
+                style={{...inputStyles, textTransform: 'uppercase'}}
                 maxLength={100}
               />
             </div>
@@ -2427,14 +2519,14 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               <input
                 type="text"
                 value={formData.mae}
-                onChange={(e) => handleInputWithLimit('mae', e.target.value, 100)}
-                style={inputStyles}
+                onChange={(e) => handleInputWithLimit('mae', e.target.value.toUpperCase(), 100)}
+                style={{...inputStyles, textTransform: 'uppercase'}}
                 maxLength={100}
               />
             </div>
 
             <div style={fieldStyles}>
-              <label style={labelStyles}>Profissão</label>
+              <RequiredLabel>Profissão</RequiredLabel>
               <input
                 type="text"
                 value={formData.profissao}
@@ -2448,7 +2540,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           {/* Linha 5: CEP, Logradouro, Endereço, Número, Complemento */}
           <div style={rowStyles}>
             <div style={fieldStylesSmall}>
-              <label style={labelStyles}>CEP</label>
+              <RequiredLabel>CEP</RequiredLabel>
               <input
                 type="text"
                 value={formData.cep}
@@ -2461,7 +2553,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             <div style={fieldStylesSmall}>
-              <label style={labelStyles}>Logradouro</label>
+              <RequiredLabel>Logradouro</RequiredLabel>
               <select
                 value={formData.logradouro}
                 onChange={(e) => handleInputChange('logradouro', e.target.value)}
@@ -2478,7 +2570,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             <div style={fieldStylesLarge}>
-              <label style={labelStyles}>Endereço</label>
+              <RequiredLabel>Endereço</RequiredLabel>
                 <input
                   type="text"
                   value={formData.endereco}
@@ -2489,7 +2581,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             <div style={fieldStylesSmall}>
-              <label style={labelStyles}>Número</label>
+              <RequiredLabel>Número</RequiredLabel>
               <input
                 type="text"
                 value={formData.numero}
@@ -2515,7 +2607,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           {/* Linha 6: Bairro, Cidade, UF, País, Código IBGE */}
           <div style={rowStyles}>
             <div style={fieldStyles}>
-              <label style={labelStyles}>Bairro</label>
+              <RequiredLabel>Bairro</RequiredLabel>
               <input
                 type="text"
                 value={formData.bairro}
@@ -2526,7 +2618,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             <div style={fieldStyles}>
-              <label style={labelStyles}>Cidade</label>
+              <RequiredLabel>Cidade</RequiredLabel>
               <CidadeAutocompleteInput
                 value={formData.cidade}
                 onChange={(cidade) => handleInputWithLimit('cidade', cidade, 50)}
@@ -2538,7 +2630,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             </div>
 
             <div style={fieldStyles}>
-              <label style={labelStyles}>UF</label>
+              <RequiredLabel>UF</RequiredLabel>
               <select
                 value={formData.ufEndereco}
                 onChange={(e) => handleInputChange('ufEndereco', e.target.value)}
@@ -2840,7 +2932,6 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 onChange={(e) => handleInputWithLimit('codigoIbge', e.target.value, 10)}
                 style={inputStyles}
                 maxLength={10}
-                placeholder="Código do país ou IBGE"
               />
             </div>
 
@@ -2849,7 +2940,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           {/* Linha 7: Telefone, Celular, E-mail */}
           <div style={rowStyles}>
             <div style={fieldStyles}>
-              <label style={labelStyles}>Telefone</label>
+              <RequiredLabel>Telefone</RequiredLabel>
               <input
                 type="text"
                 value={formData.telefone}
@@ -3465,7 +3556,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             border: `2px solid ${theme.primary}`,  // Borda mais grossa e colorida
             borderRadius: '6px',
             overflow: 'auto',
-            height: '250px',  // Altura aumentada para 250px
+            height: '220px',  // Ajustado para 220px
             flexShrink: 0,
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'  // Sombra para destaque
           }}>
@@ -3688,7 +3779,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     {showScannerConfig && (
       isWebEnvironment ? (
         <WebScannerConfig
-          onScan={async (config) => {
+          onScan={async (_config) => {
             setShowScannerConfig(false)
             await handleScannerComOCR()
           }}
@@ -3696,7 +3787,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         />
       ) : (
         <ScannerConfig
-          onScan={async (config) => {
+          onScan={async (_config) => {
             setShowScannerConfig(false)
             await handleScannerComOCR()
           }}

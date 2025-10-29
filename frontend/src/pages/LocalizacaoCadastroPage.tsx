@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { cidadesData } from '../data/cidades'
@@ -163,7 +163,7 @@ export function LocalizacaoCadastroPage({ onClose }: LocalizacaoCadastroPageProp
 
 // Conteúdo de Cidade
 function CidadeContent({ onClose }: { onClose: () => void }) {
-  const { getTheme } = useAccessibility()
+  const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
 
   // Carregar dados do localStorage na inicialização
@@ -172,7 +172,7 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
     return saved ? JSON.parse(saved) : []
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [codigo, setCodigo] = useState('')
+  const [codigo, setCodigo] = useState('0')
   const [nome, setNome] = useState('')
   const [uf, setUf] = useState('')
   const [numeroIBGE, setNumeroIBGE] = useState('')
@@ -215,7 +215,7 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
 
   const handleNovo = () => {
     setSelectedId(null)
-    setCodigo('')
+    setCodigo('0')
     setNome('')
     setUf('')
     setNumeroIBGE('')
@@ -223,7 +223,7 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
 
   const handleGravar = () => {
     if (!nome.trim() || !uf.trim() || !numeroIBGE.trim()) {
-      alert('Por favor, preencha todos os campos obrigatórios (Nome, UF e Número IBGE).')
+      console.log('⚠️ Por favor, preencha todos os campos obrigatórios (Nome, UF e Número IBGE).')
       return
     }
 
@@ -233,28 +233,33 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
           ? { ...c, nome, uf, numeroIBGE }
           : c
       ))
-      alert('Cidade atualizada com sucesso!')
+      console.log('✅ Cidade atualizada!')
     } else {
+      // Gerar código sequencial
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoCidade')
+      const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      const novoCodigo = proximoCodigo.toString().padStart(3, '0')
+      localStorage.setItem('ultimoCodigoCidade', proximoCodigo.toString())
+      
       const novaCidade: Cidade = {
         id: Date.now().toString(),
-        codigo: (cidades.length + 1).toString().padStart(3, '0'),
+        codigo: novoCodigo,
         nome,
         uf,
         numeroIBGE
       }
       setCidades(prev => [...prev, novaCidade])
-      alert('Cidade cadastrada com sucesso!')
+      console.log('✅ Cidade cadastrada! Código:', novoCodigo)
     }
     handleNovo()
   }
 
   const handleExcluir = () => {
     if (selectedId) {
-      if (confirm('Deseja realmente excluir esta cidade?')) {
-        setCidades(prev => prev.filter(c => c.id !== selectedId))
-        handleNovo()
-        alert('Cidade excluída com sucesso!')
-      }
+      setCidades(prev => prev.filter(c => c.id !== selectedId))
+      handleNovo()
+      console.log('✅ Cidade excluída.')
     }
   }
 
@@ -389,10 +394,17 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
               type="text"
               value={codigo}
               readOnly
+              disabled
+              onKeyDown={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
               style={{
                 ...inputStyles,
-                backgroundColor: theme.border,
-                cursor: 'not-allowed'
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                color: currentTheme === 'dark' ? '#666' : '#999',
+                cursor: 'not-allowed',
+                opacity: 0.7
               }}
             />
           </div>
@@ -713,7 +725,7 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
 
 // Conteúdo de País
 function PaisContent({ onClose }: { onClose: () => void }) {
-  const { getTheme } = useAccessibility()
+  const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
 
   // Carregar dados do localStorage na inicialização
@@ -722,7 +734,7 @@ function PaisContent({ onClose }: { onClose: () => void }) {
     return saved ? JSON.parse(saved) : []
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [codigo, setCodigo] = useState('')
+  const [codigo, setCodigo] = useState('0')
   const [nome, setNome] = useState('')
   const [sigla, setSigla] = useState('')
   const [numeroIBGE, setNumeroIBGE] = useState('')
@@ -767,7 +779,7 @@ function PaisContent({ onClose }: { onClose: () => void }) {
 
   const handleNovo = () => {
     setSelectedId(null)
-    setCodigo('')
+    setCodigo('0')
     setNome('')
     setSigla('')
     setNumeroIBGE('')
@@ -777,7 +789,7 @@ function PaisContent({ onClose }: { onClose: () => void }) {
 
   const handleGravar = () => {
     if (!nome.trim() || !sigla.trim()) {
-      alert('Por favor, preencha os campos obrigatórios (Nome do País e Sigla).')
+      console.log('⚠️ Por favor, preencha os campos obrigatórios (Nome do País e Sigla).')
       return
     }
 
@@ -787,11 +799,18 @@ function PaisContent({ onClose }: { onClose: () => void }) {
           ? { ...p, nome, sigla, numeroIBGE, nacionalidadeMasculino, nacionalidadeFeminino }
           : p
       ))
-      alert('País atualizado com sucesso!')
+      console.log('✅ País atualizado!')
     } else {
+      // Gerar código sequencial
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoPais')
+      const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      const novoCodigo = proximoCodigo.toString().padStart(3, '0')
+      localStorage.setItem('ultimoCodigoPais', proximoCodigo.toString())
+      
       const novoPais: Pais = {
         id: Date.now().toString(),
-        codigo: (paises.length + 1).toString().padStart(3, '0'),
+        codigo: novoCodigo,
         nome,
         sigla,
         numeroIBGE,
@@ -799,18 +818,16 @@ function PaisContent({ onClose }: { onClose: () => void }) {
         nacionalidadeFeminino
       }
       setPaises(prev => [...prev, novoPais])
-      alert('País cadastrado com sucesso!')
+      console.log('✅ País cadastrado! Código:', novoCodigo)
     }
     handleNovo()
   }
 
   const handleExcluir = () => {
     if (selectedId) {
-      if (confirm('Deseja realmente excluir este país?')) {
-        setPaises(prev => prev.filter(p => p.id !== selectedId))
-        handleNovo()
-        alert('País excluído com sucesso!')
-      }
+      setPaises(prev => prev.filter(p => p.id !== selectedId))
+      handleNovo()
+      console.log('✅ País excluído.')
     }
   }
 
@@ -894,10 +911,17 @@ function PaisContent({ onClose }: { onClose: () => void }) {
               type="text"
               value={codigo}
               readOnly
+              disabled
+              onKeyDown={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
               style={{
                 ...inputStyles,
-                backgroundColor: theme.border,
-                cursor: 'not-allowed'
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                color: currentTheme === 'dark' ? '#666' : '#999',
+                cursor: 'not-allowed',
+                opacity: 0.7
               }}
             />
           </div>

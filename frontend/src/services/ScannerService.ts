@@ -73,9 +73,9 @@ export class ScannerService {
       this.scanners = []
 
       // 1. Tentar TWAIN (Windows) - Scanners e Multifuncionais
-      if (window.electronAPI?.detectTwainScanners) {
+      if ((window.electronAPI as any)?.detectTwainScanners) {
         try {
-          const twainScanners = await window.electronAPI.detectTwainScanners()
+          const twainScanners = await (window.electronAPI as any).detectTwainScanners()
           this.scanners.push(...twainScanners.map((s: any) => ({
             id: `twain_${s.id}`,
             name: s.name,
@@ -92,9 +92,9 @@ export class ScannerService {
       }
 
       // 2. Tentar SANE (Linux) - Scanners e Multifuncionais
-      if (window.electronAPI?.detectSaneScanners) {
+      if ((window.electronAPI as any)?.detectSaneScanners) {
         try {
-          const saneScanners = await window.electronAPI.detectSaneScanners()
+          const saneScanners = await (window.electronAPI as any).detectSaneScanners()
           this.scanners.push(...saneScanners.map((s: any) => ({
             id: `sane_${s.id}`,
             name: s.name,
@@ -152,8 +152,8 @@ export class ScannerService {
     
     try {
       // Detectar via Windows WMI (se disponível no Electron)
-      if (window.electronAPI?.detectMultifunctionalPrinters) {
-        const printers = await window.electronAPI.detectMultifunctionalPrinters()
+      if ((window.electronAPI as any)?.detectMultifunctionalPrinters) {
+        const printers = await (window.electronAPI as any).detectMultifunctionalPrinters()
         multifuncionais.push(...printers.map((p: any) => ({
           id: `multifuncional_${p.id}`,
           name: p.name,
@@ -190,12 +190,12 @@ export class ScannerService {
     const multifuncionais: ScannerDevice[] = []
     
     try {
-      if (!navigator.usb) {
+      if (!(navigator as any).usb) {
         throw new Error('WebUSB não disponível')
       }
 
       // Filtrar por classes de dispositivo multifuncional
-      const devices = await navigator.usb.requestDevice({
+      const devices = await (navigator as any).usb.requestDevice({
         filters: [
           { classCode: 7 }, // Printer class
           { classCode: 6 }, // Still Image class
@@ -237,12 +237,12 @@ export class ScannerService {
     
     try {
       // Verificar se WebUSB está disponível
-      if (!navigator.usb) {
+      if (!(navigator as any).usb) {
         throw new Error('WebUSB não disponível')
       }
 
       // Solicitar acesso a dispositivos USB
-      const devices = await navigator.usb.requestDevice({
+      const devices = await (navigator as any).usb.requestDevice({
         filters: [
           { classCode: 7 }, // Printer/Scanner class
           { classCode: 6 }  // Still Image class
@@ -306,7 +306,8 @@ export class ScannerService {
   }
 
   private determineDeviceType(name: string, manufacturer?: string): 'twain' | 'sane' | 'usb' | 'camera' | 'multifuncional' | 'all-in-one' {
-    const deviceName = (name + ' ' + (manufacturer || '')).toLowerCase()
+    // @ts-ignore - Variável preparada para lógica futura de detecção
+    const _deviceName = (name + ' ' + (manufacturer || '')).toLowerCase()
     
     // Verificar se é multifuncional
     if (this.isMultifunctionalDevice(name, manufacturer)) {
@@ -327,7 +328,8 @@ export class ScannerService {
   }
 
   private determineDeviceCategory(name: string, manufacturer?: string): 'scanner' | 'multifunctional' | 'all-in-one' | 'printer-scanner' {
-    const deviceName = (name + ' ' + (manufacturer || '')).toLowerCase()
+    // @ts-ignore - Variável preparada para lógica futura de detecção
+    const _deviceName = (name + ' ' + (manufacturer || '')).toLowerCase()
     
     if (this.isMultifunctionalDevice(name, manufacturer)) {
       return 'multifunctional'
@@ -442,11 +444,11 @@ export class ScannerService {
   }
 
   private async scanWithTwain(scanner: ScannerDevice, config: ScanConfig): Promise<ScanResult> {
-    if (!window.electronAPI?.scanWithTwain) {
+    if (!(window.electronAPI as any)?.scanWithTwain) {
       throw new Error('API TWAIN não disponível')
     }
 
-    const result = await window.electronAPI.scanWithTwain({
+    const result = await (window.electronAPI as any).scanWithTwain({
       scannerId: scanner.id,
       config: {
         resolution: config.resolution,
@@ -468,11 +470,11 @@ export class ScannerService {
   }
 
   private async scanWithSane(scanner: ScannerDevice, config: ScanConfig): Promise<ScanResult> {
-    if (!window.electronAPI?.scanWithSane) {
+    if (!(window.electronAPI as any)?.scanWithSane) {
       throw new Error('API SANE não disponível')
     }
 
-    const result = await window.electronAPI.scanWithSane({
+    const result = await (window.electronAPI as any).scanWithSane({
       scannerId: scanner.id,
       config: {
         resolution: config.resolution,
@@ -498,9 +500,9 @@ export class ScannerService {
       console.log('🖨️ Iniciando digitalização com impressora multifuncional...')
       
       // Tentar via TWAIN primeiro (mais comum para multifuncionais)
-      if (window.electronAPI?.scanWithTwain) {
+      if ((window.electronAPI as any)?.scanWithTwain) {
         try {
-          const result = await window.electronAPI.scanWithTwain({
+          const result = await (window.electronAPI as any).scanWithTwain({
             scannerId: scanner.id,
             config: {
               resolution: config.resolution,
@@ -526,8 +528,8 @@ export class ScannerService {
       }
 
       // Fallback: usar API específica para multifuncionais
-      if (window.electronAPI?.scanWithMultifunctional) {
-        const result = await window.electronAPI.scanWithMultifunctional({
+      if ((window.electronAPI as any)?.scanWithMultifunctional) {
+        const result = await (window.electronAPI as any).scanWithMultifunctional({
           deviceId: scanner.id,
           config: {
             resolution: config.resolution,
@@ -564,12 +566,12 @@ export class ScannerService {
     }
   }
 
-  private async scanWithUSB(scanner: ScannerDevice, config: ScanConfig): Promise<ScanResult> {
+  private async scanWithUSB(_scanner: ScannerDevice, _config: ScanConfig): Promise<ScanResult> {
     // Implementação para scanners USB via WebUSB
     throw new Error('Scanner USB não implementado ainda')
   }
 
-  private async scanWithCamera(scanner: ScannerDevice, config: ScanConfig): Promise<ScanResult> {
+  private async scanWithCamera(_scanner: ScannerDevice, config: ScanConfig): Promise<ScanResult> {
     try {
       // Usar câmera para capturar imagem
       const stream = await navigator.mediaDevices.getUserMedia({

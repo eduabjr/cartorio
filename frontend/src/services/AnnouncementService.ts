@@ -13,10 +13,13 @@ export interface AnnouncementOptions {
 class AnnouncementService {
   private audioContext: AudioContext | null = null;
   private isInitialized = false;
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  // @ts-ignore - Variáveis de estado interno (reservadas para uso futuro)
+  private _currentUtterance: SpeechSynthesisUtterance | null = null;
   private lastAnnouncement: string = '';
-  private announcementQueue: string[] = [];
-  private isProcessing = false;
+  // @ts-ignore - Variáveis de estado interno (reservadas para uso futuro)
+  private _announcementQueue: string[] = [];
+  // @ts-ignore - Variáveis de estado interno (reservadas para uso futuro)
+  private _isProcessing = false;
 
   /**
    * Inicializa o serviço de anúncios
@@ -88,15 +91,6 @@ class AnnouncementService {
 
     this.lastAnnouncement = text;
     console.log('🔊 Anunciando:', text);
-
-    const {
-      priority = 'normal',
-      interrupt = false,
-      category = 'information',
-      volume = 0.8,
-      rate = 0.9,
-      pitch = 1.0
-    } = options;
 
     let success = false;
 
@@ -221,7 +215,7 @@ class AnnouncementService {
 
         // Falar
         speechSynthesis.speak(utterance);
-        this.currentUtterance = utterance;
+        this._currentUtterance = utterance;
       });
 
     } catch (error) {
@@ -233,7 +227,7 @@ class AnnouncementService {
   /**
    * Anuncia via tons de áudio
    */
-  private async announceViaAudioTones(text: string, options: AnnouncementOptions): Promise<boolean> {
+  private async announceViaAudioTones(_text: string, options: AnnouncementOptions): Promise<boolean> {
     try {
       if (!this.audioContext) {
         await this.initialize();
@@ -357,9 +351,9 @@ class AnnouncementService {
     if (window.speechSynthesis) {
       speechSynthesis.cancel();
     }
-    this.currentUtterance = null;
-    this.announcementQueue = [];
-    this.isProcessing = false;
+    this._currentUtterance = null;
+    this._announcementQueue = [];
+    this._isProcessing = false;
   }
 
   /**

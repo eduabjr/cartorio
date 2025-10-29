@@ -1,21 +1,60 @@
-MIT License
+# LICENÇA PROPRIETÁRIA - TODOS OS DIREITOS RESERVADOS
 
-Copyright (c) 2024 Sistema CIVITAS - Cartório Digital
+Copyright © 2024 Sistema CIVITAS - Cartório Digital
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## PROPRIEDADE EXCLUSIVA E IRRESTRITA
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Este software e toda a documentação associada (doravante denominado "SOFTWARE") são de **propriedade exclusiva e irrestrita** do titular dos direitos autorais acima identificado.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## DIREITOS RESERVADOS
+
+**TODOS OS DIREITOS SÃO RESERVADOS** ao proprietário, incluindo, mas não se limitando a:
+
+1. **Propriedade Intelectual**: Todo o código-fonte, algoritmos, estruturas de dados, interfaces, design, documentação e quaisquer outros componentes do SOFTWARE são de propriedade exclusiva do titular.
+
+2. **Direitos Autorais**: Todos os direitos autorais, marcas registradas, segredos comerciais e outros direitos de propriedade intelectual relacionados ao SOFTWARE pertencem exclusivamente ao proprietário.
+
+3. **Uso Exclusivo**: O proprietário detém direitos exclusivos e irrestritos de uso, modificação, distribuição, comercialização e exploração do SOFTWARE.
+
+4. **Direitos de Reprodução**: Apenas o proprietário possui o direito de copiar, reproduzir ou criar obras derivadas do SOFTWARE.
+
+5. **Direitos de Distribuição**: Apenas o proprietário possui o direito de distribuir, licenciar, vender ou transferir cópias do SOFTWARE.
+
+6. **Direitos de Modificação**: Apenas o proprietário possui o direito de modificar, adaptar, traduzir ou criar versões derivadas do SOFTWARE.
+
+## RESTRIÇÕES DE USO
+
+**NENHUMA PERMISSÃO** é concedida a terceiros para:
+
+- Usar, copiar, modificar ou distribuir o SOFTWARE
+- Realizar engenharia reversa, descompilar ou desmontar o SOFTWARE
+- Remover ou alterar avisos de direitos autorais ou propriedade
+- Criar obras derivadas baseadas no SOFTWARE
+- Usar o SOFTWARE para fins comerciais ou não comerciais
+- Acessar o código-fonte sem autorização expressa por escrito
+
+## USO NÃO AUTORIZADO
+
+Qualquer uso, cópia, modificação, distribuição ou acesso não autorizado ao SOFTWARE constitui violação desta licença e dos direitos de propriedade intelectual do proprietário, sujeitando o infrator a ações legais civis e criminais conforme previsto na legislação brasileira, incluindo:
+
+- Lei de Direitos Autorais (Lei nº 9.610/1998)
+- Lei de Software (Lei nº 9.609/1998)
+- Código Penal Brasileiro (Artigos 184 e seguintes)
+
+## CONFIDENCIALIDADE
+
+O SOFTWARE contém informações proprietárias e confidenciais. Qualquer divulgação não autorizada de qualquer parte do SOFTWARE é estritamente proibida.
+
+## ISENÇÃO DE GARANTIA
+
+O SOFTWARE é fornecido exclusivamente para uso do proprietário. O proprietário não oferece garantias a terceiros e não assume responsabilidade por uso não autorizado.
+
+## JURISDIÇÃO
+
+Esta licença é regida pelas leis da República Federativa do Brasil. Quaisquer disputas serão resolvidas exclusivamente nos tribunais brasileiros competentes.
+
+---
+
+**AVISO IMPORTANTE**: Este SOFTWARE é de propriedade privada e protegido por leis de direitos autorais brasileiras e internacionais. O acesso, uso ou distribuição não autorizados são estritamente proibidos e constituem crime.
+
+**Para informações sobre licenciamento ou autorização de uso, entre em contato com o proprietário.**

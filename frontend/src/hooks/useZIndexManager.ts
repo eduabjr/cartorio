@@ -1,12 +1,10 @@
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 
 /**
  * Hook para gerenciar z-index de forma segura e evitar conflitos
  * Garante que os menus sempre tenham a hierarquia correta
  */
 export function useZIndexManager() {
-  const zIndexCache = useRef<Map<string, number>>(new Map())
-
   // Hierarquia fixa e imutável
   const Z_INDEX_HIERARCHY = {
     // Menus principais

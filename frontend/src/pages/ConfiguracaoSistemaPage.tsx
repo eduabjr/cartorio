@@ -1,4 +1,3 @@
-import React from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
 
 interface ConfiguracaoSistemaPageProps {
@@ -44,7 +43,7 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
 
   const closeButtonStyles = {
     padding: '8px 16px',
-    background: theme.danger || '#dc3545',
+    background: '#dc3545',
     color: '#fff',
     border: 'none',
     borderRadius: '6px',

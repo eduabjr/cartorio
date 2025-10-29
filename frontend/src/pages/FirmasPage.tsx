@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 
@@ -122,8 +122,8 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
                     <input
                       type="text"
                       value={formData.nome}
-            onChange={(e) => handleInputChange('nome', e.target.value)}
-            style={inputStyles}
+            onChange={(e) => handleInputChange('nome', e.target.value.toUpperCase())}
+            style={{...inputStyles, textTransform: 'uppercase'}}
             placeholder="Nome completo"
                       required
                     />

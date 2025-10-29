@@ -294,7 +294,7 @@ export const fallbackService = new FallbackService()
 // Hook para usar em componentes React
 export const useOfflineMode = () => {
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine)
-  const [offlineData, setOfflineData] = React.useState(fallbackService.getOfflineCapabilities())
+  const [offlineData] = React.useState(fallbackService.getOfflineCapabilities())
   const [notifications, setNotifications] = React.useState<string[]>([])
 
   React.useEffect(() => {

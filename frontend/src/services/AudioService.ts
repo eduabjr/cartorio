@@ -19,7 +19,8 @@ export interface AudioCapabilities {
 
 class AudioService {
   private audioContext: AudioContext | null = null;
-  private isInitialized = false;
+  // @ts-ignore - Variável de estado interno (reservada para uso futuro)
+  private _isInitialized = false;
   private testResults: AudioTestResult[] = [];
 
   /**
@@ -50,13 +51,13 @@ class AudioService {
         console.log('⏸️ Contexto de áudio suspenso - aguardando interação do usuário');
       }
 
-      this.isInitialized = true;
+      this._isInitialized = true;
       console.log('✅ AudioService inicializado com sucesso');
       return true;
     } catch (error) {
       console.error('❌ Erro ao inicializar AudioService:', error);
       this.audioContext = null;
-      this.isInitialized = false;
+      this._isInitialized = false;
       return false;
     }
   }
@@ -367,7 +368,7 @@ class AudioService {
       console.error('❌ Erro ao forçar inicialização:', error);
       // Tentar recriar o contexto se houver erro
       this.audioContext = null;
-      this.isInitialized = false;
+      this._isInitialized = false;
       return await this.initialize();
     }
   }

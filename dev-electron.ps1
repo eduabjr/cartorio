@@ -19,17 +19,17 @@ if (-not (Test-Path "electron")) {
 if (-not (Test-Path "electron/node_modules")) {
     Write-Host "⚠️ Dependencias do Electron nao instaladas." -ForegroundColor DarkYellow
     Write-Host "   Executando instalacao..." -ForegroundColor DarkYellow
-    cd electron
+    Set-Location electron
     npm install
-    cd ..
+    Set-Location ..
 }
 
 # Verificar se o frontend está construído
 if (-not (Test-Path "frontend/dist")) {
     Write-Host "⚠️ Frontend nao construido. Construindo..." -ForegroundColor DarkYellow
-    cd frontend
+    Set-Location frontend
     npm run build
-    cd ..
+    Set-Location ..
 }
 
 # Menu de opções
@@ -51,8 +51,8 @@ function Show-Menu {
 function Get-Choice {
     [int]$choice = -1
     while ($choice -lt 0 -or $choice -gt 6) {
-        $input = Read-Host "Digite sua opcao (0-6)"
-        if ([int]::TryParse($input, [ref]$choice)) {
+        $userInput = Read-Host "Digite sua opcao (0-6)"
+        if ([int]::TryParse($userInput, [ref]$choice)) {
             if ($choice -lt 0 -or $choice -gt 6) {
                 Write-Host "Opcao invalida. Por favor, digite um numero entre 0 e 6." -ForegroundColor Red
             }
@@ -74,9 +74,9 @@ while ($true) {
             Write-Host "   • Hot reload ativo" -ForegroundColor White
             Write-Host "   • Logs detalhados" -ForegroundColor White
             Write-Host ""
-            cd electron
+            Set-Location electron
             npm run dev
-            cd ..
+            Set-Location ..
             Pause
         }
         2 {
@@ -85,34 +85,34 @@ while ($true) {
             Write-Host "   • DevTools desabilitado" -ForegroundColor White
             Write-Host "   • Logs reduzidos" -ForegroundColor White
             Write-Host ""
-            cd electron
+            Set-Location electron
             npm start
-            cd ..
+            Set-Location ..
             Pause
         }
         3 {
             Write-Host "`nExecutando: Construir Aplicacao..." -ForegroundColor Yellow
             Write-Host "   • Compilando frontend..." -ForegroundColor White
-            cd frontend
+            Set-Location frontend
             npm run build
-            cd ..
+            Set-Location ..
             Write-Host "   • Construindo Electron..." -ForegroundColor White
-            cd electron
+            Set-Location electron
             npm run build
-            cd ..
+            Set-Location ..
             Write-Host "✅ Aplicacao construida com sucesso!" -ForegroundColor Green
             Pause
         }
         4 {
             Write-Host "`nExecutando: Gerar Instalador..." -ForegroundColor Yellow
             Write-Host "   • Construindo frontend..." -ForegroundColor White
-            cd frontend
+            Set-Location frontend
             npm run build
-            cd ..
+            Set-Location ..
             Write-Host "   • Gerando instalador..." -ForegroundColor White
-            cd electron
+            Set-Location electron
             npm run dist
-            cd ..
+            Set-Location ..
             Write-Host "✅ Instalador gerado com sucesso!" -ForegroundColor Green
             Write-Host "   Verifique a pasta 'electron/dist' para o instalador." -ForegroundColor White
             Pause
@@ -162,7 +162,7 @@ while ($true) {
             
             Write-Host "   • Tesseract: " -NoNewline
             try {
-                $tesseractPath = Get-Command tesseract.exe -ErrorAction Stop | Select-Object -ExpandProperty Source
+                $null = Get-Command tesseract.exe -ErrorAction Stop
                 Write-Host "Encontrado" -ForegroundColor Green
             } catch {
                 Write-Host "Nao encontrado" -ForegroundColor Red

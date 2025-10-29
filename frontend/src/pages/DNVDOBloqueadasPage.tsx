@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
@@ -35,6 +35,9 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
 
   // Estado para campo em foco
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  
+  // Estado para controlar se há um registro selecionado
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   // Função para criar novo registro
   const handleNovo = () => {
@@ -54,20 +57,40 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
       cep: '',
       observacao: ''
     })
+    setSelectedId(null)
   }
 
   // Função para gravar registro
   const handleGravar = () => {
     console.log('Salvando declaração bloqueada:', formData)
-    alert('✅ Declaração bloqueada salva com sucesso!')
+    
+    // Gerar código sequencial se novo registro
+    let codigoFinal = formData.codigo
+    if (!selectedId || formData.codigo === '0') {
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoDNVDO')
+      const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      codigoFinal = proximoCodigo.toString()
+      localStorage.setItem('ultimoCodigoDNVDO', codigoFinal)
+      
+      const newId = Date.now().toString()
+      setSelectedId(newId)
+      setFormData(prev => ({ ...prev, codigo: codigoFinal }))
+      console.log('🆔 Código gerado:', codigoFinal)
+    }
+    
+    console.log('✅ Declaração bloqueada salva com sucesso!')
   }
 
   // Função para excluir registro
   const handleExcluir = () => {
-    if (confirm('⚠️ Deseja realmente excluir esta declaração bloqueada?')) {
-      handleNovo()
-      alert('✅ Declaração bloqueada excluída com sucesso!')
+    if (!selectedId) {
+      console.log('⚠️ Nenhuma declaração selecionada para excluir.')
+      return
     }
+    
+    handleNovo()
+    console.log('✅ Declaração bloqueada excluída.')
   }
 
   // Função para buscar CEP
@@ -75,7 +98,7 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
     const cep = formData.cep.replace(/\D/g, '')
     
     if (!cep || cep.length < 8) {
-      alert('⚠️ Digite um CEP válido com 8 dígitos')
+      console.log('⚠️ Digite um CEP válido com 8 dígitos')
       return
     }
 
@@ -94,14 +117,12 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
           uf: dados.uf
         }))
         
-        console.log('✅ Endereço preenchido automaticamente pelo CEP')
-        alert(`✅ CEP encontrado!\n\n📍 ${dados.logradouro}\n🏘️ ${dados.bairro}\n🏙️ ${dados.localidade}/${dados.uf}`)
+        console.log(`✅ CEP encontrado: ${dados.logradouro}, ${dados.bairro}, ${dados.localidade}/${dados.uf}`)
       } else {
-        alert('❌ CEP não encontrado')
+        console.log('❌ CEP não encontrado')
       }
     } catch (error) {
       console.error('Erro ao buscar CEP:', error)
-      alert('❌ Erro ao buscar CEP. Verifique sua conexão.')
     }
   }
 
@@ -236,25 +257,24 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
           {/* Código */}
           <div>
             <label style={labelStyles}>Código</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                value={formData.codigo}
-                onChange={(e) => {
-                  const valor = e.target.value.replace(/\D/g, '')
-                  setFormData({ ...formData, codigo: valor })
-                }}
-                onFocus={() => setFocusedField('codigo')}
-                onBlur={() => setFocusedField(null)}
-                style={getInputWithIconStyles('codigo')}
-              />
-              <button 
-                style={iconButtonStyles}
-                title="Buscar código"
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-              >🔍</button>
-            </div>
+            <input
+              type="text"
+              value={formData.codigo}
+              readOnly
+              disabled
+              onKeyDown={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
+              style={{
+                ...getInputWithIconStyles('codigo'),
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                color: currentTheme === 'dark' ? '#666' : '#999',
+                cursor: 'not-allowed',
+                opacity: 0.7,
+                width: '100px'
+              }}
+            />
           </div>
 
           {/* Tipo Declaração */}
@@ -609,16 +629,23 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
           {/* Excluir */}
           <button
             onClick={handleExcluir}
+            disabled={!selectedId}
             style={{
               ...buttonStyles,
-              backgroundColor: '#6c757d',
-              color: 'white'
+              backgroundColor: selectedId ? '#dc2626' : '#4b5563',
+              color: 'white',
+              cursor: selectedId ? 'pointer' : 'not-allowed',
+              opacity: selectedId ? 1 : 0.5
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#495057'
+              if (selectedId) {
+                e.currentTarget.style.backgroundColor = '#b91c1c'
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#6c757d'
+              if (selectedId) {
+                e.currentTarget.style.backgroundColor = '#dc2626'
+              }
             }}
           >
             ❌ Excluir

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useAccessibility } from '../hooks/useAccessibility'
-import { useResponsive } from '../hooks/useResponsive'
 import { AccessibleButton } from '../components/AccessibleButton'
 import { useFeedback } from '../components/FeedbackSystem'
 
@@ -9,9 +8,8 @@ interface AccessibilitySettingsPageProps {
   isDarkMode: boolean
 }
 
-export function AccessibilitySettingsPage({ onClose, isDarkMode }: AccessibilitySettingsPageProps) {
+export function AccessibilitySettingsPage({ onClose }: AccessibilitySettingsPageProps) {
   const accessibility = useAccessibility()
-  const responsive = useResponsive()
   const feedback = useFeedback()
   
   const [localSettings, setLocalSettings] = useState(accessibility.settings)
@@ -62,10 +60,15 @@ export function AccessibilitySettingsPage({ onClose, isDarkMode }: Accessibility
   const handleResetSettings = () => {
     const defaultSettings = {
       highContrast: false,
+      contrastLevel: 'normal' as const,
+      blueLightFilter: false,
+      blueLightIntensity: 'medium' as const,
       reducedMotion: false,
-      fontSize: 'medium' as const,
+      fontSize: 'padrao' as const,
       screenReader: false,
-      keyboardNavigation: false
+      keyboardNavigation: false,
+      autoLogoutEnabled: false,
+      autoLogoutMinutes: 15
     }
     setLocalSettings(defaultSettings)
     accessibility.updateSettings(defaultSettings)

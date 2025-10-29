@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 
@@ -20,6 +20,7 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
   
   const [caminhoArquivo, setCaminhoArquivo] = useState('')
   const [falecidos, setFalecidos] = useState<Falecido[]>([])
+  const [importingIndex, setImportingIndex] = useState<number | null>(null)
 
   const buttonStyles = {
     padding: '8px 16px',
@@ -54,62 +55,94 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
       input.click()
     } catch (error) {
       console.error('Erro ao selecionar arquivo:', error)
-      alert('Erro ao selecionar arquivo.')
     }
   }
 
-  const processarArquivo = async (file?: File) => {
+  const processarArquivo = async (_file?: File) => {
     try {
       // Em produção, aqui seria feito o parse do XML real
       // Por enquanto, simula a importação de dados
       
       const dadosSimulados: Falecido[] = [
-        { id: '1', transferido: true, nome: 'JOSÉ MARCIANO DA COSTA' },
-        { id: '2', transferido: true, nome: 'IRACEMA LEITE CAETANO' },
-        { id: '3', transferido: true, nome: 'ACCACIO DA SILVA PEDRO' },
-        { id: '4', transferido: true, nome: 'FRANCISCO BATISTA DO BONFIM' },
-        { id: '5', transferido: true, nome: 'LAERCIO ROMANINI' },
-        { id: '6', transferido: true, nome: 'VERA LUCIA DA SILVA DOS SANTOS' },
-        { id: '7', transferido: true, nome: 'NEUSA SHIDUYO HORIKAWA MATSUMOTO' },
-        { id: '8', transferido: true, nome: 'EDNA TEIXEIRA NANCI' },
-        { id: '9', transferido: true, nome: 'ADELSON HELIO FERREIRA DA SILVA' },
-        { id: '10', transferido: true, nome: 'JOSÉ SYLVERIO DE ALMEIDA' },
-        { id: '11', transferido: true, nome: 'DÉBORA HIROMI FUJII' },
-        { id: '12', transferido: true, nome: 'MARIA DE LOURDES DA SILVA' },
-        { id: '13', transferido: true, nome: 'ANTONIO CARLOS MOREIRA' },
-        { id: '14', transferido: true, nome: 'SEBASTIÃO RODRIGUES FILHO' },
-        { id: '15', transferido: true, nome: 'MARIA APARECIDA SANTOS' },
-        { id: '16', transferido: true, nome: 'PEDRO HENRIQUE OLIVEIRA' }
+        { id: '1', transferido: false, nome: 'JOSÉ MARCIANO DA COSTA' },
+        { id: '2', transferido: false, nome: 'IRACEMA LEITE CAETANO' },
+        { id: '3', transferido: false, nome: 'ACCACIO DA SILVA PEDRO' },
+        { id: '4', transferido: false, nome: 'FRANCISCO BATISTA DO BONFIM' },
+        { id: '5', transferido: false, nome: 'LAERCIO ROMANINI' },
+        { id: '6', transferido: false, nome: 'VERA LUCIA DA SILVA DOS SANTOS' },
+        { id: '7', transferido: false, nome: 'NEUSA SHIDUYO HORIKAWA MATSUMOTO' },
+        { id: '8', transferido: false, nome: 'EDNA TEIXEIRA NANCI' },
+        { id: '9', transferido: false, nome: 'ADELSON HELIO FERREIRA DA SILVA' },
+        { id: '10', transferido: false, nome: 'JOSÉ SYLVERIO DE ALMEIDA' },
+        { id: '11', transferido: false, nome: 'DÉBORA HIROMI FUJII' },
+        { id: '12', transferido: false, nome: 'MARIA DE LOURDES DA SILVA' },
+        { id: '13', transferido: false, nome: 'ANTONIO CARLOS MOREIRA' },
+        { id: '14', transferido: false, nome: 'SEBASTIÃO RODRIGUES FILHO' },
+        { id: '15', transferido: false, nome: 'MARIA APARECIDA SANTOS' },
+        { id: '16', transferido: false, nome: 'PEDRO HENRIQUE OLIVEIRA' }
       ]
 
+      // Inicializar lista com todos desmarcados
       setFalecidos(dadosSimulados)
-      alert(`✅ Arquivo carregado com sucesso!\n\n${dadosSimulados.length} registros encontrados.`)
+      
+      // Animar importação item por item
+      for (let i = 0; i < dadosSimulados.length; i++) {
+        setImportingIndex(i)
+        await new Promise(resolve => setTimeout(resolve, 200)) // 200ms por item
+        
+        // Marcar item como transferido
+        setFalecidos(prev => prev.map((item, idx) => 
+          idx === i ? { ...item, transferido: true } : item
+        ))
+      }
+      
+      setImportingIndex(null)
+      console.log(`✅ Arquivo carregado com sucesso! ${dadosSimulados.length} registros encontrados.`)
     } catch (error) {
-      console.error('Erro ao processar arquivo:', error)
-      alert('Erro ao processar o arquivo XML.')
+      console.error('Erro ao processar o arquivo XML:', error)
+      setImportingIndex(null)
     }
   }
 
-  const handleImportarArquivo = async () => {
+  // Função não utilizada - importação automática ao selecionar arquivo
+  /*const handleImportarArquivo = async () => {
     if (!caminhoArquivo) {
-      alert('Por favor, selecione um arquivo XML primeiro.')
+      console.log('⚠️ Nenhum arquivo selecionado.')
       return
     }
 
     // Processar arquivo novamente (caso o usuário clique manualmente)
     await processarArquivo()
+  }*/
+
+  const handleBaixarSelecionados = async () => {
+    const selecionados = falecidos.filter(f => f.transferido)
+    
+    if (selecionados.length === 0) {
+      console.log('⚠️ Nenhum registro selecionado para baixar.')
+      return
+    }
+
+    console.log(`✅ Baixando ${selecionados.length} registro(s) selecionado(s):`)
+    
+    // Animar baixando cada item selecionado
+    for (let i = 0; i < falecidos.length; i++) {
+      // Só processar se estiver selecionado
+      if (falecidos[i].transferido) {
+        setImportingIndex(i)
+        await new Promise(resolve => setTimeout(resolve, 300)) // 300ms por item
+        console.log(`  - ${falecidos[i].nome}`)
+      }
+    }
+    
+    setImportingIndex(null)
+    console.log('✅ Download concluído!')
   }
 
   const handleLimpar = () => {
-    if (falecidos.length > 0) {
-      if (confirm('Deseja realmente limpar todos os dados importados?')) {
-        setFalecidos([])
-        setCaminhoArquivo('')
-        alert('Dados limpos com sucesso!')
-      }
-    } else {
-      setCaminhoArquivo('')
-    }
+    setFalecidos([])
+    setCaminhoArquivo('')
+    console.log('✅ Dados limpos.')
   }
 
   const handleMarcarTodos = () => {
@@ -234,6 +267,16 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
                       fontWeight: '600',
                       fontSize: '12px',
                       borderRight: `1px solid rgba(255,255,255,0.2)`,
+                      width: '50px'
+                    }}>
+                      
+                    </th>
+                    <th style={{
+                      padding: '10px',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      fontSize: '12px',
+                      borderRight: `1px solid rgba(255,255,255,0.2)`,
                       width: '120px'
                     }}>
                       Transferido
@@ -265,6 +308,22 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
                           : theme.background
                       }}
                     >
+                      <td style={{
+                        padding: '8px',
+                        textAlign: 'center',
+                        borderRight: `1px solid ${theme.border}`
+                      }}>
+                        {importingIndex === index && (
+                          <div style={{
+                            fontSize: '20px',
+                            fontWeight: 'bold',
+                            color: headerColor,
+                            animation: 'pulse 0.5s ease-in-out infinite'
+                          }}>
+                            ➡️
+                          </div>
+                        )}
+                      </td>
                       <td style={{
                         padding: '8px',
                         textAlign: 'center',
@@ -377,7 +436,7 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
           </button>
 
           <button
-            onClick={handleImportarArquivo}
+            onClick={falecidos.length > 0 ? handleBaixarSelecionados : handleSelecionarArquivo}
             style={{
               ...buttonStyles,
               backgroundColor: theme.primary,
@@ -390,7 +449,7 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
               e.currentTarget.style.opacity = '1'
             }}
           >
-            📂 Importar Arquivo
+            {falecidos.length > 0 ? '⬇️ Baixar Selecionados' : '📂 Importar Arquivo'}
           </button>
 
           <button
@@ -423,7 +482,7 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
               color: theme.text,
               fontWeight: '600'
             }}>
-              Registros: {falecidos.length}
+              Registros: {falecidos.length} | Selecionados: {falecidos.filter(f => f.transferido).length}
             </div>
           )}
         </div>

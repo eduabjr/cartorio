@@ -15,10 +15,7 @@ import react from '@vitejs/plugin-react'
  */
 export default defineConfig({
   plugins: [
-    react({
-      // ⚡ Fast Refresh otimizado
-      fastRefresh: true,
-    }),
+    react(),
   ],
 
   server: {
