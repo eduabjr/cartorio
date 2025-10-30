@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { Modal } from '../components/Modal'
+import { useModal } from '../hooks/useModal'
 
 interface TiposCadastroPageProps {
   onClose: () => void
@@ -1037,6 +1039,9 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
   
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
 
+  // Hook para modais internos
+  const { modalState, showAlert, showConfirm, showPrompt, closeModal } = useModal()
+
   // Carregar tipos de ato (apenas leitura - sem setter necessário)
   const [tiposAto] = useState<any[]>(() => {
     const stored = localStorage.getItem('tiposAto')
@@ -1090,10 +1095,11 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
     setAcessoRapido(novosAcessos)
   }
 
-  const handleGravar = () => {
+  const handleGravar = async () => {
     localStorage.setItem('acessoRapido', JSON.stringify(acessoRapido))
     window.dispatchEvent(new CustomEvent('acesso-rapido-atualizado'))
     console.log('✅ Configurações de Acesso Rápido gravadas.')
+    await showAlert(`✅ Configurações de Acesso Rápido gravadas com sucesso!\n\n${acessoRapido.length} documento(s) configurado(s).`)
   }
 
   const labelStyles = {
@@ -1346,6 +1352,19 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
           🚪 Retornar
         </button>
       </div>
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        type={modalState.type}
+        title={modalState.title}
+        message={modalState.message}
+        defaultValue={modalState.defaultValue}
+        onConfirm={modalState.onConfirm}
+        onCancel={modalState.onCancel}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        icon={modalState.icon}
+      />
     </div>
   )
 }

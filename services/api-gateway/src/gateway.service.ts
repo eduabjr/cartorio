@@ -26,6 +26,7 @@ export class GatewayService {
   private readonly protocoloServiceUrl = process.env.PROTOCOLO_SERVICE_URL || 'http://protocolo-service:3003';
   private readonly clienteServiceUrl = process.env.CLIENTE_SERVICE_URL || 'http://cliente-service:3004';
   private readonly funcionarioServiceUrl = process.env.FUNCIONARIO_SERVICE_URL || 'http://funcionario-service:3005';
+  private readonly naturezaServiceUrl = process.env.NATUREZA_SERVICE_URL || 'http://natureza-service:3006';
 
   constructor(
     private readonly circuitBreaker: CircuitBreakerService,
@@ -177,6 +178,26 @@ export class GatewayService {
         const response = await this.axiosInstance({
           method,
           url: `${this.funcionarioServiceUrl}${path}`,
+          data,
+        });
+        return response.data;
+      }),
+      {
+        failureThreshold: 5,
+        timeout: 30000,
+        resetTimeout: 60000,
+      },
+    );
+  }
+
+  async proxyToNaturezaService(path: string, method: string = 'GET', data?: any) {
+    return this.circuitBreaker.execute(
+      'natureza-service',
+      () => this.retryService.execute(async () => {
+        this.logger.log(`→ Natureza Service: ${method} ${path}`);
+        const response = await this.axiosInstance({
+          method,
+          url: `${this.naturezaServiceUrl}${path}`,
           data,
         });
         return response.data;

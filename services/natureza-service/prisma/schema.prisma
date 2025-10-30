@@ -1,0 +1,61 @@
+// Prisma Schema para Natureza Service
+// Database: MySQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Natureza {
+  id            String   @id @default(uuid())
+  codigo        String   @unique @db.VarChar(20)
+  descricao     String   @db.VarChar(255)
+  percentualIss Decimal  @db.Decimal(4, 2) @map("percentual_iss")
+  ativo         Boolean  @default(true)
+  observacoes   String?  @db.Text
+  tabelaUrl     String?  @db.VarChar(500) @map("tabela_url")
+  criadoEm      DateTime @default(now()) @map("created_at")
+  atualizadoEm  DateTime @updatedAt @map("updated_at")
+  
+  servicos      ServicoCartorio[]
+
+  @@index([codigo])
+  @@index([descricao])
+  @@index([ativo])
+  @@index([percentualIss])
+  @@map("naturezas")
+}
+
+model ServicoCartorio {
+  id                String    @id @default(uuid())
+  naturezaId        String?   @map("natureza_id")
+  codigoServico     String    @db.VarChar(20) @map("codigo_servico")
+  descricao         String    @db.VarChar(500)
+  
+  aoOficial         Decimal   @default(0.00) @db.Decimal(10, 2) @map("ao_oficial")
+  
+  iss               Decimal   @default(0.00) @db.Decimal(10, 2) @map("iss")
+  aSecFaz           Decimal   @default(0.00) @db.Decimal(10, 2) @map("a_sec_faz")
+  total             Decimal   @default(0.00) @db.Decimal(10, 2) @map("total")
+  
+  tipoServico       String?   @default("OUTROS") @db.VarChar(50) @map("tipo_servico")
+  unidadeReferencia String?   @db.VarChar(50) @map("unidade_referencia")
+  observacoes       String?   @db.Text
+  ativo             Boolean   @default(true)
+  
+  criadoEm          DateTime  @default(now()) @map("created_at")
+  atualizadoEm      DateTime  @updatedAt @map("updated_at")
+  
+  natureza          Natureza? @relation(fields: [naturezaId], references: [id], onDelete: SetNull)
+
+  @@index([naturezaId])
+  @@index([codigoServico])
+  @@index([descricao])
+  @@index([tipoServico])
+  @@index([ativo])
+  @@map("servicos_cartorio")
+}

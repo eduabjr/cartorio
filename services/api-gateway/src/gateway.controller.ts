@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Req, Res, Param } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Req, Res, Param } from '@nestjs/common';
 import { GatewayService } from './gateway.service';
 
 @Controller()
@@ -114,13 +114,100 @@ export class GatewayController {
     return this.gatewayService.proxyToFuncionarioService('/funcionarios/stats');
   }
 
+  // Rotas de Naturezas
+  @Get('naturezas')
+  async getNaturezas(@Req() req: any) {
+    const queryString = req.url.split('?')[1] || '';
+    return this.gatewayService.proxyToNaturezaService(`/naturezas?${queryString}`);
+  }
+
+  @Get('naturezas/ativas')
+  async getNaturezasAtivas() {
+    return this.gatewayService.proxyToNaturezaService('/naturezas/ativas');
+  }
+
+  @Get('naturezas/codigo/:codigo')
+  async getNaturezaByCodigo(@Req() req: any) {
+    const codigo = req.params.codigo;
+    return this.gatewayService.proxyToNaturezaService(`/naturezas/codigo/${codigo}`);
+  }
+
+  @Get('naturezas/:id')
+  async getNatureza(@Req() req: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToNaturezaService(`/naturezas/${id}`);
+  }
+
+  @Post('naturezas')
+  async createNatureza(@Body() data: any) {
+    return this.gatewayService.proxyToNaturezaService('/naturezas', 'POST', data);
+  }
+
+  @Patch('naturezas/:id')
+  async updateNatureza(@Req() req: any, @Body() data: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToNaturezaService(`/naturezas/${id}`, 'PATCH', data);
+  }
+
+  @Delete('naturezas/:id')
+  async deleteNatureza(@Req() req: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToNaturezaService(`/naturezas/${id}`, 'DELETE');
+  }
+
+  // Rotas de Serviços de Cartório
+  @Get('servicos-cartorio')
+  async getServicosCartorio(@Req() req: any) {
+    const queryString = req.url.split('?')[1] || '';
+    return this.gatewayService.proxyToNaturezaService(`/servicos-cartorio?${queryString}`);
+  }
+
+  @Get('servicos-cartorio/ativos')
+  async getServicosCartorioAtivos() {
+    return this.gatewayService.proxyToNaturezaService('/servicos-cartorio/ativos');
+  }
+
+  @Get('servicos-cartorio/natureza/:naturezaId')
+  async getServicosByNatureza(@Req() req: any) {
+    const naturezaId = req.params.naturezaId;
+    return this.gatewayService.proxyToNaturezaService(`/servicos-cartorio/natureza/${naturezaId}`);
+  }
+
+  @Get('servicos-cartorio/codigo/:codigo')
+  async getServicoCartorioByCodigo(@Req() req: any) {
+    const codigo = req.params.codigo;
+    return this.gatewayService.proxyToNaturezaService(`/servicos-cartorio/codigo/${codigo}`);
+  }
+
+  @Get('servicos-cartorio/:id')
+  async getServicoCartorio(@Req() req: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToNaturezaService(`/servicos-cartorio/${id}`);
+  }
+
+  @Post('servicos-cartorio')
+  async createServicoCartorio(@Body() data: any) {
+    return this.gatewayService.proxyToNaturezaService('/servicos-cartorio', 'POST', data);
+  }
+
+  @Patch('servicos-cartorio/:id')
+  async updateServicoCartorio(@Req() req: any, @Body() data: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToNaturezaService(`/servicos-cartorio/${id}`, 'PATCH', data);
+  }
+
+  @Delete('servicos-cartorio/:id')
+  async deleteServicoCartorio(@Req() req: any) {
+    const id = req.params.id;
+    return this.gatewayService.proxyToNaturezaService(`/servicos-cartorio/${id}`, 'DELETE');
+  }
+
   // Health Check
   @Get('health')
   async health() {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      services: this.gatewayService.getServiceHealth(),
     };
   }
 }

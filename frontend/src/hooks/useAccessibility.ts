@@ -256,8 +256,8 @@ export function useAccessibility() {
           fontSize: 'padrao' as const,
           screenReader: false,
           keyboardNavigation: false,
-          autoLogoutEnabled: true,
-          autoLogoutMinutes: 2
+          autoLogoutEnabled: false,
+          autoLogoutMinutes: 120
         }, ...parsed }
       } catch (e) {
         console.warn('❌ Erro ao parsear settings, usando padrão')
@@ -272,8 +272,8 @@ export function useAccessibility() {
       fontSize: 'padrao',
       screenReader: false,
       keyboardNavigation: false,
-      autoLogoutEnabled: true,
-      autoLogoutMinutes: 2
+      autoLogoutEnabled: false,
+      autoLogoutMinutes: 120
     }
   })
 
@@ -283,14 +283,48 @@ export function useAccessibility() {
     if (savedTheme && ['light', 'dark', 'highContrast'].includes(savedTheme)) {
       console.log('⚡ Tema carregado ANTES do primeiro render:', savedTheme)
       
-      // 🚨 CORREÇÃO: Tema já foi aplicado pelo script HTML inline
-      // Apenas adicionar classe ao body
-      document.body.classList.add(`theme-${savedTheme}`)
-      console.log('✅ Classe de tema adicionada:', savedTheme)
+      // 🚨 APLICAR TEMA NO DOM IMEDIATAMENTE (no :root)
+      const theme = professionalThemes[savedTheme as keyof typeof professionalThemes]
+      if (theme) {
+        console.log('⚡ Aplicando variáveis CSS do tema:', savedTheme)
+        const root = document.documentElement
+        root.style.setProperty('--primary-color', theme.primary)
+        root.style.setProperty('--secondary-color', theme.secondary)
+        root.style.setProperty('--background-color', theme.background)
+        root.style.setProperty('--surface-color', theme.surface)
+        root.style.setProperty('--text-color', theme.text)
+        root.style.setProperty('--text-secondary-color', theme.textSecondary)
+        root.style.setProperty('--border-color', theme.border)
+        root.style.setProperty('--success-color', theme.success)
+        root.style.setProperty('--warning-color', theme.warning)
+        root.style.setProperty('--error-color', theme.error)
+        root.style.setProperty('--info-color', theme.info)
+        document.body.classList.add(`theme-${savedTheme}`)
+        console.log('✅ Variáveis CSS aplicadas no :root!')
+      }
       
       return savedTheme as 'light' | 'dark' | 'highContrast'
     }
-    console.log('⚡ Nenhum tema salvo, usando light por padrão')
+    
+    console.log('⚡ Nenhum tema salvo, aplicando light por padrão')
+    
+    // 🚨 APLICAR TEMA LIGHT NO DOM IMEDIATAMENTE (no :root)
+    const lightTheme = professionalThemes.light
+    const root = document.documentElement
+    root.style.setProperty('--primary-color', lightTheme.primary)
+    root.style.setProperty('--secondary-color', lightTheme.secondary)
+    root.style.setProperty('--background-color', lightTheme.background)
+    root.style.setProperty('--surface-color', lightTheme.surface)
+    root.style.setProperty('--text-color', lightTheme.text)
+    root.style.setProperty('--text-secondary-color', lightTheme.textSecondary)
+    root.style.setProperty('--border-color', lightTheme.border)
+    root.style.setProperty('--success-color', lightTheme.success)
+    root.style.setProperty('--warning-color', lightTheme.warning)
+    root.style.setProperty('--error-color', lightTheme.error)
+    root.style.setProperty('--info-color', lightTheme.info)
+    document.body.classList.add('theme-light')
+    console.log('✅ Tema light aplicado no :root por padrão!')
+    
     return 'light'
   })
   
@@ -307,17 +341,11 @@ export function useAccessibility() {
   // Carregar configurações salvas
   useEffect(() => {
     console.log('\n🚀🚀🚀 ═══════════════════════════════════════════════')
-    console.log('🚀 INICIALIZAÇÃO DO SISTEMA DE TEMAS')
+    console.log('🚀 INICIALIZAÇÃO DO SISTEMA - NÃO APLICAR TEMA AQUI!')
+    console.log('🚀 (Tema JÁ foi aplicado no useState initializer)')
     console.log('🚀🚀🚀 ═══════════════════════════════════════════════')
     
     const savedSettings = localStorage.getItem('accessibility-settings')
-    const savedTheme = localStorage.getItem('theme')
-    
-    console.log('🔍 Verificando localStorage:', {
-      savedSettings,
-      savedTheme,
-      currentThemeInicial: currentTheme
-    })
     
     if (savedSettings) {
       try {
@@ -329,76 +357,28 @@ export function useAccessibility() {
       }
     }
     
-    // 🚨 CORREÇÃO: Tema já foi aplicado pelo script HTML inline
-    // Apenas disparar evento para componentes se atualizarem
-    console.log('🎨 Tema inicial já aplicado pelo script HTML')
-    
+    // Disparar evento para componentes
     setTimeout(() => {
       const temaAtual = localStorage.getItem('theme') || 'light'
       window.dispatchEvent(new CustomEvent('theme-changed', { 
         detail: { theme: temaAtual, timestamp: +new Date(), initialization: true } 
       }))
-      console.log('✅ Evento de inicialização disparado:', temaAtual)
+      console.log('✅ Evento de inicialização disparado')
     }, 50)
     
     console.log('🚀🚀🚀 ═══════════════════════════════════════════════\n')
   }, [])
 
-  // Detectar preferências do sistema
+  // 🔒 DESABILITADO: Não detectar preferências do sistema automaticamente
+  // O tema deve ser controlado APENAS pelo usuário via configurações
   useEffect(() => {
-    const prefersHighContrast = window.matchMedia('(prefers-contrast: high)')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
-
-    console.log('🔍 useAccessibility - Detectando preferências do sistema:', {
-      prefersDark: prefersDark.matches,
-      prefersHighContrast: prefersHighContrast.matches
-    })
-
-    // Só aplicar preferências do sistema se não houver configurações salvas
-    const savedSettings = localStorage.getItem('accessibility-settings')
-    if (!savedSettings) {
-      // ⚠️ NÃO ativar reducedMotion automaticamente - apenas detectar tema
-      setSettings(prev => ({
-        ...prev,
-        // reducedMotion mantém o padrão (false) - usuário deve ativar manualmente
-        highContrast: prefersHighContrast.matches
-      }))
-
-      if (prefersHighContrast.matches) {
-        setCurrentTheme('highContrast')
-        console.log('✅ Aplicando tema highContrast baseado nas preferências do sistema')
-      } else if (prefersDark.matches) {
-        setCurrentTheme('dark')
-        console.log('✅ Aplicando tema dark baseado nas preferências do sistema')
-      } else {
-        console.log('✅ Usando tema light (padrão)')
-      }
-    } else {
-      console.log('⚠️ Configurações salvas encontradas, não aplicando preferências do sistema')
-    }
-
-    // Listeners para mudanças (SEM listener para reducedMotion)
-    const handleContrastChange = (e: MediaQueryListEvent) => {
-      setSettings(prev => ({ ...prev, highContrast: e.matches }))
-      if (e.matches) {
-        setCurrentTheme('highContrast')
-      }
-    }
-
-    const handleColorSchemeChange = (e: MediaQueryListEvent) => {
-      if (!settings.highContrast) {
-        setCurrentTheme(e.matches ? 'dark' : 'light')
-      }
-    }
-
-    prefersHighContrast.addEventListener('change', handleContrastChange)
-    prefersDark.addEventListener('change', handleColorSchemeChange)
-
-    return () => {
-      prefersHighContrast.removeEventListener('change', handleContrastChange)
-      prefersDark.removeEventListener('change', handleColorSchemeChange)
-    }
-  }, [settings.highContrast])
+    console.log('🔒 Detecção de preferências do sistema DESABILITADA')
+    console.log('🔒 Tema será controlado APENAS manualmente pelo usuário')
+    console.log('📊 Tema atual:', currentTheme)
+    
+    // NÃO adicionar listeners de mudança automática
+    // Isso impede que o sistema mude o tema sem o usuário pedir
+  }, [])
 
   // Detectar leitor de tela
   useEffect(() => {
@@ -532,9 +512,20 @@ export function useAccessibility() {
     
     setSettings(prev => {
       const updated = { ...prev, ...newSettings }
+      
+      // Salvar no localStorage
       localStorage.setItem('accessibility-settings', JSON.stringify(updated))
       
-      console.log('💾 Configurações atualizadas:', updated)
+      console.log('💾 Configurações atualizadas e salvas:', updated)
+      console.log('📦 Verificando localStorage:', localStorage.getItem('accessibility-settings'))
+      
+      // Log específico para autoLogout
+      if (newSettings.autoLogoutEnabled !== undefined) {
+        console.log(`🔐 Auto-logout ${updated.autoLogoutEnabled ? 'HABILITADO' : 'DESABILITADO'}`)
+      }
+      if (newSettings.autoLogoutMinutes !== undefined) {
+        console.log(`⏰ Tempo de logout alterado para ${updated.autoLogoutMinutes} minutos`)
+      }
       
       // 🔒 PROTEÇÃO ESPECIAL: Se reducedMotion foi alterado, garantir que não afeta temas
       if (newSettings.reducedMotion !== undefined) {
@@ -574,12 +565,17 @@ export function useAccessibility() {
 
   const setTheme = (theme: 'light' | 'dark' | 'highContrast') => {
     console.log('\n🔥🔥🔥 ═══════════════════════════════════════════════')
-    console.log('🔥 FORÇA BRUTA - setTheme CHAMADO')
+    console.log('🔥 setTheme CHAMADO')
     console.log('🔥🔥🔥 ═══════════════════════════════════════════════')
     console.log('📊 Tema SOLICITADO:', theme)
     console.log('📊 Tema ATUAL:', currentTheme)
     
-    // 🔥 FORÇA BRUTA: SEMPRE aplicar, independente do tema atual
+    if (theme === currentTheme) {
+      console.log('⚠️ Tema solicitado é o mesmo que o atual, ignorando')
+      return
+    }
+    
+    console.log('✅ Aplicando novo tema:', theme)
     console.log('🔥 FORÇA BRUTA: Aplicando tema SEMPRE!')
     
     // 🔒 CORREÇÃO CRÍTICA: Limpar filtros ao trocar tema se não for highContrast
@@ -804,7 +800,7 @@ export function useAccessibility() {
     }))
     
     console.log('✅ Tema aplicado:', currentTheme)
-  }, [currentTheme, settings])
+  }, [currentTheme, settings.reducedMotion, settings.highContrast, settings.contrastLevel, settings.blueLightFilter, settings.blueLightIntensity])
 
   // Funções específicas para contraste
   const setContrastLevel = (level: 'normal' | 'light' | 'dark' | 'extreme') => {

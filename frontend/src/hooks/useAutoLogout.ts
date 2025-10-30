@@ -56,7 +56,10 @@ export function useAutoLogout({ enabled, timeoutMinutes, onLogout }: AutoLogoutC
   }
 
   useEffect(() => {
+    console.log('🔄 useAutoLogout useEffect - enabled:', enabled, 'timeoutMinutes:', timeoutMinutes)
+    
     if (!enabled) {
+      console.log('⏸️ Auto-logout DESABILITADO - limpando timers')
       // Limpar todos os timers se desabilitado
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current)
@@ -64,6 +67,8 @@ export function useAutoLogout({ enabled, timeoutMinutes, onLogout }: AutoLogoutC
       setShowWarning(false)
       return
     }
+    
+    console.log(`✅ Auto-logout HABILITADO com ${timeoutMinutes} minutos`)
 
     // Eventos que resetam o timer
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']

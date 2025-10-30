@@ -27,6 +27,9 @@ import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
 import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
 import { HospitalCemiterioPage } from './pages/HospitalCemiterioPage'
 import { CadastroLivrosPage } from './pages/CadastroLivrosPage'
+import { ProtocoloLancamentoPage } from './pages/ProtocoloLancamentoPage'
+import { NaturezaPage } from './pages/NaturezaPage'
+import { ServicoCartorioPage } from './pages/ServicoCartorioPage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { SystemStatus } from './components/SystemStatus'
@@ -425,6 +428,18 @@ function AppContent() {
               })
               console.log('✅ Janela de Funcionário aberta!')
             } },
+            { id: 'servicos-cartorio', label: 'Serviços e Tabela de Custas', icon: '', onClick: () => {
+              console.log('✅ SERVIÇOS CARTÓRIO CLICADO! Abrindo janela...')
+              const windowId = 'servicos-cartorio-window'
+              openWindow({
+                id: windowId,
+                type: 'servicos-cartorio',
+                title: 'Serviços de Cartório',
+                component: ServicoCartorioPage,
+                props: { onClose: () => {} }
+              })
+              console.log('✅ Janela de Serviços de Cartório aberta!')
+            } },
             { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => {
               console.log('✅ CARTÓRIO SEADE CLICADO! Abrindo janela...')
               openWindow({
@@ -653,7 +668,16 @@ function AppContent() {
         label: 'Protocolos',
         icon: '',
         submenu: [
-          { id: 'protocolo-lancamento', label: 'Lançamento', icon: '', onClick: () => (window as any).navigateToPage?.('protocolo-lancamento') },
+          { id: 'protocolo-lancamento', label: 'Lançamento', icon: '', onClick: () => {
+            console.log('✅ PROTOCOLO LANÇAMENTO CLICADO! Abrindo janela...')
+            openWindow({
+              id: 'protocolo-lancamento',
+              title: 'Lançamento de Protocolos',
+              component: ProtocoloLancamentoPage,
+              position: { x: 100, y: 100 }
+            })
+            console.log('✅ Janela de Lançamento de Protocolos aberta!')
+          }},
           { id: 'protocolo-baixa', label: 'Baixa', icon: '', onClick: () => (window as any).navigateToPage?.('protocolo-baixa') },
           { id: 'protocolo-cancelamento', label: 'Cancelamento', icon: '', onClick: () => (window as any).navigateToPage?.('protocolo-cancelamento') }
         ]

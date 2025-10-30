@@ -48,6 +48,8 @@ import { ocrService } from '../services/OCRService'
 import QRCode from 'qrcode'
 import { useFieldValidation } from '../hooks/useFieldValidation'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
+import { Modal } from '../components/Modal'
+import { useModal } from '../hooks/useModal'
 // import { useTJSPApi } from '../hooks/useTJSPApi'
 
 // CSS específico para dropdowns de países com scroll pequeno quando expandido

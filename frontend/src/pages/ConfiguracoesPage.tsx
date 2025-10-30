@@ -1262,7 +1262,16 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
                 <input
                   type="checkbox"
                   checked={settings.autoLogoutEnabled}
-                  onChange={(e) => isAdmin && updateSettings({ autoLogoutEnabled: e.target.checked })}
+                  onChange={(e) => {
+                    if (!isAdmin) {
+                      alert('🔒 Apenas administradores podem alterar esta configuração!')
+                      e.preventDefault()
+                      return
+                    }
+                    const novoStatus = e.target.checked
+                    console.log('🔐 Alterando auto-logout para:', novoStatus)
+                    updateSettings({ autoLogoutEnabled: novoStatus })
+                  }}
                   disabled={!isAdmin}
                   style={{ opacity: 0, width: 0, height: 0 }}
                 />
@@ -1308,7 +1317,15 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
                 <select
                   id="autoLogoutMinutes"
                   value={settings.autoLogoutMinutes}
-                  onChange={(e) => isAdmin && updateSettings({ autoLogoutMinutes: parseInt(e.target.value) })}
+                  onChange={(e) => {
+                    if (!isAdmin) {
+                      alert('🔒 Apenas administradores podem alterar esta configuração!')
+                      return
+                    }
+                    const novoValor = parseInt(e.target.value)
+                    console.log('⏰ Alterando tempo de logout para:', novoValor, 'minutos')
+                    updateSettings({ autoLogoutMinutes: novoValor })
+                  }}
                   disabled={!isAdmin}
                   style={{
                     width: '100%',

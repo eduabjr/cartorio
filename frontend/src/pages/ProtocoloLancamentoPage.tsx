@@ -1,8 +1,75 @@
-import { useState } from 'react'
-import { DocumentIcon, CheckIcon, PlusIcon, PrintIcon, SaveIcon, ArrowLeftIcon, CalculatorIcon, TrashIcon } from '../components/icons'
+/**
+ * ====================================================================
+ * LANÇAMENTO DE PROTOCOLOS - SISTEMA DE GESTÃO DE PROTOCOLOS
+ * ====================================================================
+ * 
+ * DESCRIÇÃO GERAL:
+ * ----------------
+ * Este módulo gerencia o lançamento e controle de protocolos do cartório,
+ * incluindo cadastro, serviços, histórico, digitalização e imagens.
+ * 
+ * ESTRUTURA DE 5 ABAS:
+ * --------------------
+ * 1. CADASTRO/MANUTENÇÃO:
+ *    - Dados principais do protocolo (número, data, termo, livro, folhas)
+ *    - Informações das partes envolvidas (Comparecente, Parte A, Parte B)
+ *    - Descrição e histórico do protocolo
+ *    - Atendente e previsão de entrega
+ * 
+ * 2. SERVIÇOS:
+ *    - Cadastro de atos (natureza, tipo, quantidade)
+ *    - Outros serviços (autenticação, xerox, reconhecimento de firma)
+ *    - Cálculo de custas e valores
+ * 
+ * 3. HISTÓRICO:
+ *    - Histórico de alterações e movimentações do protocolo
+ * 
+ * 4. DIGITALIZAÇÃO:
+ *    - Interface para digitalização de documentos
+ *    - Controles de scanner
+ * 
+ * 5. IMAGENS:
+ *    - Visualização de documentos digitalizados
+ *    - Lista de imagens por tipo de ato e documento
+ * 
+ * FUNCIONALIDADES:
+ * ----------------
+ * - Auto-incremento de número de protocolo
+ * - Busca de clientes e partes
+ * - Cálculo automático de custas
+ * - Controle de pagamentos (depósito, assinatura, parcelas)
+ * - Impressão de documentos
+ * - Scanner e digitalização integrados
+ * 
+ * PERSISTÊNCIA:
+ * -------------
+ * - Dados salvos em localStorage
+ * - Sincronização entre abas
+ * 
+ * ====================================================================
+ */
 
-interface ProtocoloData {
-  protocolo: string
+import { useState, useEffect } from 'react'
+import { BasePage } from '../components/BasePage'
+import { useAccessibility } from '../hooks/useAccessibility'
+import { Modal } from '../components/Modal'
+import { useModal } from '../hooks/useModal'
+
+/**
+ * PROPS DO COMPONENTE
+ */
+interface ProtocoloLancamentoPageProps {
+  onClose: () => void
+}
+
+/**
+ * INTERFACE: Protocolo
+ * --------------------
+ * Define a estrutura de um protocolo
+ */
+interface Protocolo {
+  id: string
+  numero: string
   dataEntrada: string
   fichaBalcao: string
   termo: string
@@ -17,839 +84,1308 @@ interface ProtocoloData {
   parteB: string
   descricao: string
   atendente: string
+  atendenteNome: string
   previsaoEntrega: string
   horario: string
   origemPedido: string
-  tipo: string
-  quantidade: number
-  analfabetos: number
-  totalAtos: number
-  outrosServicos: number
-  total: number
-  totalPago: number
 }
 
-interface PagamentoData {
-  deposito: { valor: number; data: string }
-  assinatura: { valor: number; data: string }
-  parcela1: { valor: number; data: string }
-  parcela2: { valor: number; data: string }
-  parcela3: { valor: number; data: string }
+/**
+ * INTERFACE: Ato
+ * --------------
+ * Define um ato cadastrado no protocolo
+ */
+interface Ato {
+  id: string
+  natureza: string
+  tipoGratuidade: string
+  quantidade: string
+  analfabetos: string
+  servicoExterno: boolean
+  descontoTerco: boolean
+  total: string
 }
 
-export function ProtocoloLancamentoPage() {
-  const [activeTab, setActiveTab] = useState<'cadastro' | 'servicos' | 'historico' | 'digitalizacao'>('cadastro')
+/**
+ * INTERFACE: OutroServico
+ * -----------------------
+ * Define outros serviços prestados
+ */
+interface OutroServico {
+  id: string
+  quantidade: string
+  descricao: string
+  valor: string
+}
+
+/**
+ * INTERFACE: Pagamento
+ * --------------------
+ * Define informações de pagamento
+ */
+interface Pagamento {
+  deposito: { valor: string; data: string; pago: boolean }
+  assinatura: { valor: string; data: string; pago: boolean }
+  parcela1: { valor: string; data: string; pago: boolean }
+  parcela2: { valor: string; data: string; pago: boolean }
+  parcela3: { valor: string; data: string; pago: boolean }
+}
+
+/**
+ * INTERFACE: ImagemDigitalizada
+ * ------------------------------
+ * Define uma imagem digitalizada vinculada ao protocolo
+ */
+interface ImagemDigitalizada {
+  id: string
+  sequencia: string
+  tipoAto: string
+  tipoDocumento: string
+  arquivo: string
+  dataDigitalizacao: string
+}
+
+export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProps) {
+  const { getTheme, currentTheme } = useAccessibility()
+  const theme = getTheme()
   
-  const [protocoloData, setProtocoloData] = useState<ProtocoloData>({
-    protocolo: '876260',
-    dataEntrada: '06/09/2025',
-    fichaBalcao: '2626',
-    termo: '26223',
-    livro: '38',
-    folhas: '255',
-    natureza: 'CERTIDÃO EM BREVE RELATÓRIO',
-    complementoAto: 'Nascimento',
+  const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
+
+  // Hook para modais internos
+  const { modalState, showAlert, showConfirm, showPrompt, closeModal } = useModal()
+
+  // Estado para controlar aba ativa
+  const [activeTab, setActiveTab] = useState<'cadastro' | 'servicos' | 'historico' | 'digitalizacao' | 'imagens'>('cadastro')
+  
+  // Estado para campo em foco
+  const [focusedField, setFocusedField] = useState<string | null>(null)
+
+  // Estados para Cadastro/Manutenção
+  const [formData, setFormData] = useState<Protocolo>({
+    id: '',
+    numero: '',
+    dataEntrada: new Date().toLocaleDateString('pt-BR'),
+    fichaBalcao: '0',
+    termo: '',
+    livro: '',
+    folhas: '',
+    natureza: '',
+    complementoAto: '',
     comparecente: '',
     numeroDocumento: '',
     telefone: '',
-    parteA: 'CIBELE SALLES DE OLIVEIRA',
+    parteA: '',
     parteB: '',
-    descricao: 'Certidão de Nascimento registrado no Livro: 38, Folha(s): 255, sob nº: 26223, em 09/02/1978',
-    atendente: '185',
-    previsaoEntrega: '11/09/2025',
-    horario: '15:00',
-    origemPedido: 'Pessoal',
-    tipo: 'Pago',
-    quantidade: 1,
-    analfabetos: 0,
-    totalAtos: 67.52,
-    outrosServicos: 0.00,
-    total: 67.52,
-    totalPago: 0.00
+    descricao: '',
+    atendente: '103',
+    atendenteNome: 'EDUARDO ANTONIO BRAGA JUNIOR',
+    previsaoEntrega: '',
+    horario: ':',
+    origemPedido: ''
   })
 
-  const [pagamentoData, setPagamentoData] = useState<PagamentoData>({
-    deposito: { valor: 67.52, data: '06/09/2025' },
-    assinatura: { valor: 0.00, data: '' },
-    parcela1: { valor: 0.00, data: '' },
-    parcela2: { valor: 0.00, data: '' },
-    parcela3: { valor: 0.00, data: '' }
-  })
-
-  const [servicosData, setServicosData] = useState({
+  // Estados para Serviços
+  const [atos, setAtos] = useState<Ato[]>([])
+  const [atoForm, setAtoForm] = useState<Ato>({
+    id: '',
     natureza: 'CERTIDÃO EM BREVE RELATÓRIO',
     tipoGratuidade: 'Pago',
-    quantidade: 1,
-    analfabetos: 0,
-    total: 67.52
+    quantidade: '1',
+    analfabetos: '0',
+    servicoExterno: false,
+    descontoTerco: false,
+    total: '0,00'
+  })
+  const [selectedAtoId, setSelectedAtoId] = useState<string | null>(null)
+
+  const [outrosServicos, setOutrosServicos] = useState<OutroServico[]>([
+    { id: '1', quantidade: '0', descricao: 'AUTENTICAÇÃO', valor: '0,00' },
+    { id: '2', quantidade: '0', descricao: 'XEROX', valor: '0,00' },
+    { id: '3', quantidade: '0', descricao: 'RECONHECIMENTO DE FIRMA COM VALOR', valor: '0,00' },
+    { id: '4', quantidade: '0', descricao: 'RECONHECIMENTO DE FIRMA SEM VALOR', valor: '0,00' },
+    { id: '5', quantidade: '0', descricao: 'RECONHECIMENTO DE FIRMA AUTÊNTICA', valor: '0,00' }
+  ])
+  const [servicoForm, setServicoForm] = useState({ quantidade: '', descricao: '', valor: '' })
+  const [selectedServicoId, setSelectedServicoId] = useState<string | null>(null)
+
+  const [custas, setCustas] = useState({
+    tipo: 'Pago',
+    quantidade: '0',
+    analfabetos: '0',
+    totalAtos: '0',
+    outrosServicos: '0',
+    total: '',
+    totalPago: '0,00'
   })
 
-  const [outrosServicos, setOutrosServicos] = useState({
-    quantidade: '',
-    descricao: '',
-    valor: ''
+  const [pagamento, setPagamento] = useState<Pagamento>({
+    deposito: { valor: '', data: '', pago: false },
+    assinatura: { valor: '', data: '', pago: false },
+    parcela1: { valor: '', data: '', pago: false },
+    parcela2: { valor: '', data: '', pago: false },
+    parcela3: { valor: '', data: '', pago: false }
   })
 
-  const servicosLista = [
-    { nome: 'AUTENTICAÇÃO', quantidade: 0, valor: 0.00 },
-    { nome: 'XEROX', quantidade: 0, valor: 0.00 },
-    { nome: 'RECONHECIMENTO DE FIRMA COM VALOR', quantidade: 0, valor: 0.00 },
-    { nome: 'RECONHECIMENTO DE FIRMA SEM VALOR', quantidade: 0, valor: 0.00 },
-    { nome: 'RECONHECIMENTO DE FIRMA AUTÊNTICA', quantidade: 0, valor: 0.00 }
-  ]
+  // Estados para Imagens
+  const [imagens, setImagens] = useState<ImagemDigitalizada[]>([])
+  const [selectedImagemId, setSelectedImagemId] = useState<string | null>(null)
 
-  const handleInputChange = (field: keyof ProtocoloData, value: string | number) => {
-    setProtocoloData(prev => ({ ...prev, [field]: value }))
+  /**
+   * ====================================================================
+   * FUNÇÕES DA ABA CADASTRO/MANUTENÇÃO
+   * ====================================================================
+   */
+
+  /**
+   * FUNÇÃO: handleGravarProtocolo
+   * ------------------------------
+   * Grava um novo protocolo ou atualiza um existente.
+   */
+  const handleGravarProtocolo = async () => {
+    // Validação de campos obrigatórios
+    if (!formData.numero || !formData.dataEntrada) {
+      await showAlert('⚠️ Preencha os campos obrigatórios: Protocolo e Data Entrada!')
+      return
+    }
+
+    // Salvar protocolo (implementação futura com backend)
+    console.log('💾 Protocolo salvo:', formData)
+    await showAlert(`✅ Protocolo gravado com sucesso!\n\nNúmero: ${formData.numero}`)
   }
 
-  const handleServicosChange = (field: keyof typeof servicosData, value: string | number) => {
-    setServicosData(prev => ({ ...prev, [field]: value }))
-  }
-
-  const handleOutrosServicosChange = (field: keyof typeof outrosServicos, value: string) => {
-    setOutrosServicos(prev => ({ ...prev, [field]: value }))
-  }
-
-  const handleCalcular = () => {
-    // Lógica para calcular valores
-    console.log('Calculando...')
-  }
-
-  const handleGravar = () => {
-    // Lógica para salvar
-    console.log('Salvando...')
-  }
-
+  /**
+   * FUNÇÃO: handleLimpar
+   * --------------------
+   * Limpa o formulário de cadastro.
+   */
   const handleLimpar = () => {
-    // Lógica para limpar formulário
-    console.log('Limpando...')
+    setFormData({
+      ...formData,
+      numero: '',
+      termo: '',
+      livro: '',
+      folhas: '',
+      natureza: '',
+      complementoAto: '',
+      comparecente: '',
+      numeroDocumento: '',
+      telefone: '',
+      parteA: '',
+      parteB: '',
+      descricao: ''
+    })
   }
 
-  const handleImprimir = () => {
-    // Lógica para imprimir
-    console.log('Imprimindo...')
+  /**
+   * ====================================================================
+   * FUNÇÕES DA ABA SERVIÇOS
+   * ====================================================================
+   */
+
+  /**
+   * FUNÇÃO: handleCalcularAto
+   * -------------------------
+   * Calcula o valor total do ato baseado na natureza e quantidade.
+   */
+  const handleCalcularAto = () => {
+    // Lógica de cálculo (valores fictícios)
+    const valor = parseFloat(atoForm.quantidade) * 67.52
+    setAtoForm({ ...atoForm, total: valor.toFixed(2).replace('.', ',') })
   }
 
-  const handleRetornar = () => {
-    // Lógica para retornar
-    console.log('Retornando...')
+  /**
+   * FUNÇÃO: handleGravarAto
+   * -----------------------
+   * Grava um ato no protocolo.
+   */
+  const handleGravarAto = async () => {
+    if (!atoForm.natureza) {
+      await showAlert('⚠️ Selecione a natureza do ato!')
+      return
+    }
+
+    const novoAto: Ato = {
+      ...atoForm,
+      id: Date.now().toString()
+    }
+
+    setAtos([...atos, novoAto])
+    await showAlert('✅ Ato gravado com sucesso!')
+    
+    // Reset formulário
+    setAtoForm({
+      id: '',
+      natureza: 'CERTIDÃO EM BREVE RELATÓRIO',
+      tipoGratuidade: 'Pago',
+      quantidade: '1',
+      analfabetos: '0',
+      servicoExterno: false,
+      descontoTerco: false,
+      total: '0,00'
+    })
   }
 
-  const renderCadastroManutencao = () => (
-    <div className="space-y-6">
-      {/* Identificação do Protocolo */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Identificação do Protocolo</h3>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Protocolo</label>
-            <div className="flex">
-              <input
-                type="text"
-                value={protocoloData.protocolo}
-                onChange={(e) => handleInputChange('protocolo', e.target.value)}
-                className="input flex-1"
-              />
-              <button className="ml-2 p-2 text-gray-500 hover:text-primary-600">
-                <DocumentIcon size={16} />
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Entrada</label>
-            <div className="flex">
-              <input
-                type="text"
-                value={protocoloData.dataEntrada}
-                onChange={(e) => handleInputChange('dataEntrada', e.target.value)}
-                className="input flex-1"
-              />
-              <button className="ml-2 p-2 text-gray-500 hover:text-primary-600">
-                <DocumentIcon size={16} />
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ficha Balcão</label>
-            <input
-              type="text"
-              value={protocoloData.fichaBalcao}
-              onChange={(e) => handleInputChange('fichaBalcao', e.target.value)}
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Termo</label>
-            <input
-              type="text"
-              value={protocoloData.termo}
-              onChange={(e) => handleInputChange('termo', e.target.value)}
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Livro</label>
-            <input
-              type="text"
-              value={protocoloData.livro}
-              onChange={(e) => handleInputChange('livro', e.target.value)}
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Folha(s)</label>
-            <input
-              type="text"
-              value={protocoloData.folhas}
-              onChange={(e) => handleInputChange('folhas', e.target.value)}
-              className="input"
-            />
-          </div>
-        </div>
-      </div>
+  /**
+   * FUNÇÃO: handleExcluirAto
+   * ------------------------
+   * Exclui um ato selecionado.
+   */
+  const handleExcluirAto = async () => {
+    if (!selectedAtoId) {
+      await showAlert('⚠️ Selecione um ato para excluir!')
+      return
+    }
 
-      {/* Natureza e Informações Complementares */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Natureza e Informações Complementares</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Natureza</label>
-            <input
-              type="text"
-              value={protocoloData.natureza}
-              onChange={(e) => handleInputChange('natureza', e.target.value)}
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Complemento do Ato</label>
-            <select
-              value={protocoloData.complementoAto}
-              onChange={(e) => handleInputChange('complementoAto', e.target.value)}
-              className="input"
-            >
-              <option value="Nascimento">Nascimento</option>
-              <option value="Casamento">Casamento</option>
-              <option value="Óbito">Óbito</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Comparecente</label>
-            <div className="flex">
-              <input
-                type="text"
-                value={protocoloData.comparecente}
-                onChange={(e) => handleInputChange('comparecente', e.target.value)}
-                className="input flex-1"
-              />
-              <button className="ml-2 p-2 text-gray-500 hover:text-primary-600">
-                <DocumentIcon size={16} />
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Número Documento</label>
-            <select
-              value={protocoloData.numeroDocumento}
-              onChange={(e) => handleInputChange('numeroDocumento', e.target.value)}
-              className="input"
-            >
-              <option value="">Selecione...</option>
-              <option value="CPF">CPF</option>
-              <option value="RG">RG</option>
-              <option value="CNH">CNH</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-            <input
-              type="text"
-              value={protocoloData.telefone}
-              onChange={(e) => handleInputChange('telefone', e.target.value)}
-              className="input"
-            />
-          </div>
-        </div>
-      </div>
+    const confirmado = await showConfirm('Tem certeza que deseja excluir este ato?')
+    if (confirmado) {
+      setAtos(atos.filter(a => a.id !== selectedAtoId))
+      setSelectedAtoId(null)
+      await showAlert('✅ Ato excluído com sucesso!')
+    }
+  }
 
-      {/* Parte A e Parte B */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Partes Envolvidas</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parte A</label>
-            <input
-              type="text"
-              value={protocoloData.parteA}
-              onChange={(e) => handleInputChange('parteA', e.target.value)}
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parte B</label>
-            <div className="flex">
-              <input
-                type="text"
-                value={protocoloData.parteB}
-                onChange={(e) => handleInputChange('parteB', e.target.value)}
-                className="input flex-1"
-              />
-              <button className="ml-2 p-2 text-gray-500 hover:text-primary-600">
-                <DocumentIcon size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+  /**
+   * ====================================================================
+   * ESTILOS DO COMPONENTE
+   * ====================================================================
+   */
 
-      {/* Descrição - Histórico */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Descrição - Histórico</h3>
-        <textarea
-          value={protocoloData.descricao}
-          onChange={(e) => handleInputChange('descricao', e.target.value)}
-          className="input"
-          rows={4}
-        />
-      </div>
+  const focusColor = currentTheme === 'dark' ? '#ffd4a3' : '#ffedd5'
+  const focusTextColor = currentTheme === 'dark' ? '#1a1a1a' : '#000000'
 
-      {/* Atendente e Informações de Entrega */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Atendente e Informações de Entrega</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Atendente</label>
-            <div className="flex">
-              <input
-                type="text"
-                value={protocoloData.atendente}
-                onChange={(e) => handleInputChange('atendente', e.target.value)}
-                className="input flex-1"
-              />
-              <select
-                value="LAURA MARSI MARTINS"
-                className="input ml-2"
-              >
-                <option value="LAURA MARSI MARTINS">LAURA MARSI MARTINS</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Previsão de Entrega</label>
-            <input
-              type="text"
-              value={protocoloData.previsaoEntrega}
-              onChange={(e) => handleInputChange('previsaoEntrega', e.target.value)}
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
-            <input
-              type="text"
-              value={protocoloData.horario}
-              onChange={(e) => handleInputChange('horario', e.target.value)}
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Origem do Pedido</label>
-            <select
-              value={protocoloData.origemPedido}
-              onChange={(e) => handleInputChange('origemPedido', e.target.value)}
-              className="input"
-            >
-              <option value="Pessoal">Pessoal</option>
-              <option value="Online">Online</option>
-              <option value="Telefone">Telefone</option>
-            </select>
-          </div>
-        </div>
-      </div>
+  const getInputStyles = (fieldName: string) => ({
+    width: '100%',
+    padding: '4px 8px',
+    fontSize: '11px',
+    border: `1px solid ${focusedField === fieldName ? focusColor : theme.border}`,
+    borderRadius: '3px',
+    backgroundColor: focusedField === fieldName ? focusColor : theme.inputBackground || theme.background,
+    color: focusedField === fieldName ? focusTextColor : theme.text,
+    outline: 'none',
+    height: '24px',
+    transition: 'all 0.2s ease'
+  })
 
-      {/* Custas e Pagamento */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Custas */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Custas</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-              <select
-                value={protocoloData.tipo}
-                onChange={(e) => handleInputChange('tipo', e.target.value)}
-                className="input"
-              >
-                <option value="Pago">Pago</option>
-                <option value="Gratuito">Gratuito</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
-                <input
-                  type="number"
-                  value={protocoloData.quantidade}
-                  onChange={(e) => handleInputChange('quantidade', parseInt(e.target.value) || 0)}
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Analfabetos</label>
-                <input
-                  type="number"
-                  value={protocoloData.analfabetos}
-                  onChange={(e) => handleInputChange('analfabetos', parseInt(e.target.value) || 0)}
-                  className="input"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total de Atos</label>
-              <input
-                type="number"
-                step="0.01"
-                value={protocoloData.totalAtos}
-                onChange={(e) => handleInputChange('totalAtos', parseFloat(e.target.value) || 0)}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Outros Serviços</label>
-              <input
-                type="number"
-                step="0.01"
-                value={protocoloData.outrosServicos}
-                onChange={(e) => handleInputChange('outrosServicos', parseFloat(e.target.value) || 0)}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total</label>
-              <input
-                type="number"
-                step="0.01"
-                value={protocoloData.total}
-                onChange={(e) => handleInputChange('total', parseFloat(e.target.value) || 0)}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total Pago</label>
-              <input
-                type="number"
-                step="0.01"
-                value={protocoloData.totalPago}
-                onChange={(e) => handleInputChange('totalPago', parseFloat(e.target.value) || 0)}
-                className="input"
-              />
-            </div>
-          </div>
-        </div>
+  const labelStyles = {
+    fontSize: '10px',
+    fontWeight: '600' as const,
+    marginBottom: '2px',
+    color: theme.text,
+    display: 'block'
+  }
 
-        {/* Pagamento */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Pagamento</h3>
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2 text-sm font-medium text-gray-700">
-              <div>Pagamento</div>
-              <div>Valor (R$)</div>
-              <div>Data</div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 items-center">
-              <div className="text-sm">Depósito</div>
-              <input
-                type="number"
-                step="0.01"
-                value={pagamentoData.deposito.valor}
-                onChange={(e) => setPagamentoData(prev => ({
-                  ...prev,
-                  deposito: { ...prev.deposito, valor: parseFloat(e.target.value) || 0 }
-                }))}
-                className="input text-sm"
-              />
-              <input
-                type="text"
-                value={pagamentoData.deposito.data}
-                onChange={(e) => setPagamentoData(prev => ({
-                  ...prev,
-                  deposito: { ...prev.deposito, data: e.target.value }
-                }))}
-                className="input text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2 items-center opacity-50">
-              <div className="text-sm line-through">Assinatura</div>
-              <input
-                type="number"
-                step="0.01"
-                value={pagamentoData.assinatura.valor}
-                disabled
-                className="input text-sm"
-              />
-              <input
-                type="text"
-                value={pagamentoData.assinatura.data}
-                disabled
-                className="input text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2 items-center opacity-50">
-              <div className="text-sm line-through">1ª Parcela</div>
-              <input
-                type="number"
-                step="0.01"
-                value={pagamentoData.parcela1.valor}
-                disabled
-                className="input text-sm"
-              />
-              <input
-                type="text"
-                value={pagamentoData.parcela1.data}
-                disabled
-                className="input text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2 items-center opacity-50">
-              <div className="text-sm line-through">2ª Parcela</div>
-              <input
-                type="number"
-                step="0.01"
-                value={pagamentoData.parcela2.valor}
-                disabled
-                className="input text-sm"
-              />
-              <input
-                type="text"
-                value={pagamentoData.parcela2.data}
-                disabled
-                className="input text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2 items-center opacity-50">
-              <div className="text-sm line-through">3ª Parcela</div>
-              <input
-                type="number"
-                step="0.01"
-                value={pagamentoData.parcela3.valor}
-                disabled
-                className="input text-sm"
-              />
-              <input
-                type="text"
-                value={pagamentoData.parcela3.data}
-                disabled
-                className="input text-sm"
-              />
-            </div>
-            <div className="mt-4 p-2 bg-gray-50 rounded text-sm">
-              Certidão de Nascimento - Processo: 570542
-            </div>
-          </div>
-        </div>
-      </div>
+  const buttonStyles = {
+    padding: '6px 12px',
+    fontSize: '11px',
+    fontWeight: '600' as const,
+    border: 'none',
+    borderRadius: '3px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minWidth: '80px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  }
 
-      {/* Botões de Ação */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <div className="flex space-x-3">
-          <button
-            onClick={handleCalcular}
-            className="btn btn-secondary flex items-center space-x-2"
-          >
-            <CalculatorIcon size={16} />
-            <span>Calcular</span>
-          </button>
-          <button
-            onClick={handleGravar}
-            className="btn btn-primary flex items-center space-x-2"
-          >
-            <SaveIcon size={16} />
-            <span>Gravar</span>
-          </button>
-          <button
-            onClick={handleLimpar}
-            className="btn btn-secondary flex items-center space-x-2"
-          >
-            <TrashIcon size={16} />
-            <span>Limpar</span>
-          </button>
-          <button
-            onClick={handleImprimir}
-            className="btn btn-secondary flex items-center space-x-2"
-          >
-            <PrintIcon size={16} />
-            <span>Imprimir</span>
-          </button>
-          <button
-            onClick={handleRetornar}
-            className="btn btn-secondary flex items-center space-x-2"
-          >
-            <ArrowLeftIcon size={16} />
-            <span>Retornar</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-
-  const renderServicos = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ATOS */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">ATOS</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Natureza</label>
-              <select
-                value={servicosData.natureza}
-                onChange={(e) => handleServicosChange('natureza', e.target.value)}
-                className="input"
-              >
-                <option value="CERTIDÃO EM BREVE RELATÓRIO">CERTIDÃO EM BREVE RELATÓRIO</option>
-                <option value="CERTIDÃO DE NASCIMENTO">CERTIDÃO DE NASCIMENTO</option>
-                <option value="CERTIDÃO DE CASAMENTO">CERTIDÃO DE CASAMENTO</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo Gratuidade</label>
-              <select
-                value={servicosData.tipoGratuidade}
-                onChange={(e) => handleServicosChange('tipoGratuidade', e.target.value)}
-                className="input"
-              >
-                <option value="Pago">Pago</option>
-                <option value="Gratuito">Gratuito</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
-              <input
-                type="number"
-                value={servicosData.quantidade}
-                onChange={(e) => handleServicosChange('quantidade', parseInt(e.target.value) || 0)}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Analfabetos (Procuração)</label>
-              <input
-                type="number"
-                value={servicosData.analfabetos}
-                onChange={(e) => handleServicosChange('analfabetos', parseInt(e.target.value) || 0)}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total</label>
-              <input
-                type="number"
-                step="0.01"
-                value={servicosData.total}
-                onChange={(e) => handleServicosChange('total', parseFloat(e.target.value) || 0)}
-                className="input"
-              />
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={handleCalcular}
-                className="btn btn-secondary flex items-center space-x-2"
-              >
-                <CalculatorIcon size={16} />
-                <span>Calcular</span>
-              </button>
-              <button className="btn btn-primary flex items-center space-x-2">
-                <PlusIcon size={16} />
-                <span>Novo</span>
-              </button>
-              <button
-                onClick={handleGravar}
-                className="btn btn-primary flex items-center space-x-2"
-              >
-                <SaveIcon size={16} />
-                <span>Gravar</span>
-              </button>
-              <button className="btn btn-red-600 text-white hover:bg-red-700 flex items-center space-x-2">
-                <TrashIcon size={16} />
-                <span>Excluir</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Resumo */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Resumo</h3>
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2 text-sm font-medium text-gray-700 border-b pb-2">
-              <div>Natureza</div>
-              <div>Valor</div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>{servicosData.natureza}</div>
-              <div>R$ {servicosData.total.toFixed(2)}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* OUTROS SERVIÇOS */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">OUTROS SERVIÇOS</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
-              <input
-                type="text"
-                value={outrosServicos.quantidade}
-                onChange={(e) => handleOutrosServicosChange('quantidade', e.target.value)}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descrição (Serviço)</label>
-              <input
-                type="text"
-                value={outrosServicos.descricao}
-                onChange={(e) => handleOutrosServicosChange('descricao', e.target.value)}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
-              <input
-                type="text"
-                value={outrosServicos.valor}
-                onChange={(e) => handleOutrosServicosChange('valor', e.target.value)}
-                className="input"
-              />
-            </div>
-          </div>
-          <div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qtde</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor R$</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {servicosLista.map((servico, index) => (
-                    <tr key={index}>
-                      <td className="px-3 py-2 text-sm text-gray-900">{servico.quantidade}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{servico.nome}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{servico.valor.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex space-x-2 mt-3">
-              <button className="btn btn-secondary flex items-center space-x-2">
-                <CheckIcon size={16} />
-                <span>Editar</span>
-              </button>
-              <button className="btn btn-primary flex items-center space-x-2">
-                <PlusIcon size={16} />
-                <span>Incluir</span>
-              </button>
-              <button className="btn btn-red-600 text-white hover:bg-red-700 flex items-center space-x-2">
-                <TrashIcon size={16} />
-                <span>Excluir</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-
-  const renderHistorico = () => (
-    <div className="bg-white p-6 rounded-lg border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Histórico do Protocolo</h3>
-      <p className="text-gray-600">Funcionalidade de histórico será implementada em breve.</p>
-    </div>
-  )
-
-  const renderDigitalizacao = () => (
-    <div className="bg-white p-6 rounded-lg border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Digitalização</h3>
-      <p className="text-gray-600">Funcionalidade de digitalização será implementada em breve.</p>
-    </div>
-  )
+  const tabStyles = (isActive: boolean) => ({
+    flex: 1,
+    padding: '10px',
+    fontSize: '11px',
+    fontWeight: '600' as const,
+    border: 'none',
+    borderBottom: isActive ? `3px solid ${headerColor}` : '3px solid transparent',
+    backgroundColor: isActive ? (currentTheme === 'dark' ? '#2a2a2a' : '#f0f0f0') : 'transparent',
+    color: isActive ? headerColor : theme.text,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    outline: 'none'
+  })
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <DocumentIcon size={24} className="text-primary-600" />
-              <h2 className="text-xl font-semibold text-gray-800">
-                Lançamento de Protocolos
-              </h2>
+    <BasePage
+      title="Lançamento de Protocolos"
+      onClose={onClose}
+      width="1200px"
+      height="700px"
+      headerColor={headerColor}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+        {/* Navegação por abas */}
+        <div style={{
+          display: 'flex',
+          borderBottom: `1px solid ${theme.border}`,
+          backgroundColor: theme.surface
+        }}>
+          <button
+            onClick={() => setActiveTab('cadastro')}
+            style={tabStyles(activeTab === 'cadastro')}
+          >
+            📝 Cadastro / Manutenção
+          </button>
+          <button
+            onClick={() => setActiveTab('servicos')}
+            style={tabStyles(activeTab === 'servicos')}
+          >
+            💼 Serviços
+          </button>
+          <button
+            onClick={() => setActiveTab('historico')}
+            style={tabStyles(activeTab === 'historico')}
+          >
+            📋 Histórico
+          </button>
+          <button
+            onClick={() => setActiveTab('digitalizacao')}
+            style={tabStyles(activeTab === 'digitalizacao')}
+          >
+            📄 Digitalização
+          </button>
+          <button
+            onClick={() => setActiveTab('imagens')}
+            style={tabStyles(activeTab === 'imagens')}
+          >
+            🖼️ Imagens
+          </button>
+        </div>
+
+        {/* Conteúdo da aba ativa */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+          {/* ABA 1: CADASTRO/MANUTENÇÃO */}
+          {activeTab === 'cadastro' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Linha 1: Protocolo, Data Entrada, Ficha Balcão, Livro, Folha(s), Termo */}
+              <div style={{ display: 'grid', gridTemplateColumns: '200px 180px 120px 120px 120px 120px', gap: '12px' }}>
+                <div>
+                  <label style={labelStyles}>Protocolo *</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.numero}
+                      onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                      onFocus={() => setFocusedField('numero')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('numero')}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>🔍</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyles}>Data Entrada *</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.dataEntrada}
+                      onChange={(e) => setFormData({ ...formData, dataEntrada: e.target.value })}
+                      onFocus={() => setFocusedField('dataEntrada')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('dataEntrada')}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>🔍</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyles}>Ficha Balcão</label>
+                  <input
+                    type="text"
+                    value={formData.fichaBalcao}
+                    onChange={(e) => setFormData({ ...formData, fichaBalcao: e.target.value })}
+                    onFocus={() => setFocusedField('fichaBalcao')}
+                    onBlur={() => setFocusedField(null)}
+                    style={getInputStyles('fichaBalcao')}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyles}>Livro</label>
+                  <input
+                    type="text"
+                    value={formData.livro}
+                    onChange={(e) => setFormData({ ...formData, livro: e.target.value })}
+                    onFocus={() => setFocusedField('livro')}
+                    onBlur={() => setFocusedField(null)}
+                    style={getInputStyles('livro')}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyles}>Folha(s)</label>
+                  <input
+                    type="text"
+                    value={formData.folhas}
+                    onChange={(e) => setFormData({ ...formData, folhas: e.target.value })}
+                    onFocus={() => setFocusedField('folhas')}
+                    onBlur={() => setFocusedField(null)}
+                    style={getInputStyles('folhas')}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyles}>Termo</label>
+                  <input
+                    type="text"
+                    value={formData.termo}
+                    onChange={(e) => setFormData({ ...formData, termo: e.target.value })}
+                    onFocus={() => setFocusedField('termo')}
+                    onBlur={() => setFocusedField(null)}
+                    style={getInputStyles('termo')}
+                  />
+                </div>
+              </div>
+
+              {/* Linha 2: Natureza, Complemento do Ato */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyles}>Natureza</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.natureza}
+                      onChange={(e) => setFormData({ ...formData, natureza: e.target.value })}
+                      onFocus={() => setFocusedField('natureza')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('natureza')}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>▼</button>
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>🔍</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyles}>Complemento do Ato</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.complementoAto}
+                      onChange={(e) => setFormData({ ...formData, complementoAto: e.target.value })}
+                      onFocus={() => setFocusedField('complementoAto')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('complementoAto')}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>▼</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Linha 4: Comparecente, Número Documento, Telefone */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyles}>Comparecente</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.comparecente}
+                      onChange={(e) => setFormData({ ...formData, comparecente: e.target.value })}
+                      onFocus={() => setFocusedField('comparecente')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('comparecente')}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>🔍</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyles}>Número Documento</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.numeroDocumento}
+                      onChange={(e) => setFormData({ ...formData, numeroDocumento: e.target.value })}
+                      onFocus={() => setFocusedField('numeroDocumento')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('numeroDocumento')}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>▼</button>
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>🔍</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyles}>Telefone</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.telefone}
+                      onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                      onFocus={() => setFocusedField('telefone')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('telefone')}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>...</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Linha 5: Parte A e Parte B (lado a lado) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyles}>Parte A</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <textarea
+                      value={formData.parteA}
+                      onChange={(e) => setFormData({ ...formData, parteA: e.target.value })}
+                      onFocus={() => setFocusedField('parteA')}
+                      onBlur={() => setFocusedField(null)}
+                      style={{
+                        ...getInputStyles('parteA'),
+                        height: '80px',
+                        resize: 'vertical' as const,
+                        fontFamily: 'inherit'
+                      }}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer', height: '24px' }}>🔍</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyles}>Parte B</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <textarea
+                      value={formData.parteB}
+                      onChange={(e) => setFormData({ ...formData, parteB: e.target.value })}
+                      onFocus={() => setFocusedField('parteB')}
+                      onBlur={() => setFocusedField(null)}
+                      style={{
+                        ...getInputStyles('parteB'),
+                        height: '80px',
+                        resize: 'vertical' as const,
+                        fontFamily: 'inherit'
+                      }}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer', height: '24px' }}>🔍</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Linha 6: Descrição - Histórico */}
+              <div>
+                <label style={labelStyles}>Descrição - Histórico</label>
+                <textarea
+                  value={formData.descricao}
+                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                  onFocus={() => setFocusedField('descricao')}
+                  onBlur={() => setFocusedField(null)}
+                  style={{
+                    ...getInputStyles('descricao'),
+                    height: '120px',
+                    resize: 'vertical' as const,
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              {/* Linha 7: Atendente, Previsão Entrega, Horário, Origem */}
+              <div style={{ display: 'grid', gridTemplateColumns: '300px 150px 100px 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyles}>Atendente</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.atendente}
+                      onChange={(e) => setFormData({ ...formData, atendente: e.target.value })}
+                      style={{ ...getInputStyles('atendente'), width: '50px' }}
+                    />
+                    <input
+                      type="text"
+                      value={formData.atendenteNome}
+                      onChange={(e) => setFormData({ ...formData, atendenteNome: e.target.value })}
+                      onFocus={() => setFocusedField('atendenteNome')}
+                      onBlur={() => setFocusedField(null)}
+                      style={{ ...getInputStyles('atendenteNome'), flex: 1 }}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>▼</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyles}>Previsão de Entrega</label>
+                  <input
+                    type="text"
+                    value={formData.previsaoEntrega}
+                    onChange={(e) => setFormData({ ...formData, previsaoEntrega: e.target.value })}
+                    onFocus={() => setFocusedField('previsaoEntrega')}
+                    onBlur={() => setFocusedField(null)}
+                    style={getInputStyles('previsaoEntrega')}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyles}>Horário</label>
+                  <input
+                    type="text"
+                    value={formData.horario}
+                    onChange={(e) => setFormData({ ...formData, horario: e.target.value })}
+                    onFocus={() => setFocusedField('horario')}
+                    onBlur={() => setFocusedField(null)}
+                    style={getInputStyles('horario')}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyles}>Origem do Pedido</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={formData.origemPedido}
+                      onChange={(e) => setFormData({ ...formData, origemPedido: e.target.value })}
+                      onFocus={() => setFocusedField('origemPedido')}
+                      onBlur={() => setFocusedField(null)}
+                      style={getInputStyles('origemPedido')}
+                    />
+                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>▼</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Linha 8: Custas e Pagamento (lado a lado) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                {/* Custas */}
+                <div style={{
+                  padding: '12px',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '4px',
+                  backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f9f9f9'
+                }}>
+                  <h3 style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: 'bold', color: theme.text }}>Custas</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label style={labelStyles}>Tipo</label>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={custas.tipo}
+                            onChange={(e) => setCustas({ ...custas, tipo: e.target.value })}
+                            style={getInputStyles('custaTipo')}
+                          />
+                          <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>▼</button>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelStyles}>Quantidade</label>
+                        <input
+                          type="text"
+                          value={custas.quantidade}
+                          onChange={(e) => setCustas({ ...custas, quantidade: e.target.value })}
+                          style={getInputStyles('custaQuantidade')}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label style={labelStyles}>Analfabetos</label>
+                        <input
+                          type="text"
+                          value={custas.analfabetos}
+                          onChange={(e) => setCustas({ ...custas, analfabetos: e.target.value })}
+                          style={getInputStyles('custaAnalfabetos')}
+                        />
+                      </div>
+                      <div>
+                        <label style={labelStyles}>Total de Atos</label>
+                        <input
+                          type="text"
+                          value={custas.totalAtos}
+                          onChange={(e) => setCustas({ ...custas, totalAtos: e.target.value })}
+                          style={getInputStyles('custaTotalAtos')}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label style={labelStyles}>Outros Serviços</label>
+                        <input
+                          type="text"
+                          value={custas.outrosServicos}
+                          onChange={(e) => setCustas({ ...custas, outrosServicos: e.target.value })}
+                          style={getInputStyles('custaOutrosServicos')}
+                        />
+                      </div>
+                      <div>
+                        <label style={labelStyles}>Total</label>
+                        <input
+                          type="text"
+                          value={custas.total}
+                          onChange={(e) => setCustas({ ...custas, total: e.target.value })}
+                          style={getInputStyles('custaTotal')}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={labelStyles}>Total Pago</label>
+                      <input
+                        type="text"
+                        value={custas.totalPago}
+                        onChange={(e) => setCustas({ ...custas, totalPago: e.target.value })}
+                        style={getInputStyles('custaTotalPago')}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pagamento */}
+                <div style={{
+                  padding: '12px',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '4px',
+                  backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f9f9f9'
+                }}>
+                  <h3 style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: 'bold', color: theme.text }}>Pagamento</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 100px 40px', gap: '8px', alignItems: 'center' }}>
+                    {/* Cabeçalhos */}
+                    <div></div>
+                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.text }}>Valor (R$)</div>
+                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.text }}>Data</div>
+                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: theme.text, textAlign: 'center' }}>Pago</div>
+
+                    {/* Depósito */}
+                    <label style={{ fontSize: '10px', color: theme.text }}>Depósito</label>
+                    <input type="text" value={pagamento.deposito.valor} onChange={(e) => setPagamento({ ...pagamento, deposito: { ...pagamento.deposito, valor: e.target.value } })} style={{ ...getInputStyles('depositoValor'), height: '22px' }} />
+                    <input type="text" value={pagamento.deposito.data} onChange={(e) => setPagamento({ ...pagamento, deposito: { ...pagamento.deposito, data: e.target.value } })} style={{ ...getInputStyles('depositoData'), height: '22px' }} />
+                    <input type="checkbox" checked={pagamento.deposito.pago} onChange={(e) => setPagamento({ ...pagamento, deposito: { ...pagamento.deposito, pago: e.target.checked } })} />
+
+                    {/* Assinatura */}
+                    <label style={{ fontSize: '10px', color: theme.text }}>Assinatura</label>
+                    <input type="text" value={pagamento.assinatura.valor} onChange={(e) => setPagamento({ ...pagamento, assinatura: { ...pagamento.assinatura, valor: e.target.value } })} style={{ ...getInputStyles('assinaturaValor'), height: '22px' }} />
+                    <input type="text" value={pagamento.assinatura.data} onChange={(e) => setPagamento({ ...pagamento, assinatura: { ...pagamento.assinatura, data: e.target.value } })} style={{ ...getInputStyles('assinaturaData'), height: '22px' }} />
+                    <input type="checkbox" checked={pagamento.assinatura.pago} onChange={(e) => setPagamento({ ...pagamento, assinatura: { ...pagamento.assinatura, pago: e.target.checked } })} />
+
+                    {/* 1ª Parcela */}
+                    <label style={{ fontSize: '10px', color: theme.text }}>1ª Parcela</label>
+                    <input type="text" value={pagamento.parcela1.valor} onChange={(e) => setPagamento({ ...pagamento, parcela1: { ...pagamento.parcela1, valor: e.target.value } })} style={{ ...getInputStyles('parcela1Valor'), height: '22px' }} />
+                    <input type="text" value={pagamento.parcela1.data} onChange={(e) => setPagamento({ ...pagamento, parcela1: { ...pagamento.parcela1, data: e.target.value } })} style={{ ...getInputStyles('parcela1Data'), height: '22px' }} />
+                    <input type="checkbox" checked={pagamento.parcela1.pago} onChange={(e) => setPagamento({ ...pagamento, parcela1: { ...pagamento.parcela1, pago: e.target.checked } })} />
+
+                    {/* 2ª Parcela */}
+                    <label style={{ fontSize: '10px', color: theme.text }}>2ª Parcela</label>
+                    <input type="text" value={pagamento.parcela2.valor} onChange={(e) => setPagamento({ ...pagamento, parcela2: { ...pagamento.parcela2, valor: e.target.value } })} style={{ ...getInputStyles('parcela2Valor'), height: '22px' }} />
+                    <input type="text" value={pagamento.parcela2.data} onChange={(e) => setPagamento({ ...pagamento, parcela2: { ...pagamento.parcela2, data: e.target.value } })} style={{ ...getInputStyles('parcela2Data'), height: '22px' }} />
+                    <input type="checkbox" checked={pagamento.parcela2.pago} onChange={(e) => setPagamento({ ...pagamento, parcela2: { ...pagamento.parcela2, pago: e.target.checked } })} />
+
+                    {/* 3ª Parcela */}
+                    <label style={{ fontSize: '10px', color: theme.text }}>3ª Parcela</label>
+                    <input type="text" value={pagamento.parcela3.valor} onChange={(e) => setPagamento({ ...pagamento, parcela3: { ...pagamento.parcela3, valor: e.target.value } })} style={{ ...getInputStyles('parcela3Valor'), height: '22px' }} />
+                    <input type="text" value={pagamento.parcela3.data} onChange={(e) => setPagamento({ ...pagamento, parcela3: { ...pagamento.parcela3, data: e.target.value } })} style={{ ...getInputStyles('parcela3Data'), height: '22px' }} />
+                    <input type="checkbox" checked={pagamento.parcela3.pago} onChange={(e) => setPagamento({ ...pagamento, parcela3: { ...pagamento.parcela3, pago: e.target.checked } })} />
+                  </div>
+                  <div style={{ fontSize: '9px', color: theme.text, marginTop: '8px' }}>- Processo: 0</div>
+                </div>
+              </div>
+
+              {/* Botões de ação */}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px', paddingTop: '12px', borderTop: `1px solid ${theme.border}` }}>
+                <button
+                  onClick={handleCalcularAto}
+                  style={{ ...buttonStyles, backgroundColor: '#3b82f6', color: 'white' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                >
+                  🧮 Calcular
+                </button>
+                <button
+                  onClick={handleGravarProtocolo}
+                  style={{ ...buttonStyles, backgroundColor: '#10b981', color: 'white' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                >
+                  💾 Gravar
+                </button>
+                <button
+                  onClick={handleLimpar}
+                  style={{ ...buttonStyles, backgroundColor: '#f59e0b', color: 'white' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
+                >
+                  🗑️ Limpar
+                </button>
+                <button
+                  onClick={() => console.log('Imprimir')}
+                  style={{ ...buttonStyles, backgroundColor: '#6366f1', color: 'white' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4f46e5'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6366f1'}
+                >
+                  🖨️ Imprimir
+                </button>
+                <button
+                  onClick={onClose}
+                  style={{ ...buttonStyles, backgroundColor: '#6c757d', color: 'white' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#495057'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
+                >
+                  ↩️ Retornar
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
-            <button
-              onClick={() => setActiveTab('cadastro')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'cadastro'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Cadastro / Manutenção
-            </button>
-            <button
-              onClick={() => setActiveTab('servicos')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'servicos'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Serviços
-            </button>
-            <button
-              onClick={() => setActiveTab('historico')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'historico'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Histórico
-            </button>
-            <button
-              onClick={() => setActiveTab('digitalizacao')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'digitalizacao'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Digitalização
-            </button>
-          </nav>
-        </div>
+          {/* ABA 2: SERVIÇOS */}
+          {activeTab === 'servicos' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%' }}>
+              {/* Seção ATOS */}
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                gap: '16px',
+                padding: '12px',
+                border: `1px solid ${theme.border}`,
+                borderRadius: '4px',
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f9f9f9'
+              }}>
+                {/* Formulário de Atos (esquerda) */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: theme.text }}>ATOS</h3>
+                  
+                  <div>
+                    <label style={labelStyles}>Natureza</label>
+                    <select
+                      value={atoForm.natureza}
+                      onChange={(e) => setAtoForm({ ...atoForm, natureza: e.target.value })}
+                      style={{ ...getInputStyles('natureza'), cursor: 'pointer' }}
+                    >
+                      <option>CERTIDÃO EM BREVE RELATÓRIO</option>
+                      <option>CERTIDÃO NARRATIVA</option>
+                      <option>CERTIDÃO DE INTEIRO TEOR</option>
+                      <option>ASSENTO</option>
+                      <option>AVERBAÇÃO</option>
+                    </select>
+                  </div>
 
-        {/* Content */}
-        <div className="p-6">
-          {activeTab === 'cadastro' && renderCadastroManutencao()}
-          {activeTab === 'servicos' && renderServicos()}
-          {activeTab === 'historico' && renderHistorico()}
-          {activeTab === 'digitalizacao' && renderDigitalizacao()}
+                  <div>
+                    <label style={labelStyles}>Tipo Gratuidade</label>
+                    <select
+                      value={atoForm.tipoGratuidade}
+                      onChange={(e) => setAtoForm({ ...atoForm, tipoGratuidade: e.target.value })}
+                      style={{ ...getInputStyles('tipoGratuidade'), cursor: 'pointer' }}
+                    >
+                      <option>Pago</option>
+                      <option>Gratuito</option>
+                      <option>Isento</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={labelStyles}>Quantidade</label>
+                      <input
+                        type="text"
+                        value={atoForm.quantidade}
+                        onChange={(e) => setAtoForm({ ...atoForm, quantidade: e.target.value })}
+                        style={getInputStyles('quantidade')}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyles}>Analfabetos (Procuração)</label>
+                      <input
+                        type="text"
+                        value={atoForm.analfabetos}
+                        onChange={(e) => setAtoForm({ ...atoForm, analfabetos: e.target.value })}
+                        style={getInputStyles('analfabetos')}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: theme.text }}>
+                      <input
+                        type="checkbox"
+                        checked={atoForm.servicoExterno}
+                        onChange={(e) => setAtoForm({ ...atoForm, servicoExterno: e.target.checked })}
+                      />
+                      Serviço Externo?
+                    </label>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: theme.text }}>
+                      <input
+                        type="checkbox"
+                        checked={atoForm.descontoTerco}
+                        onChange={(e) => setAtoForm({ ...atoForm, descontoTerco: e.target.checked })}
+                      />
+                      Desconto de 1/3?
+                    </label>
+                  </div>
+
+                  <div>
+                    <label style={labelStyles}>Total</label>
+                    <input
+                      type="text"
+                      value={atoForm.total}
+                      readOnly
+                      style={{ ...getInputStyles('total'), backgroundColor: currentTheme === 'dark' ? '#1a1a1a' : '#e5e5e5' }}
+                    />
+                  </div>
+
+                  {/* Botões de ação para atos */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                    <button
+                      onClick={handleCalcularAto}
+                      style={{ ...buttonStyles, backgroundColor: '#3b82f6', color: 'white', flex: 1 }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                    >
+                      🧮 Calcular
+                    </button>
+                    <button
+                      onClick={() => setAtoForm({ id: '', natureza: 'CERTIDÃO EM BREVE RELATÓRIO', tipoGratuidade: 'Pago', quantidade: '1', analfabetos: '0', servicoExterno: false, descontoTerco: false, total: '0,00' })}
+                      style={{ ...buttonStyles, backgroundColor: '#10b981', color: 'white', flex: 1 }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                    >
+                      📄 Novo
+                    </button>
+                    <button
+                      onClick={handleGravarAto}
+                      style={{ ...buttonStyles, backgroundColor: '#f59e0b', color: 'white', flex: 1 }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
+                    >
+                      💾 Gravar
+                    </button>
+                    <button
+                      onClick={handleExcluirAto}
+                      style={{ ...buttonStyles, backgroundColor: '#dc2626', color: 'white', flex: 1 }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                    >
+                      ❌ Excluir
+                    </button>
+                  </div>
+                </div>
+
+                {/* Lista de Atos (direita) */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: 'bold', color: theme.text }}>Atos Cadastrados</h3>
+                  <div style={{
+                    flex: 1,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '4px',
+                    overflow: 'auto',
+                    backgroundColor: theme.background
+                  }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{
+                          backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f0f0f0',
+                          position: 'sticky',
+                          top: 0
+                        }}>
+                          <th style={{ padding: '8px', textAlign: 'left', fontSize: '10px', fontWeight: 'bold', color: theme.text }}>Natureza</th>
+                          <th style={{ padding: '8px', textAlign: 'right', fontSize: '10px', fontWeight: 'bold', color: theme.text, width: '100px' }}>Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {atos.length === 0 ? (
+                          <tr>
+                            <td colSpan={2} style={{ padding: '24px', textAlign: 'center', fontSize: '11px', color: theme.text, fontStyle: 'italic' }}>
+                              Nenhum ato cadastrado
+                            </td>
+                          </tr>
+                        ) : (
+                          atos.map((ato) => (
+                            <tr
+                              key={ato.id}
+                              onClick={() => setSelectedAtoId(ato.id)}
+                              style={{
+                                backgroundColor: selectedAtoId === ato.id ? (currentTheme === 'dark' ? '#3b82f6' : '#60a5fa') : 'transparent',
+                                cursor: 'pointer',
+                                borderBottom: `1px solid ${theme.border}`
+                              }}
+                            >
+                              <td style={{ padding: '8px', fontSize: '11px', color: selectedAtoId === ato.id ? '#fff' : theme.text }}>{ato.natureza}</td>
+                              <td style={{ padding: '8px', fontSize: '11px', textAlign: 'right', color: selectedAtoId === ato.id ? '#fff' : theme.text }}>{ato.total}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção OUTROS SERVIÇOS */}
+              <div style={{
+                flex: 1,
+                padding: '12px',
+                border: `1px solid ${theme.border}`,
+                borderRadius: '4px',
+                backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f9f9f9'
+              }}>
+                <h3 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 'bold', color: theme.text }}>OUTROS SERVIÇOS</h3>
+                
+                {/* Formulário de novo serviço */}
+                <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 150px auto', gap: '8px', marginBottom: '12px' }}>
+                  <div>
+                    <label style={labelStyles}>Quantidade</label>
+                    <input
+                      type="text"
+                      value={servicoForm.quantidade}
+                      onChange={(e) => setServicoForm({ ...servicoForm, quantidade: e.target.value })}
+                      style={getInputStyles('servicoQtd')}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyles}>Descrição (Serviço)</label>
+                    <input
+                      type="text"
+                      value={servicoForm.descricao}
+                      onChange={(e) => setServicoForm({ ...servicoForm, descricao: e.target.value })}
+                      style={getInputStyles('servicoDesc')}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyles}>Valor (R$)</label>
+                    <input
+                      type="text"
+                      value={servicoForm.valor}
+                      onChange={(e) => setServicoForm({ ...servicoForm, valor: e.target.value })}
+                      style={getInputStyles('servicoValor')}
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (servicoForm.descricao && servicoForm.quantidade) {
+                        const novoServico: OutroServico = {
+                          id: Date.now().toString(),
+                          ...servicoForm
+                        }
+                        setOutrosServicos([...outrosServicos, novoServico])
+                        setServicoForm({ quantidade: '', descricao: '', valor: '' })
+                        await showAlert('✅ Serviço incluído com sucesso!')
+                      } else {
+                        await showAlert('⚠️ Preencha descrição e quantidade!')
+                      }
+                    }}
+                    style={{ ...buttonStyles, backgroundColor: '#10b981', color: 'white', marginTop: '18px' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                  >
+                    ➕ Incluir
+                  </button>
+                </div>
+
+                {/* Lista de outros serviços */}
+                <div style={{
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  maxHeight: '200px',
+                  backgroundColor: theme.background
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{
+                        backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f0f0f0',
+                        position: 'sticky',
+                        top: 0
+                      }}>
+                        <th style={{ padding: '8px', textAlign: 'left', fontSize: '10px', fontWeight: 'bold', color: theme.text, width: '80px' }}>Qtde</th>
+                        <th style={{ padding: '8px', textAlign: 'left', fontSize: '10px', fontWeight: 'bold', color: theme.text }}>Descrição</th>
+                        <th style={{ padding: '8px', textAlign: 'right', fontSize: '10px', fontWeight: 'bold', color: theme.text, width: '100px' }}>Valor R$</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {outrosServicos.map((servico) => (
+                        <tr
+                          key={servico.id}
+                          onClick={() => setSelectedServicoId(servico.id)}
+                          style={{
+                            backgroundColor: selectedServicoId === servico.id ? (currentTheme === 'dark' ? '#3b82f6' : '#60a5fa') : 'transparent',
+                            cursor: 'pointer',
+                            borderBottom: `1px solid ${theme.border}`
+                          }}
+                        >
+                          <td style={{ padding: '8px', fontSize: '11px', color: selectedServicoId === servico.id ? '#fff' : theme.text }}>{servico.quantidade}</td>
+                          <td style={{ padding: '8px', fontSize: '11px', color: selectedServicoId === servico.id ? '#fff' : theme.text }}>{servico.descricao}</td>
+                          <td style={{ padding: '8px', fontSize: '11px', textAlign: 'right', color: selectedServicoId === servico.id ? '#fff' : theme.text }}>{servico.valor}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Botões para outros serviços */}
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                  <button
+                    onClick={async () => {
+                      if (selectedServicoId) {
+                        const servico = outrosServicos.find(s => s.id === selectedServicoId)
+                        if (servico) {
+                          setServicoForm(servico)
+                          await showAlert('✅ Serviço carregado para edição!')
+                        }
+                      } else {
+                        await showAlert('⚠️ Selecione um serviço para editar!')
+                      }
+                    }}
+                    style={{ ...buttonStyles, backgroundColor: '#f59e0b', color: 'white' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
+                  >
+                    ✏️ Editar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (selectedServicoId) {
+                        const confirmado = await showConfirm('Tem certeza que deseja excluir este serviço?')
+                        if (confirmado) {
+                          setOutrosServicos(outrosServicos.filter(s => s.id !== selectedServicoId))
+                          setSelectedServicoId(null)
+                          await showAlert('✅ Serviço excluído com sucesso!')
+                        }
+                      } else {
+                        await showAlert('⚠️ Selecione um serviço para excluir!')
+                      }
+                    }}
+                    style={{ ...buttonStyles, backgroundColor: '#dc2626', color: 'white' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                  >
+                    ❌ Excluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ABA 3: HISTÓRICO */}
+          {activeTab === 'historico' && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              padding: '16px',
+              border: `1px solid ${theme.border}`,
+              borderRadius: '4px',
+              backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+              height: '100%'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: theme.text }}>Histórico de Movimentações</h3>
+              <div style={{
+                flex: 1,
+                padding: '12px',
+                border: `1px solid ${theme.border}`,
+                borderRadius: '4px',
+                backgroundColor: theme.background,
+                fontSize: '11px',
+                color: theme.text,
+                fontStyle: 'italic'
+              }}>
+                Nenhuma movimentação registrada
+              </div>
+            </div>
+          )}
+
+          {/* ABA 4: DIGITALIZAÇÃO */}
+          {activeTab === 'digitalizacao' && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '24px',
+              height: '100%',
+              padding: '32px'
+            }}>
+              <div style={{
+                fontSize: '48px',
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '2px 2px 4px rgba(0,0,0,0.1)'
+              }}>
+                ins!ght
+              </div>
+              <div style={{ fontSize: '16px', color: theme.text }}>
+                Tecnologia da Informática
+              </div>
+              
+              {/* Botões de controle */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+                <button style={{ ...buttonStyles, backgroundColor: '#3b82f6', color: 'white' }}>
+                  ⬅️ Anterior
+                </button>
+                <button style={{ ...buttonStyles, backgroundColor: '#3b82f6', color: 'white' }}>
+                  ➡️ Próxima
+                </button>
+                <button style={{ ...buttonStyles, backgroundColor: '#10b981', color: 'white' }}>
+                  📥 Adquirir
+                </button>
+                <button style={{ ...buttonStyles, backgroundColor: '#06b6d4', color: 'white' }}>
+                  🖨️ Scanner
+                </button>
+                <button style={{ ...buttonStyles, backgroundColor: '#dc2626', color: 'white' }}>
+                  ❌ Excluir
+                </button>
+                <button style={{ ...buttonStyles, backgroundColor: '#6c757d', color: 'white' }}>
+                  🖨️ Imprimir
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ABA 5: IMAGENS */}
+          {activeTab === 'imagens' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', height: '100%' }}>
+              <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: theme.text }}>Imagens Digitalizadas</h3>
+              
+              {/* Tabela de imagens */}
+              <div style={{
+                flex: 1,
+                border: `1px solid ${theme.border}`,
+                borderRadius: '4px',
+                overflow: 'auto',
+                backgroundColor: theme.background
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{
+                      backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f0f0f0',
+                      position: 'sticky',
+                      top: 0
+                    }}>
+                      <th style={{ padding: '8px', textAlign: 'left', fontSize: '10px', fontWeight: 'bold', color: theme.text, width: '100px' }}>Sequência</th>
+                      <th style={{ padding: '8px', textAlign: 'left', fontSize: '10px', fontWeight: 'bold', color: theme.text }}>Tipo do Ato</th>
+                      <th style={{ padding: '8px', textAlign: 'left', fontSize: '10px', fontWeight: 'bold', color: theme.text }}>Tipo do Documento</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {imagens.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ padding: '24px', textAlign: 'center', fontSize: '11px', color: theme.text, fontStyle: 'italic' }}>
+                          Nenhuma imagem digitalizada
+                        </td>
+                      </tr>
+                    ) : (
+                      imagens.map((imagem) => (
+                        <tr
+                          key={imagem.id}
+                          onClick={() => setSelectedImagemId(imagem.id)}
+                          style={{
+                            backgroundColor: selectedImagemId === imagem.id ? (currentTheme === 'dark' ? '#3b82f6' : '#60a5fa') : 'transparent',
+                            cursor: 'pointer',
+                            borderBottom: `1px solid ${theme.border}`
+                          }}
+                        >
+                          <td style={{ padding: '8px', fontSize: '11px', color: selectedImagemId === imagem.id ? '#fff' : theme.text }}>{imagem.sequencia}</td>
+                          <td style={{ padding: '8px', fontSize: '11px', color: selectedImagemId === imagem.id ? '#fff' : theme.text }}>{imagem.tipoAto}</td>
+                          <td style={{ padding: '8px', fontSize: '11px', color: selectedImagemId === imagem.id ? '#fff' : theme.text }}>{imagem.tipoDocumento}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+
+      {/* Modal interno */}
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        type={modalState.type}
+        title={modalState.title}
+        message={modalState.message}
+        defaultValue={modalState.defaultValue}
+        onConfirm={modalState.onConfirm}
+        onCancel={modalState.onCancel}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        icon={modalState.icon}
+      />
+    </BasePage>
   )
 }

@@ -6,6 +6,7 @@ import { RecepcaoArquivoMaternidade } from './RecepcaoArquivoMaternidade'
 import { CidadePage } from '../pages/CidadePage'
 import { PaisPage } from '../pages/PaisPage'
 import { HospitalCemiterioPage } from '../pages/HospitalCemiterioPage'
+import { ProtocoloLancamentoPage } from '../pages/ProtocoloLancamentoPage'
 import { SingleInstanceWindow } from './SingleInstanceWindow'
 import { singleInstanceService } from '../services/SingleInstanceService'
 import { useAccessibility } from '../hooks/useAccessibility'
@@ -185,12 +186,7 @@ export function NavigationManager({ isDarkMode, user, currentPage, pageProps, on
     
     // Protocolos
     'protocolo-lancamento': { 
-      component: PlaceholderModulePage, 
-      props: { 
-        moduleName: 'Lançamento de Protocolo', 
-        moduleIcon: '📝', 
-        moduleDescription: 'Lançamento de novos protocolos' 
-      } 
+      component: ProtocoloLancamentoPage
     },
     'protocolo-baixa': { 
       component: PlaceholderModulePage, 
