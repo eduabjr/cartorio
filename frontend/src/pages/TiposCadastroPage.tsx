@@ -12,7 +12,13 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   
-  const [activeTab, setActiveTab] = useState<'tipoAto' | 'tipoDocumento' | 'acessoRapido'>('tipoAto')
+  const [activeTab, setActiveTab] = useState<'tipoAto' | 'tipoDocumento' | 'acessoRapido' | 'diretorio'>('tipoAto')
+  
+  // Estado para configuração de diretório
+  const [diretorioGravacao, setDiretorioGravacao] = useState(() => {
+    return localStorage.getItem('diretorio-digitalizacao') || ''
+  })
+  const [diretorioValido, setDiretorioValido] = useState(false)
   
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
 
@@ -124,6 +130,36 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
           >
             ⚡ Acesso Rápido
           </button>
+          
+          {/* Seta de Fluxo */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: headerColor,
+            textShadow: `0 0 10px ${headerColor}40`
+          }}>
+            ➡️
+          </div>
+          
+          <button
+            onClick={() => setActiveTab('diretorio')}
+            style={tabStyles(activeTab === 'diretorio')}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'diretorio') {
+                e.currentTarget.style.backgroundColor = theme.border
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'diretorio') {
+                e.currentTarget.style.backgroundColor = theme.surface
+              }
+            }}
+          >
+            📁 Diretório
+          </button>
         </div>
 
         {/* Conteúdo da aba ativa */}
@@ -132,8 +168,16 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
             <TipoAtoContent onClose={onClose} />
           ) : activeTab === 'tipoDocumento' ? (
             <TipoDocumentoContent onClose={onClose} />
-          ) : (
+          ) : activeTab === 'acessoRapido' ? (
             <AcessoRapidoContent onClose={onClose} />
+          ) : (
+            <DiretorioContent 
+              diretorioGravacao={diretorioGravacao}
+              setDiretorioGravacao={setDiretorioGravacao}
+              diretorioValido={diretorioValido}
+              setDiretorioValido={setDiretorioValido}
+              onClose={onClose}
+            />
           )}
         </div>
       </div>
@@ -161,6 +205,32 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
   
   // Estado para o item selecionado na grid
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  
+  // Estado para armazenar os tipos de ato do JSON
+  const [tiposAtoJSON, setTiposAtoJSON] = useState<string[]>([])
+  
+  // Carregar tipos de ato do JSON
+  React.useEffect(() => {
+    const carregarTiposAtoJSON = async () => {
+      try {
+        // Tentar carregar do caminho relativo ao projeto
+        const response = await fetch('/extra/tiposAto.json')
+        if (response.ok) {
+          const data = await response.json()
+          setTiposAtoJSON(data)
+          console.log('✅ Tipos de Ato carregados do JSON:', data)
+        } else {
+          console.warn('⚠️ Não foi possível carregar tiposAto.json, usando valores padrão')
+          setTiposAtoJSON(['Casamento', 'Nascimento', 'Óbito', 'Livro E', 'Procuração'])
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar tiposAto.json:', error)
+        setTiposAtoJSON(['Casamento', 'Nascimento', 'Óbito', 'Livro E', 'Procuração'])
+      }
+    }
+    
+    carregarTiposAtoJSON()
+  }, [])
 
   const saveTiposAto = (tipos: any[]) => {
     localStorage.setItem('tiposAto', JSON.stringify(tipos))
@@ -173,6 +243,55 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
     setDescricao('')
     setObservacoes('')
     setSelectedId(null)
+  }
+  
+  const handleGerarTodosAutomaticamente = () => {
+    if (tiposAtoJSON.length === 0) {
+      console.warn('⚠️ Nenhum tipo de ato encontrado no JSON.')
+      return
+    }
+
+    let novosTiposAto = [...tiposAto]
+    let ultimoCodigo = tiposAto.length > 0 ? Math.max(...tiposAto.map(t => t.codigo)) : 0
+    let countCriados = 0
+    let countJaExistentes = 0
+
+    tiposAtoJSON.forEach((item, index) => {
+      // Verificar se já existe
+      const jaExiste = novosTiposAto.some(tipo => 
+        tipo.descricao.toLowerCase() === item.toLowerCase()
+      )
+      
+      if (jaExiste) {
+        console.log(`⚠️ Tipo de Ato "${item}" já existe, pulando...`)
+        countJaExistentes++
+        return
+      }
+      
+      // Criar novo tipo de ato
+      ultimoCodigo++
+      const novoTipo = {
+        id: Date.now() + index,
+        codigo: ultimoCodigo,
+        descricao: item,
+        observacoes: ''
+      }
+      novosTiposAto.push(novoTipo)
+      countCriados++
+      console.log(`✅ Tipo de Ato "${item}" criado!`)
+    })
+
+    if (countCriados > 0) {
+      setTiposAto(novosTiposAto)
+      saveTiposAto(novosTiposAto)
+      handleNovo() // Limpar formulário
+      console.log(`🎉 ${countCriados} Tipo(s) de Ato criado(s) com sucesso!`)
+      if (countJaExistentes > 0) {
+        console.log(`ℹ️ ${countJaExistentes} tipo(s) já existia(m) e foi(ram) ignorado(s).`)
+      }
+    } else {
+      console.log('ℹ️ Todos os tipos de ato já existem no sistema.')
+    }
   }
 
   const handleGravar = () => {
@@ -271,10 +390,10 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
         padding: '8px',
         backgroundColor: theme.surface
       }}>
-        {/* Linha 1: Código */}
+        {/* Linha 1: Código, Descrição e Botão Geração Automática */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '80px 1fr',
+          gridTemplateColumns: '80px 1fr 120px',
           gap: '8px',
           marginBottom: '8px'
         }}>
@@ -312,6 +431,40 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
               maxLength={100}
             />
           </div>
+
+          {/* Botão Geração Automática */}
+          <div>
+            <label style={labelStyles}>Geração Automática</label>
+            <button
+              onClick={handleGerarTodosAutomaticamente}
+              style={{
+                width: '100%',
+                padding: '4px 8px',
+                fontSize: '11px',
+                fontWeight: '600',
+                border: `1px solid ${theme.border}`,
+                borderRadius: '3px',
+                cursor: 'pointer',
+                backgroundColor: headerColor,
+                color: 'white',
+                height: '28px',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1'
+              }}
+              title="Gerar todos os tipos de ato do JSON automaticamente"
+            >
+              ⚡ Gerar
+            </button>
+          </div>
         </div>
 
         {/* Linha 2: Observações */}
@@ -322,10 +475,8 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
             onChange={(e) => setObservacoes(e.target.value)}
             style={{
               ...inputStyles,
-              height: 'auto',
-              minHeight: '60px',
-              maxHeight: '150px',
-              resize: 'vertical',
+              height: '60px',
+              resize: 'none',
               fontFamily: 'inherit'
             }}
             placeholder="Informações adicionais sobre o tipo de ato..."
@@ -573,12 +724,35 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
   // 🔒 Estado para filtro de Tipo de Ato na lista
   const [filtroTipoAto, setFiltroTipoAto] = useState<string>('') // '' = todos, ou nome específico
   
+  // Estado para armazenar os documentos do JSON
+  const [tiposDocumentoJSON, setTiposDocumentoJSON] = useState<Record<string, string[]>>({})
+  
   // 🔒 CORREÇÃO: Recarregar tipos de ato quando a aba é ativada
   React.useEffect(() => {
     const storedTiposAto = localStorage.getItem('tiposAto')
     if (storedTiposAto) {
       setTiposAto(JSON.parse(storedTiposAto))
     }
+  }, [])
+  
+  // Carregar tipos de documento do JSON
+  React.useEffect(() => {
+    const carregarTiposDocumentoJSON = async () => {
+      try {
+        const response = await fetch('/extra/tiposDocumento.json')
+        if (response.ok) {
+          const data = await response.json()
+          setTiposDocumentoJSON(data)
+          console.log('✅ Tipos de Documento carregados do JSON:', data)
+        } else {
+          console.warn('⚠️ Não foi possível carregar tiposDocumento.json')
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar tiposDocumento.json:', error)
+      }
+    }
+    
+    carregarTiposDocumentoJSON()
   }, [])
   
   // 🔒 Filtrar documentos por Tipo de Ato
@@ -665,6 +839,64 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
     setNomeDocumento(tipo.nomeDocumento || '')
     setObservacoes(tipo.observacoes)
   }
+  
+  const handleGerarDocumentosAutomaticamente = () => {
+    if (!tipoAtoSelecionado) {
+      console.warn('⚠️ Selecione um Tipo de Ato primeiro!')
+      return
+    }
+    
+    const documentos = tiposDocumentoJSON[tipoAtoSelecionado]
+    
+    if (!documentos || documentos.length === 0) {
+      console.warn(`⚠️ Nenhum documento configurado para "${tipoAtoSelecionado}" no JSON.`)
+      return
+    }
+    
+    let novosTiposDocumento = [...tiposDocumento]
+    let ultimoCodigo = tiposDocumento.length > 0 ? Math.max(...tiposDocumento.map(t => t.codigo)) : 0
+    let countCriados = 0
+    let countJaExistentes = 0
+    
+    documentos.forEach((nomeDoc, index) => {
+      // Verificar se já existe
+      const jaExiste = novosTiposDocumento.some(doc => 
+        doc.tipoAto === tipoAtoSelecionado && 
+        doc.nomeDocumento.toLowerCase() === nomeDoc.toLowerCase()
+      )
+      
+      if (jaExiste) {
+        console.log(`⚠️ Documento "${nomeDoc}" já existe para "${tipoAtoSelecionado}", pulando...`)
+        countJaExistentes++
+        return
+      }
+      
+      // Criar novo documento
+      ultimoCodigo++
+      const novoDocumento = {
+        id: Date.now() + index,
+        codigo: ultimoCodigo,
+        tipoAto: tipoAtoSelecionado,
+        nomeDocumento: nomeDoc,
+        observacoes: ''
+      }
+      novosTiposDocumento.push(novoDocumento)
+      countCriados++
+      console.log(`✅ Documento "${nomeDoc}" criado para "${tipoAtoSelecionado}"!`)
+    })
+    
+    if (countCriados > 0) {
+      setTiposDocumento(novosTiposDocumento)
+      saveTiposDocumento(novosTiposDocumento)
+      handleNovo() // Limpar formulário
+      console.log(`🎉 ${countCriados} documento(s) criado(s) para "${tipoAtoSelecionado}"!`)
+      if (countJaExistentes > 0) {
+        console.log(`ℹ️ ${countJaExistentes} documento(s) já existia(m) e foi(ram) ignorado(s).`)
+      }
+    } else {
+      console.log(`ℹ️ Todos os documentos de "${tipoAtoSelecionado}" já existem no sistema.`)
+    }
+  }
 
   const inputStyles = {
     width: '100%',
@@ -712,10 +944,10 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
         padding: '8px',
         backgroundColor: theme.surface
       }}>
-        {/* Linha 1: Código e Tipo de Ato */}
+        {/* Linha 1: Código, Tipo de Ato e Botão Geração Automática */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '100px 1fr',
+          gridTemplateColumns: '100px 1fr 130px',
           gap: '8px',
           marginBottom: '8px'
         }}>
@@ -780,6 +1012,49 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
               </div>
             )}
           </div>
+
+          {/* Botão Geração Automática */}
+          <div>
+            <label style={labelStyles}>Geração Automática</label>
+            <button
+              onClick={handleGerarDocumentosAutomaticamente}
+              disabled={!tipoAtoSelecionado}
+              style={{
+                width: '100%',
+                padding: '4px 8px',
+                fontSize: '11px',
+                fontWeight: '600',
+                border: `1px solid ${theme.border}`,
+                borderRadius: '3px',
+                cursor: tipoAtoSelecionado ? 'pointer' : 'not-allowed',
+                backgroundColor: tipoAtoSelecionado ? headerColor : theme.border,
+                color: tipoAtoSelecionado ? 'white' : theme.textSecondary,
+                height: '28px',
+                boxSizing: 'border-box' as const,
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                opacity: tipoAtoSelecionado ? 1 : 0.5
+              }}
+              onMouseEnter={(e) => {
+                if (tipoAtoSelecionado) {
+                  e.currentTarget.style.opacity = '0.9'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (tipoAtoSelecionado) {
+                  e.currentTarget.style.opacity = '1'
+                }
+              }}
+              title={tipoAtoSelecionado 
+                ? `Gerar documentos para ${tipoAtoSelecionado}` 
+                : 'Selecione um Tipo de Ato primeiro'}
+            >
+              ⚡ Gerar
+            </button>
+          </div>
         </div>
 
         {/* Linha 2: Nome do Documento */}
@@ -803,10 +1078,8 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
             onChange={(e) => setObservacoes(e.target.value)}
             style={{
               ...inputStyles,
-              height: 'auto',
-              minHeight: '60px',
-              maxHeight: '150px',
-              resize: 'vertical',
+              height: '60px',
+              resize: 'none',
               fontFamily: 'inherit'
             }}
             placeholder="Informações adicionais sobre o tipo de documento..."
@@ -1365,6 +1638,280 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
         cancelText={modalState.cancelText}
         icon={modalState.icon}
       />
+    </div>
+  )
+}
+
+// Conteúdo de Diretório
+function DiretorioContent({ 
+  diretorioGravacao, 
+  setDiretorioGravacao, 
+  diretorioValido, 
+  setDiretorioValido,
+  onClose
+}: { 
+  diretorioGravacao: string
+  setDiretorioGravacao: (dir: string) => void
+  diretorioValido: boolean
+  setDiretorioValido: (valid: boolean) => void
+  onClose: () => void
+}) {
+  const { getTheme, currentTheme } = useAccessibility()
+  const theme = getTheme()
+  
+  const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
+  
+  // Carregar diretório salvo ao montar o componente
+  React.useEffect(() => {
+    const dirSalvo = localStorage.getItem('diretorio-digitalizacao')
+    if (dirSalvo) {
+      setDiretorioGravacao(dirSalvo)
+      setDiretorioValido(true)
+      console.log('📁 Diretório carregado:', dirSalvo)
+    }
+  }, [setDiretorioGravacao, setDiretorioValido])
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      gap: '12px'
+    }}>
+      {/* Configuração de Diretório */}
+      <div style={{
+        border: `1px solid ${theme.border}`,
+        borderRadius: '4px',
+        padding: '16px',
+        backgroundColor: theme.surface
+      }}>
+        <div style={{
+          fontSize: '13px',
+          fontWeight: '600',
+          color: theme.text,
+          marginBottom: '12px'
+        }}>
+          📁 Configuração de Diretório de Gravação
+        </div>
+        
+        <div style={{
+          fontSize: '11px',
+          color: theme.textSecondary,
+          marginBottom: '16px',
+          lineHeight: '1.5'
+        }}>
+          Configure o diretório onde os arquivos digitalizados (imagens) serão salvos. 
+          Cada container criado terá uma subpasta neste diretório.
+        </div>
+        
+        {/* Campo de Diretório */}
+        <div>
+          <label style={{
+            fontSize: '11px',
+            fontWeight: '600',
+            marginBottom: '4px',
+            color: theme.text,
+            display: 'block'
+          }}>
+            Diretório de Gravação
+          </label>
+          
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center'
+          }}>
+            <input
+              type="text"
+              value={diretorioGravacao}
+              onChange={(e) => {
+                setDiretorioGravacao(e.target.value)
+                setDiretorioValido(false)
+              }}
+              style={{
+                flex: 1,
+                padding: '6px 8px',
+                fontSize: '12px',
+                border: `1px solid ${theme.border}`,
+                borderRadius: '3px',
+                backgroundColor: theme.background,
+                color: theme.text,
+                height: '32px',
+                boxSizing: 'border-box' as const
+              }}
+              placeholder="Ex: C:\\Digitalizacao\\Imagens ou /home/usuario/digitalizacao"
+            />
+            
+            <button
+              onClick={() => {
+                // Abrir seletor de diretório
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.setAttribute('webkitdirectory', '')
+                input.onchange = (e: any) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const file = e.target.files[0]
+                    if (file.path) {
+                      const path = file.path
+                      const dirPath = path.substring(0, path.lastIndexOf('\\') || path.lastIndexOf('/'))
+                      setDiretorioGravacao(dirPath)
+                      setDiretorioValido(true)
+                      console.log('📁 Diretório selecionado:', dirPath)
+                    }
+                  }
+                }
+                input.click()
+              }}
+              style={{
+                padding: '6px 12px',
+                height: '32px',
+                border: `1px solid ${theme.border}`,
+                borderRadius: '3px',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '16px',
+                fontWeight: '600',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#d97706'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#f59e0b'
+              }}
+              title="Selecionar pasta"
+            >
+              📂
+            </button>
+            
+            {diretorioGravacao && !diretorioValido && (
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: '#dc2626',
+                whiteSpace: 'nowrap'
+              }}>
+                NÃO ENCONTRADO!
+              </span>
+            )}
+            
+            {diretorioValido && (
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: '#10b981'
+              }}>
+                ✓ Válido
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Informações Adicionais */}
+      <div style={{
+        border: `1px solid ${theme.border}`,
+        borderRadius: '4px',
+        padding: '16px',
+        backgroundColor: theme.surface
+      }}>
+        <div style={{
+          fontSize: '12px',
+          fontWeight: '600',
+          color: theme.text,
+          marginBottom: '8px'
+        }}>
+          📋 Como funciona:
+        </div>
+        
+        <ul style={{
+          fontSize: '11px',
+          color: theme.textSecondary,
+          lineHeight: '1.6',
+          marginLeft: '20px'
+        }}>
+          <li>Cada <strong>Container</strong> criado no Controle de Digitalização terá uma <strong>subpasta</strong> neste diretório</li>
+          <li>As imagens digitalizadas serão salvas dentro da pasta do container correspondente</li>
+          <li>Exemplo: <code style={{
+            backgroundColor: theme.background,
+            padding: '2px 4px',
+            borderRadius: '2px',
+            fontSize: '10px'
+          }}>
+            C:\Digitalizacao\Container_0\imagem_001.jpg
+          </code></li>
+          <li>O código do container é gerado automaticamente ao criar um novo container</li>
+        </ul>
+      </div>
+      
+      {/* Botões de Ação no Rodapé */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        justifyContent: 'center',
+        paddingTop: '4px'
+      }}>
+        <button
+          onClick={() => {
+            if (!diretorioGravacao || diretorioGravacao.trim() === '') {
+              alert('⚠️ Por favor, informe o diretório de gravação')
+              return
+            }
+            localStorage.setItem('diretorio-digitalizacao', diretorioGravacao)
+            setDiretorioValido(true)
+            console.log('✅ Diretório de gravação gravado:', diretorioGravacao)
+            alert('✅ Diretório de gravação salvo com sucesso!')
+          }}
+          style={{
+            padding: '6px 16px',
+            fontSize: '11px',
+            fontWeight: '600',
+            border: 'none',
+            borderRadius: '3px',
+            backgroundColor: '#10b981',
+            color: 'white',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            minWidth: '90px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#059669'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#10b981'
+          }}
+        >
+          💾 Gravar
+        </button>
+
+        <button
+          onClick={onClose}
+          style={{
+            padding: '6px 16px',
+            fontSize: '11px',
+            fontWeight: '600',
+            border: 'none',
+            borderRadius: '3px',
+            backgroundColor: '#6c757d',
+            color: 'white',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            minWidth: '90px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#495057'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#6c757d'
+          }}
+        >
+          🚪 Retornar
+        </button>
+      </div>
     </div>
   )
 }

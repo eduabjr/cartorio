@@ -20,8 +20,10 @@ import { TiposCadastroPage } from './pages/TiposCadastroPage'
 import { LocalizacaoCadastroPage } from './pages/LocalizacaoCadastroPage'
 import { RecepcaoArquivoFunerariaPage } from './pages/RecepcaoArquivoFunerariaPage'
 import { RecepcaoArquivoMaternidadePage } from './pages/RecepcaoArquivoMaternidadePage'
+import { RecepcaoArquivosPage } from './pages/RecepcaoArquivosPage'
 import { FeriadosPage } from './pages/FeriadosPage'
 import { ControleDigitalizacaoPage } from './pages/ControleDigitalizacaoPage'
+import { ProtocoloCancelamentoPage } from './pages/ProtocoloCancelamentoPage'
 import { CartorioSeadePage } from './pages/CartorioSeadePage'
 import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
 import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
@@ -428,18 +430,6 @@ function AppContent() {
               })
               console.log('✅ Janela de Funcionário aberta!')
             } },
-            { id: 'servicos-cartorio', label: 'Serviços e Tabela de Custas', icon: '', onClick: () => {
-              console.log('✅ SERVIÇOS CARTÓRIO CLICADO! Abrindo janela...')
-              const windowId = 'servicos-cartorio-window'
-              openWindow({
-                id: windowId,
-                type: 'servicos-cartorio',
-                title: 'Serviços de Cartório',
-                component: ServicoCartorioPage,
-                props: { onClose: () => {} }
-              })
-              console.log('✅ Janela de Serviços de Cartório aberta!')
-            } },
             { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => {
               console.log('✅ CARTÓRIO SEADE CLICADO! Abrindo janela...')
               openWindow({
@@ -613,6 +603,18 @@ function AppContent() {
                   component: TiposCadastroPage,
                   props: { onClose: () => {} }
                 })
+              } },
+              { id: 'servicos-cartorio', label: 'Serviços e Tabela de Custas', icon: '', onClick: () => {
+                console.log('✅ SERVIÇOS CARTÓRIO CLICADO! Abrindo janela...')
+                const windowId = 'servicos-cartorio-window'
+                openWindow({
+                  id: windowId,
+                  type: 'servicos-cartorio',
+                  title: 'Serviços de Cartório',
+                  component: ServicoCartorioPage,
+                  props: { onClose: () => {} }
+                })
+                console.log('✅ Janela de Serviços de Cartório aberta!')
               } }
             ]
           }
@@ -623,23 +625,13 @@ function AppContent() {
         label: 'Processos',
         icon: '',
         submenu: [
-          { id: 'recepcao-arquivo-funeraria', label: 'Recepção de Arquivo da Funerária', icon: '', onClick: () => {
-            console.log('✅ Abrindo Recepção de Arquivo da Funerária...')
+          { id: 'recepcao-arquivos', label: 'Recepção de Arquivos', icon: '', onClick: () => {
+            console.log('✅ Abrindo Recepção de Arquivos...')
             openWindow({
-              id: 'recepcao-funeraria-window',
-              type: 'recepcao-funeraria',
-              title: 'Recepção de Arquivo da Funerária',
-              component: RecepcaoArquivoFunerariaPage,
-              props: { onClose: () => {} }
-            })
-          } },
-          { id: 'recepcao-arquivo-maternidade', label: 'Recepção de Arquivo da Maternidade', icon: '', onClick: () => {
-            console.log('✅ Abrindo Recepção de Arquivo da Maternidade...')
-            openWindow({
-              id: 'recepcao-maternidade-window',
-              type: 'recepcao-maternidade',
-              title: 'Recepção de Arquivo da Maternidade',
-              component: RecepcaoArquivoMaternidadePage,
+              id: 'recepcao-arquivos-window',
+              type: 'recepcao-arquivos',
+              title: 'Recepção de Arquivos',
+              component: RecepcaoArquivosPage,
               props: { onClose: () => {} }
             })
           } }
@@ -679,7 +671,16 @@ function AppContent() {
             console.log('✅ Janela de Lançamento de Protocolos aberta!')
           }},
           { id: 'protocolo-baixa', label: 'Baixa', icon: '', onClick: () => (window as any).navigateToPage?.('protocolo-baixa') },
-          { id: 'protocolo-cancelamento', label: 'Cancelamento', icon: '', onClick: () => (window as any).navigateToPage?.('protocolo-cancelamento') }
+          { id: 'protocolo-cancelamento', label: 'Cancelamento', icon: '', onClick: () => {
+            console.log('✅ Abrindo Cancelamento de Protocolos...')
+            openWindow({
+              id: 'protocolo-cancelamento-window',
+              type: 'protocolo-cancelamento',
+              title: 'Cancelamento de Protocolos',
+              component: ProtocoloCancelamentoPage,
+              props: { onClose: () => {} }
+            })
+          } }
         ]
       },
       {

@@ -33,6 +33,29 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
   })
   const [isEditingNatureza, setIsEditingNatureza] = useState(false)
   
+  // Estado para armazenar naturezas do JSON
+  const [naturezasJSON, setNaturezasJSON] = useState<Array<{codigo: string, nome: string, ativo: boolean}>>([])
+  
+  // Carregar naturezas do JSON
+  useEffect(() => {
+    const carregarNaturezasJSON = async () => {
+      try {
+        const response = await fetch('/extra/naturezaProtocolo.json')
+        if (response.ok) {
+          const data = await response.json()
+          setNaturezasJSON(data)
+          console.log('✅ Naturezas/Protocolos carregados do JSON:', data)
+        } else {
+          console.warn('⚠️ Não foi possível carregar naturezaProtocolo.json')
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar naturezaProtocolo.json:', error)
+      }
+    }
+    
+    carregarNaturezasJSON()
+  }, [])
+  
   // Estados para Valores (Aba 2)
   const [valoresForm, setValoresForm] = useState({
     naturezaId: '',
@@ -266,6 +289,9 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
       // Aguardar mais um pouco antes de gerar novo código
       await new Promise(resolve => setTimeout(resolve, 100))
       
+      // Disparar evento para outras telas atualizarem
+      window.dispatchEvent(new Event('naturezas-atualizadas'))
+      
       handleNovoNatureza()
     } catch (error: any) {
       console.error('❌ ERRO COMPLETO ao gravar natureza:', error)
@@ -287,6 +313,10 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
         alert('✅ Natureza excluída com sucesso!')
         await carregarNaturezas()
         setForceUpdate(prev => prev + 1)
+        
+        // Disparar evento para outras telas atualizarem
+        window.dispatchEvent(new Event('naturezas-atualizadas'))
+        
         handleNovoNatureza()
       } catch (error) {
         console.error('❌ Erro ao excluir natureza:', error)
@@ -318,61 +348,60 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
   }
 
   const handleGeracaoAutomatica = async () => {
-    if (!confirm('⚠️ Isso irá criar 24 naturezas automaticamente. Deseja continuar?')) {
+    if (naturezasJSON.length === 0) {
+      alert('⚠️ Nenhuma natureza encontrada no JSON. Verifique o arquivo naturezaProtocolo.json')
+      return
+    }
+
+    if (!confirm(`⚠️ Isso irá criar ${naturezasJSON.length} naturezas automaticamente. Deseja continuar?`)) {
       return
     }
 
     try {
-      console.log('🤖 Iniciando geração automática de naturezas...')
+      console.log('🤖 Iniciando geração automática de naturezas do JSON...')
       
-      const naturezasPadrao = [
-        'Lavratura de assento de casamento realizado na sede',
-        'Lavratura de assento de casamento fora da sede',
-        'Habilitação de casamento a ser realizado em outra serventia',
-        'Lavratura de assento de casamento expedida por outra serventia',
-        'Lavratura de Assento de Casamento Fora da Sede',
-        'Averbação em geral',
-        'Registro de inscrição de emancipação',
-        'Registro de inscrição de interdição',
-        'Registro de inscrição de ausência',
-        'Registro de inscrição de opção de nacionalidade brasileira',
-        'Transcrição de registro de nascimento',
-        'Transcrição de registro de casamento',
-        'Transcrição de registro de óbito',
-        'Averbação em geral',
-        'Cópia reprográfica autenticada de ato da serventia',
-        'Documento desentranhado',
-        'procedimento de retificação',
-        'procedimento de reconhecimento de filho',
-        'procedimento de alteração de patronímico familiar',
-        'Certidão em breve relatório',
-        'Certidão em Inteiro Teor',
-        'Certidão negativa',
-        'Assento de nascimento',
-        'Assento de óbito'
-      ]
-
-      let codigoAtual = parseInt(await gerarProximoCodigo())
+      let countCriadas = 0
+      let countJaExistentes = 0
       
-      for (const descricao of naturezasPadrao) {
+      for (const naturezaJSON of naturezasJSON) {
+        // Verificar se já existe
+        const jaExiste = naturezas.some(n => 
+          n.codigo === naturezaJSON.codigo || 
+          n.descricao.toLowerCase() === naturezaJSON.nome.toLowerCase()
+        )
+        
+        if (jaExiste) {
+          console.log(`⚠️ Natureza "${naturezaJSON.nome}" (código ${naturezaJSON.codigo}) já existe, pulando...`)
+          countJaExistentes++
+          continue
+        }
+        
         const naturezaData = {
-          codigo: String(codigoAtual),
-          descricao: descricao,
+          codigo: naturezaJSON.codigo,
+          descricao: naturezaJSON.nome,
           percentualIss: 0,
-          ativo: true
+          ativo: naturezaJSON.ativo
         }
         
         await naturezaService.criar(naturezaData)
-        console.log(`✅ Criada: ${codigoAtual} - ${descricao}`)
-        codigoAtual++
+        console.log(`✅ Criada: ${naturezaJSON.codigo} - ${naturezaJSON.nome}`)
+        countCriadas++
       }
 
       await new Promise(resolve => setTimeout(resolve, 200))
       await carregarNaturezas()
       setForceUpdate(prev => prev + 1)
       
-      alert(`✅ ${naturezasPadrao.length} naturezas criadas com sucesso!`)
+      let mensagem = `✅ ${countCriadas} natureza(s) criada(s) com sucesso!`
+      if (countJaExistentes > 0) {
+        mensagem += `\nℹ️ ${countJaExistentes} natureza(s) já existia(m) e foi(ram) ignorada(s).`
+      }
+      
+      alert(mensagem)
       console.log('🎉 Geração automática concluída!')
+      
+      // Disparar evento para outras telas atualizarem
+      window.dispatchEvent(new Event('naturezas-atualizadas'))
     } catch (error: any) {
       console.error('❌ Erro na geração automática:', error)
       alert(`❌ Erro ao gerar naturezas: ${error.message}`)
@@ -427,6 +456,7 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
     outline: 'none'
   })
 
+  const arrowColor = currentTheme === 'dark' ? '%23FFFFFF' : '%23333333'
   const selectStyles = {
     width: '100%',
     padding: '7px 10px',
@@ -435,7 +465,16 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
     borderRadius: '4px',
     backgroundColor: theme.surface,
     color: theme.text,
-    outline: 'none'
+    outline: 'none',
+    cursor: 'pointer',
+    appearance: 'none' as const,
+    WebkitAppearance: 'none' as const,
+    MozAppearance: 'none' as const,
+    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${arrowColor}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 8px center',
+    backgroundSize: '14px',
+    paddingRight: '30px'
   }
 
   const buttonContainerStyles = {
@@ -495,14 +534,14 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
     <BasePage
       title="Cadastro de Naturezas - Tabela de Custas"
       onClose={onClose}
-      width="1100px"
-      height="700px"
-      minWidth="1100px"
-      minHeight="700px"
+      width="900px"
+      height="650px"
+      minWidth="900px"
+      minHeight="650px"
       headerColor={headerColor}
       resetToOriginalPosition={resetToOriginalPosition}
       draggable={true}
-      resizable={true}
+      resizable={false}
     >
       {/* Menu de Abas com Setas Separadoras */}
       <div style={{
@@ -601,7 +640,7 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
               {/* Lista de Naturezas Criadas */}
               <div style={{ 
                 ...sectionTitleStyles, 
-                marginTop: '24px',
+                marginTop: '12px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
@@ -683,18 +722,21 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
                           <td style={{ padding: '8px', fontSize: getRelativeFontSize(12), color: theme.text }}>{nat.descricao}</td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
                             <span style={{
-                              padding: '4px 8px',
+                              padding: '4px 10px',
                               borderRadius: '4px',
-                              fontSize: getRelativeFontSize(10),
+                              fontSize: getRelativeFontSize(11),
                               backgroundColor: nat.ativo ? '#10b981' : '#ef4444',
                               color: 'white',
-                              fontWeight: '600'
+                              fontWeight: '600',
+                              display: 'inline-block',
+                              minWidth: '70px',
+                              textAlign: 'center'
                             }}>
                               {nat.ativo ? '✓ Ativo' : '✗ Inativo'}
                             </span>
                           </td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
-                            <button
+                            <span 
                               onClick={(e) => {
                                 e.stopPropagation()
                                 if (confirm(`⚠️ Tem certeza que deseja excluir a natureza "${nat.descricao}"?`)) {
@@ -711,13 +753,16 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
                                 borderRadius: '4px',
                                 backgroundColor: '#ef4444',
                                 color: 'white',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                minWidth: '70px',
+                                display: 'inline-block',
+                                textAlign: 'center'
                               }}
-                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.opacity = '0.8'}
+                              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.opacity = '1'}
                             >
                               🗑️ Excluir
-                            </button>
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -742,6 +787,9 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
             >
               💾 Gravar
             </button>
+            <button onClick={handleNovoNatureza} style={buttonStyles()}>
+              🧹 Limpar
+            </button>
             <button onClick={onClose} style={buttonStyles()}>
               🚪 Sair
             </button>
@@ -756,34 +804,123 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
             <div style={formStyles}>
               <div style={sectionTitleStyles}>2️⃣ Cadastrar Valores de Custas</div>
               
-              {/* Seleção de Natureza */}
-              <div style={rowStyles}>
-                <div style={fieldStyles('1')}>
-                  <label style={labelStyles}>Selecione a Natureza: *</label>
-                  <select
-                    value={valoresForm.naturezaId}
-                    onChange={(e) => {
-                      const naturezaId = e.target.value
-                      handleValoresInputChange('naturezaId', naturezaId)
-                      if (naturezaId) {
-                        carregarValoresNatureza(naturezaId)
-                      }
-                    }}
-                    style={selectStyles}
-                  >
-                    <option value="">Selecione uma natureza...</option>
-                    {naturezas.map(nat => {
-                      const valoresKey = `cartorio_valores_${nat.codigo}`
-                      const temValores = localStorage.getItem(valoresKey) !== null
-                      return (
-                        <option key={nat.id} value={nat.id}>
-                          {nat.codigo} - {nat.descricao} {temValores ? '✓' : ''}
-                        </option>
-                      )
-                    })}
-                  </select>
-                </div>
+              {/* Lista de Naturezas Cadastradas */}
+              <div style={{ 
+                ...sectionTitleStyles, 
+                marginTop: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span>📋 Naturezas Cadastradas ({naturezas.length})</span>
               </div>
+              
+              {naturezas.length === 0 && (
+                <div style={{
+                  padding: '20px',
+                  textAlign: 'center',
+                  fontSize: getRelativeFontSize(13),
+                  color: theme.textSecondary,
+                  backgroundColor: theme.background,
+                  borderRadius: '4px',
+                  border: `1px dashed ${theme.border}`,
+                  marginTop: '8px'
+                }}>
+                  Nenhuma natureza cadastrada. Vá para aba "Criar Natureza" para cadastrar.
+                </div>
+              )}
+              
+              {naturezas.length > 0 && (
+                <div style={{
+                  marginTop: '8px',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '4px',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  backgroundColor: theme.background
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: theme.surface, borderBottom: `2px solid ${theme.border}`, position: 'sticky', top: 0 }}>
+                        <th style={{ padding: '8px', textAlign: 'left', fontSize: getRelativeFontSize(11), color: theme.text }}>Código</th>
+                        <th style={{ padding: '8px', textAlign: 'left', fontSize: getRelativeFontSize(11), color: theme.text }}>Nome</th>
+                        <th style={{ padding: '8px', textAlign: 'center', fontSize: getRelativeFontSize(11), color: theme.text }}>Status</th>
+                        <th style={{ padding: '8px', textAlign: 'center', fontSize: getRelativeFontSize(11), color: theme.text }}>Valores</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {naturezas.map((nat) => {
+                        const valoresKey = `cartorio_valores_${nat.codigo}`
+                        const valoresSalvos = localStorage.getItem(valoresKey)
+                        
+                        // Verificar se tem valores E se não são todos zero
+                        let temValores = false
+                        if (valoresSalvos) {
+                          try {
+                            const valores = JSON.parse(valoresSalvos)
+                            const valorTotal = (valores.valorOficial || 0) + (valores.valorIss || 0) + (valores.valorSecFaz || 0)
+                            temValores = valorTotal > 0
+                          } catch (e) {
+                            temValores = false
+                          }
+                        }
+                        
+                        const isSelected = valoresForm.naturezaId === nat.id
+                        
+                        return (
+                          <tr
+                            key={nat.id}
+                            onClick={() => {
+                              handleValoresInputChange('naturezaId', nat.id!)
+                              carregarValoresNatureza(nat.id!)
+                            }}
+                            style={{
+                              cursor: 'pointer',
+                              borderBottom: `1px solid ${theme.border}`,
+                              backgroundColor: isSelected ? theme.primary + '20' : 'transparent'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.primary + '10'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isSelected ? theme.primary + '20' : 'transparent'}
+                          >
+                            <td style={{ padding: '8px', fontSize: getRelativeFontSize(12), color: theme.text }}>{nat.codigo}</td>
+                            <td style={{ padding: '8px', fontSize: getRelativeFontSize(12), color: theme.text }}>{nat.descricao}</td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                              <span style={{
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                fontSize: getRelativeFontSize(11),
+                                backgroundColor: nat.ativo ? '#10b981' : '#ef4444',
+                                color: 'white',
+                                fontWeight: '600',
+                                display: 'inline-block',
+                                minWidth: '70px',
+                                textAlign: 'center'
+                              }}>
+                                {nat.ativo ? '✓ Ativo' : '✗ Inativo'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                              <span style={{
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                fontSize: getRelativeFontSize(11),
+                                backgroundColor: temValores ? '#3b82f6' : '#6b7280',
+                                color: 'white',
+                                fontWeight: '600',
+                                display: 'inline-block',
+                                minWidth: '70px',
+                                textAlign: 'center'
+                              }}>
+                                {temValores ? '✓ Cadastrado' : '⚠️ Pendente'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               {valoresForm.naturezaId && (
                 <>
@@ -947,34 +1084,43 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
                     <td style={{ padding: '8px', fontSize: getRelativeFontSize(11) }}>{nat.descricao}</td>
                     <td style={{ padding: '8px', textAlign: 'center', fontSize: getRelativeFontSize(11) }}>
                       <span style={{
-                        padding: '2px 6px',
+                        padding: '4px 10px',
                         borderRadius: '4px',
-                        fontSize: getRelativeFontSize(10),
+                        fontSize: getRelativeFontSize(11),
                         backgroundColor: nat.ativo ? '#10b981' : '#ef4444',
-                        color: 'white'
+                        color: 'white',
+                        fontWeight: '600',
+                        display: 'inline-block',
+                        minWidth: '70px',
+                        textAlign: 'center'
                       }}>
-                        {nat.ativo ? 'Ativo' : 'Inativo'}
+                        {nat.ativo ? '✓ Ativo' : '✗ Inativo'}
                       </span>
                     </td>
                     <td style={{ padding: '8px', textAlign: 'center' }}>
-                      <button
+                      <span
                         onClick={(e) => {
                           e.stopPropagation()
                           handleToggleAtivo(nat)
                         }}
                         style={{
-                          padding: '6px 12px',
+                          padding: '4px 10px',
                           fontSize: getRelativeFontSize(11),
                           fontWeight: '600',
                           border: 'none',
                           borderRadius: '4px',
                           backgroundColor: nat.ativo ? '#ef4444' : '#10b981',
                           color: 'white',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          minWidth: '85px',
+                          display: 'inline-block',
+                          textAlign: 'center'
                         }}
+                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.opacity = '0.8'}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.opacity = '1'}
                       >
                         {nat.ativo ? 'Desativar' : 'Ativar'}
-                      </button>
+                      </span>
                     </td>
                     </tr>
                   )})}

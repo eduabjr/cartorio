@@ -1,0 +1,122 @@
+[
+  {
+    "codigo": "1",
+    "nome": "Lavratura de assento de casamento realizado na sede",
+    "ativo": true
+  },
+  {
+    "codigo": "2",
+    "nome": "Lavratura de assento de casamento fora da sede",
+    "ativo": true
+  },
+  {
+    "codigo": "3",
+    "nome": "Habilitação de casamento a ser realizado em outra serventia",
+    "ativo": true
+  },
+  {
+    "codigo": "4",
+    "nome": "Lavratura de assento de casamento expedida por outra serventia",
+    "ativo": true
+  },
+  {
+    "codigo": "5",
+    "nome": "Lavratura de Assento de Casamento Fora da Sede",
+    "ativo": true
+  },
+  {
+    "codigo": "6",
+    "nome": "Averbação em geral",
+    "ativo": true
+  },
+  {
+    "codigo": "7",
+    "nome": "Registro de inscrição de emancipação",
+    "ativo": true
+  },
+  {
+    "codigo": "8",
+    "nome": "Registro de inscrição de interdição",
+    "ativo": true
+  },
+  {
+    "codigo": "9",
+    "nome": "Registro de inscrição de ausência",
+    "ativo": true
+  },
+  {
+    "codigo": "10",
+    "nome": "Registro de inscrição de opção de nacionalidade brasileira",
+    "ativo": true
+  },
+  {
+    "codigo": "11",
+    "nome": "Transcrição de registro de nascimento",
+    "ativo": true
+  },
+  {
+    "codigo": "12",
+    "nome": "Transcrição de registro de casamento",
+    "ativo": true
+  },
+  {
+    "codigo": "13",
+    "nome": "Transcrição de registro de óbito",
+    "ativo": true
+  },
+  {
+    "codigo": "14",
+    "nome": "Averbação em geral",
+    "ativo": true
+  },
+  {
+    "codigo": "15",
+    "nome": "Cópia reprográfica autenticada de ato da serventia",
+    "ativo": true
+  },
+  {
+    "codigo": "16",
+    "nome": "Documento desentranhado",
+    "ativo": true
+  },
+  {
+    "codigo": "17",
+    "nome": "procedimento de retificação",
+    "ativo": true
+  },
+  {
+    "codigo": "18",
+    "nome": "procedimento de reconhecimento de filho",
+    "ativo": true
+  },
+  {
+    "codigo": "19",
+    "nome": "procedimento de alteração de patronímico familiar",
+    "ativo": true
+  },
+  {
+    "codigo": "20",
+    "nome": "Certidão em breve relatório",
+    "ativo": true
+  },
+  {
+    "codigo": "21",
+    "nome": "Certidão em Inteiro Teor",
+    "ativo": true
+  },
+  {
+    "codigo": "22",
+    "nome": "Certidão negativa",
+    "ativo": true
+  },
+  {
+    "codigo": "23",
+    "nome": "Assento de nascimento",
+    "ativo": true
+  },
+  {
+    "codigo": "24",
+    "nome": "Assento de óbito",
+    "ativo": true
+  }
+]

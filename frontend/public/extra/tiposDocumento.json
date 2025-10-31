@@ -1,0 +1,47 @@
+{
+  "Casamento": [
+    "Certidão de Nascimento do Nubente",
+    "Certidão de Nascimento da Nubente",
+    "RG do Nubente",
+    "RG da Nubente",
+    "CPF do Nubente",
+    "CPF da Nubente",
+    "Comprovante de Residência",
+    "Certidão de Óbito (se viúvo)",
+    "Certidão de Casamento Anterior (se divorciado)"
+  ],
+  "Nascimento": [
+    "DNV - Declaração de Nascido Vivo",
+    "RG da Mãe",
+    "CPF da Mãe",
+    "RG do Pai",
+    "CPF do Pai",
+    "Certidão de Casamento dos Pais",
+    "Comprovante de Residência"
+  ],
+  "Óbito": [
+    "Declaração de Óbito",
+    "RG do Falecido",
+    "CPF do Falecido",
+    "Certidão de Nascimento do Falecido",
+    "Atestado Médico",
+    "RG do Declarante",
+    "CPF do Declarante"
+  ],
+  "Livro E": [
+    "Documento de Identificação",
+    "CPF",
+    "Comprovante de Residência",
+    "Procuração (se houver)",
+    "Documentos Complementares"
+  ],
+  "Procuração": [
+    "RG do Outorgante",
+    "CPF do Outorgante",
+    "RG do Outorgado",
+    "CPF do Outorgado",
+    "Comprovante de Residência do Outorgante",
+    "Termo de Procuração"
+  ]
+}
+

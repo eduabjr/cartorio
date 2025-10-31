@@ -70,8 +70,19 @@ export function ControleDigitalizacaoPage({ onClose }: ControleDigitalizacaoPage
     folhaInicio: ''
   })
 
-  const [digitalizacoes, setDigitalizacoes] = useState<Digitalizacao[]>([])
+  const [digitalizacoes, setDigitalizacoes] = useState<Digitalizacao[]>(() => {
+    const saved = localStorage.getItem('digitalizacoes-containers')
+    return saved ? JSON.parse(saved) : []
+  })
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  
+  // Atualizar o código do formulário automaticamente
+  useEffect(() => {
+    if (!selectedId) {
+      const proximoCodigo = digitalizacoes.length.toString()
+      setFormData(prev => ({ ...prev, codigo: proximoCodigo }))
+    }
+  }, [digitalizacoes.length, selectedId])
   const [ultimosDados, setUltimosDados] = useState<any>(null)
   const [abaAtiva, setAbaAtiva] = useState<'cadastro' | 'digitalizacao'>('cadastro')
   
@@ -142,27 +153,45 @@ export function ControleDigitalizacaoPage({ onClose }: ControleDigitalizacaoPage
       return
     }
 
-    const novaDigitalizacao: Digitalizacao = {
-      id: Date.now().toString(),
-      tipoAto: formData.tipoAto,
-      codigo: (digitalizacoes.length + 1).toString().padStart(3, '0'),
-      tipoDocumento: formData.tipoDocumento,
-      processo: formData.processo,
-      protocolo: formData.protocolo,
-      termo: formData.termo,
-      livro: formData.livro,
-      folhaInicio: formData.folhaInicio
-    }
+    if (selectedId) {
+      // Atualizar container existente
+      const novasDigitalizacoes = digitalizacoes.map(d => 
+        d.id === selectedId 
+          ? { ...d, ...formData }
+          : d
+      )
+      setDigitalizacoes(novasDigitalizacoes)
+      localStorage.setItem('digitalizacoes-containers', JSON.stringify(novasDigitalizacoes))
+      console.log('✅ Container atualizado com sucesso!')
+    } else {
+      // Criar novo container
+      const novaDigitalizacao: Digitalizacao = {
+        id: Date.now().toString(),
+        tipoAto: formData.tipoAto,
+        codigo: formData.codigo,
+        tipoDocumento: formData.tipoDocumento,
+        processo: formData.processo,
+        protocolo: formData.protocolo,
+        termo: formData.termo,
+        livro: formData.livro,
+        folhaInicio: formData.folhaInicio
+      }
 
-    setDigitalizacoes(prev => [...prev, novaDigitalizacao])
+      const novasDigitalizacoes = [...digitalizacoes, novaDigitalizacao]
+      setDigitalizacoes(novasDigitalizacoes)
+      localStorage.setItem('digitalizacoes-containers', JSON.stringify(novasDigitalizacoes))
+      console.log(`✅ Container ${formData.codigo} criado com sucesso!`)
+    }
+    
     setUltimosDados(formData)
-    console.log('✅ Digitalização gravada com sucesso!')
     handleLimpar()
   }
 
   const handleLimpar = () => {
+    setSelectedId(null)
+    const proximoCodigo = digitalizacoes.length.toString()
     setFormData({
-      codigo: '0',
+      codigo: proximoCodigo,
       tipoAto: '',
       tipoDocumento: '',
       processo: '0',
@@ -171,21 +200,24 @@ export function ControleDigitalizacaoPage({ onClose }: ControleDigitalizacaoPage
       livro: '',
       folhaInicio: ''
     })
-    setSelectedId(null)
   }
 
   const handleExcluir = () => {
     if (selectedId) {
-      setDigitalizacoes(prev => prev.filter(d => d.id !== selectedId))
+      const novasDigitalizacoes = digitalizacoes.filter(d => d.id !== selectedId)
+      setDigitalizacoes(novasDigitalizacoes)
+      localStorage.setItem('digitalizacoes-containers', JSON.stringify(novasDigitalizacoes))
       handleLimpar()
-      console.log('✅ Digitalização excluída.')
+      console.log('✅ Container excluído.')
     }
   }
 
   const handleRepetirDados = () => {
     if (ultimosDados) {
-      setFormData({ ...ultimosDados, codigo: '0' })
-      console.log('✅ Dados repetidos.')
+      const proximoCodigo = digitalizacoes.length.toString()
+      setFormData({ ...ultimosDados, codigo: proximoCodigo })
+      setSelectedId(null)
+      console.log('✅ Dados repetidos com novo código.')
     } else {
       console.log('⚠️ Nenhum dado anterior para repetir.')
     }
@@ -562,6 +594,16 @@ export function ControleDigitalizacaoPage({ onClose }: ControleDigitalizacaoPage
                      key={dig.id}
                      onClick={() => {
                        setSelectedId(dig.id)
+                       setFormData({
+                         codigo: dig.codigo,
+                         tipoAto: dig.tipoAto,
+                         tipoDocumento: dig.tipoDocumento,
+                         processo: dig.processo,
+                         protocolo: dig.protocolo,
+                         termo: dig.termo,
+                         livro: dig.livro,
+                         folhaInicio: dig.folhaInicio
+                       })
                      }}
                      style={{
                        padding: '8px',

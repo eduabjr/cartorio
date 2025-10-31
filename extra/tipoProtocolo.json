@@ -1,0 +1,32 @@
+[
+  {
+    "codigo": "1",
+    "nome": "Gratuito",
+    "ativo": true
+  },
+  {
+    "codigo": "2",
+    "nome": "Gratuito - Atestado de Pobreza",
+    "ativo": true
+  },
+  {
+    "codigo": "3",
+    "nome": "Gratuito - Certidão Judicial (CRC JUD)",
+    "ativo": true
+  },
+  {
+    "codigo": "4",
+    "nome": "Gratuito - Req. Judicial",
+    "ativo": true
+  },
+  {
+    "codigo": "5",
+    "nome": "Gratuito - Serviço, Conselho Tutelar...",
+    "ativo": true
+  },
+  {
+    "codigo": "6",
+    "nome": "Pago",
+    "ativo": true
+  }
+]

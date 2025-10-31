@@ -54,6 +54,7 @@ import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { Modal } from '../components/Modal'
 import { useModal } from '../hooks/useModal'
+import { naturezaService, Natureza } from '../services/NaturezaService'
 
 /**
  * PROPS DO COMPONENTE
@@ -185,10 +186,11 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
   })
 
   // Estados para Serviços
+  const [naturezas, setNaturezas] = useState<Natureza[]>([])
   const [atos, setAtos] = useState<Ato[]>([])
   const [atoForm, setAtoForm] = useState<Ato>({
     id: '',
-    natureza: 'CERTIDÃO EM BREVE RELATÓRIO',
+    natureza: '',
     tipoGratuidade: 'Pago',
     quantidade: '1',
     analfabetos: '0',
@@ -197,6 +199,40 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
     total: '0,00'
   })
   const [selectedAtoId, setSelectedAtoId] = useState<string | null>(null)
+  
+  // Carregar naturezas do localStorage
+  useEffect(() => {
+    const carregarNaturezas = async () => {
+      try {
+        const lista = await naturezaService.listar()
+        console.log('📋 Naturezas carregadas para protocolo:', lista)
+        setNaturezas(lista.filter(n => n.ativo !== false))
+        
+        // Se tiver naturezas, selecionar a primeira
+        if (lista.length > 0 && !atoForm.natureza) {
+          setAtoForm(prev => ({ ...prev, natureza: lista[0].descricao }))
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar naturezas:', error)
+      }
+    }
+    
+    carregarNaturezas()
+    
+    // Escutar mudanças nas naturezas
+    const handleStorageChange = () => {
+      carregarNaturezas()
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('naturezas-atualizadas', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('naturezas-atualizadas', handleStorageChange)
+    }
+  }, [])
+  
 
   const [outrosServicos, setOutrosServicos] = useState<OutroServico[]>([
     { id: '1', quantidade: '0', descricao: 'AUTENTICAÇÃO', valor: '0,00' },
@@ -315,7 +351,7 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
     // Reset formulário
     setAtoForm({
       id: '',
-      natureza: 'CERTIDÃO EM BREVE RELATÓRIO',
+      natureza: naturezas.length > 0 ? naturezas[0].descricao : '',
       tipoGratuidade: 'Pago',
       quantidade: '1',
       analfabetos: '0',
@@ -533,19 +569,24 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
               {/* Linha 2: Natureza, Complemento do Ato */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={labelStyles}>Natureza</label>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <input
-                      type="text"
-                      value={formData.natureza}
-                      onChange={(e) => setFormData({ ...formData, natureza: e.target.value })}
-                      onFocus={() => setFocusedField('natureza')}
-                      onBlur={() => setFocusedField(null)}
-                      style={getInputStyles('natureza')}
-                    />
-                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>▼</button>
-                    <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>🔍</button>
-                  </div>
+                  <label style={labelStyles}>Natureza *</label>
+                  <select
+                    value={formData.natureza}
+                    onChange={(e) => setFormData({ ...formData, natureza: e.target.value })}
+                    onFocus={() => setFocusedField('natureza')}
+                    onBlur={() => setFocusedField(null)}
+                    style={{ 
+                      ...getInputStyles('natureza'), 
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">Selecione uma natureza...</option>
+                    {naturezas.map(nat => (
+                      <option key={nat.id} value={nat.descricao}>
+                        {nat.codigo} - {nat.descricao}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={labelStyles}>Complemento do Ato</label>
@@ -926,17 +967,21 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
                   <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: theme.text }}>ATOS</h3>
                   
                   <div>
-                    <label style={labelStyles}>Natureza</label>
+                    <label style={labelStyles}>Natureza *</label>
                     <select
                       value={atoForm.natureza}
                       onChange={(e) => setAtoForm({ ...atoForm, natureza: e.target.value })}
-                      style={{ ...getInputStyles('natureza'), cursor: 'pointer' }}
+                      style={{ 
+                        ...getInputStyles('natureza'), 
+                        cursor: 'pointer'
+                      }}
                     >
-                      <option>CERTIDÃO EM BREVE RELATÓRIO</option>
-                      <option>CERTIDÃO NARRATIVA</option>
-                      <option>CERTIDÃO DE INTEIRO TEOR</option>
-                      <option>ASSENTO</option>
-                      <option>AVERBAÇÃO</option>
+                      <option value="">Selecione uma natureza...</option>
+                      {naturezas.map(nat => (
+                        <option key={nat.id} value={nat.descricao}>
+                          {nat.codigo} - {nat.descricao}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -1017,7 +1062,7 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
                       🧮 Calcular
                     </button>
                     <button
-                      onClick={() => setAtoForm({ id: '', natureza: 'CERTIDÃO EM BREVE RELATÓRIO', tipoGratuidade: 'Pago', quantidade: '1', analfabetos: '0', servicoExterno: false, descontoTerco: false, total: '0,00' })}
+                      onClick={() => setAtoForm({ id: '', natureza: naturezas.length > 0 ? naturezas[0].descricao : '', tipoGratuidade: 'Pago', quantidade: '1', analfabetos: '0', servicoExterno: false, descontoTerco: false, total: '0,00' })}
                       style={{ ...buttonStyles, backgroundColor: '#10b981', color: 'white', flex: 1 }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}

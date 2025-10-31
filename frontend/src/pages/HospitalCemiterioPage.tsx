@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { CustomSelect } from '../components/CustomSelect'
+import { UF_OPTIONS } from '../constants/selectOptions'
 
 interface HospitalCemiterioPageProps {
   onClose: () => void
@@ -437,16 +439,17 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
     boxShadow: focusedField === fieldName ? `0 0 0 1000px ${currentTheme === 'dark' ? '#ffd4a3' : '#ffedd5'} inset` : 'none'
   })
 
+  const arrowColor = currentTheme === 'dark' ? '%23FFFFFF' : '%23333333'
   const getSelectStyles = (fieldName: string) => ({
     ...getInputStyles(fieldName),
     appearance: 'none' as const,
     WebkitAppearance: 'none' as const,
     MozAppearance: 'none' as const,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666666' d='M1 1 L6 6 L11 1'/%3E%3C/svg%3E")`,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='${arrowColor}' d='M1 1 L6 6 L11 1'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 8px center',
-    backgroundSize: '12px 8px',
-    paddingRight: '28px',
+    backgroundSize: '14px 10px',
+    paddingRight: '30px',
     verticalAlign: 'middle'
   })
 
@@ -815,18 +818,12 @@ export const HospitalCemiterioPage: React.FC<HospitalCemiterioPageProps> = ({ on
           </div>
           <div style={{ width: '100px' }}>
             <label style={labelStyles}>UF <span style={{ color: '#ff4444' }}>*</span></label>
-            <select
+            <CustomSelect
               value={formData.uf}
-              onChange={(e) => setFormData({ ...formData, uf: e.target.value })}
-              onFocus={() => setFocusedField('uf')}
-              onBlur={() => setFocusedField(null)}
-              style={{ ...getSelectStyles('uf'), width: '100%' }}
-            >
-              <option value="">--</option>
-              {estados.map(estado => (
-                <option key={estado} value={estado}>{estado}</option>
-              ))}
-            </select>
+              onChange={(value) => setFormData({ ...formData, uf: value })}
+              options={UF_OPTIONS}
+              maxVisibleItems={5}
+            />
           </div>
         </div>
 

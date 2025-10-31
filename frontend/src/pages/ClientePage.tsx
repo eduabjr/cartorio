@@ -37,6 +37,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
+import { CustomSelect } from '../components/CustomSelect'
+import { UF_OPTIONS, PAIS_OPTIONS } from '../constants/selectOptions'
 import { BasePage } from '../components/BasePage'
 import { OCRProgress } from '../components/OCRProgress'
 import { ScannerConfig } from '../components/ScannerConfig'
@@ -48,8 +50,6 @@ import { ocrService } from '../services/OCRService'
 import QRCode from 'qrcode'
 import { useFieldValidation } from '../hooks/useFieldValidation'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
-import { Modal } from '../components/Modal'
-import { useModal } from '../hooks/useModal'
 // import { useTJSPApi } from '../hooks/useTJSPApi'
 
 // CSS específico para dropdowns de países com scroll pequeno quando expandido
@@ -478,17 +478,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     return value
   }
 
-  // Função para formatar email
+  // Função para formatar email (apenas retorna o valor sem adicionar @)
   const formatEmail = (value: string) => {
-    // Se o usuário digitar @, não adiciona outro
-    if (value.includes('@')) {
-      return value
-    }
-    // Se não tem @ e tem mais de 3 caracteres, adiciona @ automaticamente
-    if (value.length > 3 && !value.includes('@')) {
-      return value + '@'
-    }
-    return value
+    // Apenas retorna o valor digitado pelo usuário
+    return value.trim()
   }
 
   // Função para detectar se uma cidade é brasileira
@@ -782,24 +775,43 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
 
 
-  // Função para gerar número de cartão sequencial
-  const handleGerarNumeroCartao = () => {
-    if (!cartaoHabilitado) {
-      console.log('⚠️ Marque a opção "Cartão" primeiro.')
+
+  // Função para iniciar um novo cadastro
+  const handleConsultarCliente = () => {
+    const codigoConsulta = formData.codigo.trim()
+    
+    if (!codigoConsulta || codigoConsulta === '0') {
+      console.log('⚠️ Digite um código para consultar')
       return
     }
     
-    const ultimoNumero = localStorage.getItem('ultimoNumeroCartao')
-    const proximoNumero = ultimoNumero ? parseInt(ultimoNumero) + 1 : 1
+    // Buscar clientes salvos no localStorage
+    const clientesSalvos = localStorage.getItem('clientes-cadastrados')
+    if (!clientesSalvos) {
+      console.log('⚠️ Nenhum cliente cadastrado no sistema')
+      alert('Nenhum cliente cadastrado no sistema')
+      return
+    }
     
-    const numeroGerado = proximoNumero.toString().padStart(10, '0')
-    localStorage.setItem('ultimoNumeroCartao', proximoNumero.toString())
-    
-    handleInputChange('numeroCartao', numeroGerado)
-    console.log('🎫 Número de cartão gerado:', numeroGerado)
+    try {
+      const clientes = JSON.parse(clientesSalvos)
+      const clienteEncontrado = clientes.find((c: any) => c.codigo === codigoConsulta)
+      
+      if (clienteEncontrado) {
+        // Preencher formulário com os dados do cliente encontrado
+        setFormData(clienteEncontrado)
+        console.log('✅ Cliente encontrado:', clienteEncontrado.nome)
+        alert(`Cliente encontrado:\n${clienteEncontrado.nome}\nCPF: ${clienteEncontrado.cpf}`)
+      } else {
+        console.log('❌ Cliente não encontrado com código:', codigoConsulta)
+        alert(`Cliente com código ${codigoConsulta} não encontrado`)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao consultar cliente:', error)
+      alert('Erro ao consultar cliente')
+    }
   }
 
-  // Função para iniciar um novo cadastro
   const handleNovo = () => {
     setFormData({
       codigo: '0',
@@ -834,6 +846,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       assinanteCartao: '',
       sexo: ''
     })
+    // Desmarcar checkbox do cartão
+    setCartaoHabilitado(false)
+    // Voltar para aba Cadastro ao criar novo
+    setActiveTab('cadastro')
     console.log('📄 Novo cadastro iniciado! Formulário limpo.')
   }
 
@@ -894,11 +910,46 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       console.log('🆔 Código gerado:', codigoFinal)
     }
 
-    // Simula salvamento
-    console.log('Dados a serem gravados:', { ...formData, codigo: codigoFinal })
-    console.log('💾 Cliente gravado com sucesso!')
+    // Gera número de cartão automaticamente se checkbox estiver marcado e campo vazio
+    let numeroCartaoFinal = formData.numeroCartao
+    if (cartaoHabilitado && (formData.numeroCartao === '0' || formData.numeroCartao === '')) {
+      const ultimoNumero = localStorage.getItem('ultimoNumeroCartao')
+      const proximoNumero = ultimoNumero ? parseInt(ultimoNumero) + 1 : 1
+      
+      numeroCartaoFinal = proximoNumero.toString().padStart(10, '0')
+      
+      // Salvar novo último número
+      localStorage.setItem('ultimoNumeroCartao', proximoNumero.toString())
+      
+      setFormData(prev => ({ ...prev, numeroCartao: numeroCartaoFinal }))
+      console.log('🎫 Número de cartão gerado:', numeroCartaoFinal)
+    }
+
+    // Salvar cliente no localStorage
+    const clienteParaSalvar = { ...formData, codigo: codigoFinal, numeroCartao: numeroCartaoFinal }
     
-    alert(`✅ Cliente gravado com sucesso!\n\nCódigo: ${codigoFinal}\nNome: ${formData.nome}`)
+    const clientesSalvos = localStorage.getItem('clientes-cadastrados')
+    let clientes = clientesSalvos ? JSON.parse(clientesSalvos) : []
+    
+    // Verificar se já existe (atualizar) ou criar novo
+    const indexExistente = clientes.findIndex((c: any) => c.codigo === codigoFinal)
+    if (indexExistente >= 0) {
+      clientes[indexExistente] = clienteParaSalvar
+      console.log('✏️ Cliente atualizado:', codigoFinal)
+    } else {
+      clientes.push(clienteParaSalvar)
+      console.log('➕ Novo cliente adicionado:', codigoFinal)
+    }
+    
+    localStorage.setItem('clientes-cadastrados', JSON.stringify(clientes))
+    console.log('💾 Cliente gravado com sucesso no localStorage!')
+    
+    let mensagemSucesso = `✅ Cliente gravado com sucesso!\n\nCódigo: ${codigoFinal}\nNome: ${formData.nome}`
+    if (cartaoHabilitado && numeroCartaoFinal !== '0') {
+      mensagemSucesso += `\nNúmero Cartão: ${numeroCartaoFinal}`
+    }
+    
+    alert(mensagemSucesso)
   }
 
   // Função para limpar os campos
@@ -937,6 +988,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       assinanteCartao: '',
       sexo: ''
     }))
+    // Desmarcar checkbox do cartão
+    setCartaoHabilitado(false)
+    // Voltar para aba Cadastro ao limpar
+    setActiveTab('cadastro')
     console.log('🧹 Campos limpos!')
   }
 
@@ -1809,6 +1864,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   }
 
   // 🔒 BLOQUEIO: selectStyles - NÃO MODIFICAR minWidth ou flexShrink
+  const arrowColor = currentTheme === 'dark' ? '%23FFFFFF' : '%23333333' // Cor da seta: branca no dark, preta no light
   const selectStyles = {
     padding: '3px 10px',
     border: `1px solid ${theme.border}`,
@@ -1827,31 +1883,17 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     appearance: 'none' as const,
     WebkitAppearance: 'none' as const,
     MozAppearance: 'none' as const,
-    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${arrowColor}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 6px center',
-    backgroundSize: '12px',
-    paddingRight: '24px',
+    backgroundSize: '14px',
+    paddingRight: '26px',
     verticalAlign: 'top',
     display: 'block',
     margin: '0',
     fontFamily: 'inherit',
     minWidth: '0',  // 🔒 FIXO - Permite encolher até o mínimo
     flexShrink: 1  // 🔒 FIXO - Encolhe proporcionalmente
-  }
-
-  // Estilos específicos para dropdowns de países com scroll pequeno quando expandido
-  const paisSelectStyles = {
-    ...selectStyles,
-    // Altura máxima quando o dropdown está expandido (scroll pequeno)
-    maxHeight: '80px',
-    // Scroll automático quando necessário
-    overflowY: 'auto' as const,
-    // Garante que o scroll funcione bem
-    scrollBehavior: 'smooth' as const,
-    // Estilo adicional para melhor controle
-    position: 'relative' as const,
-    zIndex: 1000
   }
 
   const buttonStyles = {
@@ -2002,14 +2044,36 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           Cadastro
         </button>
         <button
-          style={tabButtonStyles(activeTab === 'digitalizacao')}
-          onClick={() => setActiveTab('digitalizacao')}
+          style={{
+            ...tabButtonStyles(activeTab === 'digitalizacao'),
+            opacity: formData.codigo === '0' ? 0.4 : 1,
+            cursor: formData.codigo === '0' ? 'not-allowed' : 'pointer'
+          }}
+          onClick={() => {
+            if (formData.codigo !== '0') {
+              setActiveTab('digitalizacao')
+            } else {
+              alert('⚠️ Grave um cadastro primeiro antes de acessar a Digitalização!')
+            }
+          }}
+          disabled={formData.codigo === '0'}
         >
           Digitalização
         </button>
         <button
-          style={tabButtonStyles(activeTab === 'selo-digital')}
-          onClick={() => setActiveTab('selo-digital')}
+          style={{
+            ...tabButtonStyles(activeTab === 'selo-digital'),
+            opacity: formData.codigo === '0' ? 0.4 : 1,
+            cursor: formData.codigo === '0' ? 'not-allowed' : 'pointer'
+          }}
+          onClick={() => {
+            if (formData.codigo !== '0') {
+              setActiveTab('selo-digital')
+            } else {
+              alert('⚠️ Grave um cadastro primeiro antes de acessar o Selo Digital!')
+            }
+          }}
+          disabled={formData.codigo === '0'}
         >
           Selo Digital
         </button>
@@ -2022,7 +2086,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           {/* Linha 1: Código, Nome, Número Cartão */}
           <div style={{...rowStyles, display: 'flex', alignItems: 'flex-end', gap: '8px'}}>
             {/* Campo Código */}
-            <div style={{display: 'flex', flexDirection: 'column', maxWidth: '150px', flexShrink: 0}}>
+            <div style={{display: 'flex', flexDirection: 'column', maxWidth: '180px', flexShrink: 0}}>
               <label style={{fontSize: '12px', color: theme.text, marginBottom: '2px', height: '18px', lineHeight: '18px'}}>Código</label>
               <div style={{display: 'flex', gap: '4px', alignItems: 'center', height: '24px'}}>
                 <button
@@ -2049,24 +2113,51 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 <input
                   type="text"
                   value={formData.codigo}
-                  readOnly
-                  disabled
-                  onKeyDown={(e) => e.preventDefault()}
-                  onPaste={(e) => e.preventDefault()}
-                  onCut={(e) => e.preventDefault()}
-                  onDrop={(e) => e.preventDefault()}
+                  onChange={(e) => handleInputChange('codigo', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleConsultarCliente()
+                    }
+                  }}
                   style={{
                     ...inputStyles, 
                     flex: 1, 
                     minWidth: '50px', 
-                    height: '24px',
-                    backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
-                    color: currentTheme === 'dark' ? '#666' : '#999',
-                    cursor: 'not-allowed',
-                    opacity: 0.7
+                    height: '24px'
                   }}
                   maxLength={10}
+                  placeholder="Digite o código"
                 />
+                <button
+                  type="button"
+                  onClick={handleConsultarCliente}
+                  style={{
+                    padding: '0',
+                    border: `1px solid ${theme.border}`,
+                    backgroundColor: theme.surface,
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '24px',
+                    width: '24px',
+                    minWidth: '24px',
+                    borderRadius: '3px',
+                    flexShrink: 0,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.border
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.surface
+                  }}
+                  title="Consultar cliente pelo código"
+                >
+                  🔍
+                </button>
               </div>
             </div>
 
@@ -2097,7 +2188,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                     onChange={(e) => {
                       setCartaoHabilitado(e.target.checked)
                       if (!e.target.checked) {
-                        handleInputChange('numeroCartao', '')
+                        handleInputChange('numeroCartao', '0')
                       }
                     }}
                     style={{ 
@@ -2117,48 +2208,33 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 <input
                   type="text"
                   value={formData.numeroCartao}
-                  onChange={(e) => {
-                    if (cartaoHabilitado) {
-                      // Permite apenas números
-                      const valor = e.target.value.replace(/\D/g, '')
-                      handleInputChange('numeroCartao', valor)
-                    }
-                  }}
+                  readOnly
                   disabled={!cartaoHabilitado}
-                  onKeyDown={(e) => !cartaoHabilitado && e.preventDefault()}
-                  onPaste={(e) => !cartaoHabilitado && e.preventDefault()}
-                  onCut={(e) => !cartaoHabilitado && e.preventDefault()}
-                  onDrop={(e) => !cartaoHabilitado && e.preventDefault()}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  onDrop={(e) => e.preventDefault()}
                   style={{
                     ...inputStyles, 
                     flex: 1, 
                     minWidth: '30px', 
                     height: '24px',
                     backgroundColor: !cartaoHabilitado 
-                      ? (currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0')
-                      : inputStyles.backgroundColor,
+                      ? (currentTheme === 'dark' ? '#1a1a1a' : '#f0f0f0')
+                      : (currentTheme === 'dark' ? '#2a4a2a' : '#e8f5e9'),
                     color: !cartaoHabilitado 
-                      ? (currentTheme === 'dark' ? '#666' : '#999')
-                      : inputStyles.color,
-                    cursor: !cartaoHabilitado ? 'not-allowed' : 'text',
-                    opacity: !cartaoHabilitado ? 0.7 : 1
-                  }}
-                  maxLength={20}
-                />
-                <button 
-                  type="button" 
-                  onClick={handleGerarNumeroCartao}
-                  disabled={!cartaoHabilitado}
-                  title="Gerar número de cartão sequencial"
-                  style={{
-                    ...secondaryButtonStyles, 
-                    height: '24px', 
-                    minWidth: '25px', 
-                    padding: '3px 6px',
+                      ? (currentTheme === 'dark' ? '#555' : '#aaa')
+                      : (currentTheme === 'dark' ? '#4ade80' : '#2e7d32'),
+                    cursor: 'not-allowed',
                     opacity: !cartaoHabilitado ? 0.5 : 1,
-                    cursor: !cartaoHabilitado ? 'not-allowed' : 'pointer'
+                    border: cartaoHabilitado 
+                      ? `2px solid ${currentTheme === 'dark' ? '#4ade80' : '#4caf50'}` 
+                      : `1px solid ${theme.border}`,
+                    fontWeight: cartaoHabilitado ? '600' : '400',
+                    transition: 'all 0.3s ease'
                   }}
-                >...</button>
+                  placeholder={cartaoHabilitado ? 'Será gerado ao gravar' : 'Marque o checkbox'}
+                />
               </div>
             </div>
           </div>
@@ -2201,7 +2277,12 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                   // Valida CPF
                   const validacao = validarCPF(valor)
                   if (!validacao.isValid) {
+                    alert(`❌ CPF INVÁLIDO!\n\n${validacao.error}\n\nPor favor, verifique o número digitado.`)
                     console.log(`❌ CPF inválido! ${validacao.error}`)
+                    // Limpa o campo CPF inválido
+                    handleInputChange('cpf', '')
+                  } else {
+                    console.log('✅ CPF válido!')
                   }
                 }
               }}
@@ -2215,7 +2296,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         </div>
 
             <div style={fieldStyles}>
-              <label style={labelStyles}>RG *</label>
+              <label style={labelStyles}>RG</label>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <input
                 type="text"
@@ -2223,7 +2304,6 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                 onChange={(e) => handleInputWithLimit('rg', e.target.value, 20)}
                 style={inputStyles}
                 maxLength={20}
-                required
               />
                 <button type="button" style={secondaryButtonStyles}>...</button>
               </div>
@@ -2283,299 +2363,22 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
             <div style={fieldStyles}>
               <label style={labelStyles}>UF</label>
-              <select
+              <CustomSelect
                 value={formData.uf}
-                onChange={(e) => handleInputChange('uf', e.target.value)}
-                style={selectStyles}
-              >
-                <option value="">Selecione</option>
-                <option value="AC">AC - Acre</option>
-                <option value="AL">AL - Alagoas</option>
-                <option value="AP">AP - Amapá</option>
-                <option value="AM">AM - Amazonas</option>
-                <option value="BA">BA - Bahia</option>
-                <option value="CE">CE - Ceará</option>
-                <option value="DF">DF - Distrito Federal</option>
-                <option value="ES">ES - Espírito Santo</option>
-                <option value="GO">GO - Goiás</option>
-                <option value="MA">MA - Maranhão</option>
-                <option value="MT">MT - Mato Grosso</option>
-                <option value="MS">MS - Mato Grosso do Sul</option>
-                <option value="MG">MG - Minas Gerais</option>
-                <option value="PA">PA - Pará</option>
-                <option value="PB">PB - Paraíba</option>
-                <option value="PR">PR - Paraná</option>
-                <option value="PE">PE - Pernambuco</option>
-                <option value="PI">PI - Piauí</option>
-                <option value="RJ">RJ - Rio de Janeiro</option>
-                <option value="RN">RN - Rio Grande do Norte</option>
-                <option value="RS">RS - Rio Grande do Sul</option>
-                <option value="RO">RO - Rondônia</option>
-                <option value="RR">RR - Roraima</option>
-                <option value="SC">SC - Santa Catarina</option>
-                <option value="SP">SP - São Paulo</option>
-                <option value="SE">SE - Sergipe</option>
-                <option value="TO">TO - Tocantins</option>
-              </select>
+                onChange={(value) => handleInputChange('uf', value)}
+                options={UF_OPTIONS}
+                maxVisibleItems={5}
+              />
             </div>
 
             <div style={fieldStyles}>
               <label style={labelStyles}>País</label>
-              <select
+              <CustomSelect
                 value={formData.pais}
-                onChange={(e) => handleInputChange('pais', e.target.value)}
-                style={paisSelectStyles}
-                className="pais-select"
-                size={1}
-              >
-                <option value="">Selecione</option>
-                <option value="AF">AF - Afeganistão</option>
-                <option value="ZA">ZA - África do Sul</option>
-                <option value="AL">AL - Albânia</option>
-                <option value="DE">DE - Alemanha</option>
-                <option value="AD">AD - Andorra</option>
-                <option value="AO">AO - Angola</option>
-                <option value="AI">AI - Anguilla</option>
-                <option value="AQ">AQ - Antártida</option>
-                <option value="AG">AG - Antígua e Barbuda</option>
-                <option value="SA">SA - Arábia Saudita</option>
-                <option value="DZ">DZ - Argélia</option>
-                <option value="AR">AR - Argentina</option>
-                <option value="AM">AM - Armênia</option>
-                <option value="AW">AW - Aruba</option>
-                <option value="AU">AU - Austrália</option>
-                <option value="AT">AT - Áustria</option>
-                <option value="AZ">AZ - Azerbaijão</option>
-                <option value="BS">BS - Bahamas</option>
-                <option value="BH">BH - Bahrein</option>
-                <option value="BD">BD - Bangladesh</option>
-                <option value="BB">BB - Barbados</option>
-                <option value="BY">BY - Belarus</option>
-                <option value="BE">BE - Bélgica</option>
-                <option value="BZ">BZ - Belize</option>
-                <option value="BJ">BJ - Benin</option>
-                <option value="BM">BM - Bermudas</option>
-                <option value="BO">BO - Bolívia</option>
-                <option value="BA">BA - Bósnia e Herzegovina</option>
-                <option value="BW">BW - Botswana</option>
-                <option value="BR">BR - Brasil</option>
-                <option value="BN">BN - Brunei</option>
-                <option value="BG">BG - Bulgária</option>
-                <option value="BF">BF - Burkina Faso</option>
-                <option value="BI">BI - Burundi</option>
-                <option value="BT">BT - Butão</option>
-                <option value="CV">CV - Cabo Verde</option>
-                <option value="KH">KH - Camboja</option>
-                <option value="CM">CM - Camarões</option>
-                <option value="CA">CA - Canadá</option>
-                <option value="KZ">KZ - Cazaquistão</option>
-                <option value="TD">TD - Chade</option>
-                <option value="CL">CL - Chile</option>
-                <option value="CN">CN - China</option>
-                <option value="CY">CY - Chipre</option>
-                <option value="CO">CO - Colômbia</option>
-                <option value="KM">KM - Comores</option>
-                <option value="CG">CG - Congo</option>
-                <option value="CD">CD - Congo (República Democrática)</option>
-                <option value="KP">KP - Coreia do Norte</option>
-                <option value="KR">KR - Coreia do Sul</option>
-                <option value="CI">CI - Costa do Marfim</option>
-                <option value="CR">CR - Costa Rica</option>
-                <option value="HR">HR - Croácia</option>
-                <option value="CU">CU - Cuba</option>
-                <option value="CW">CW - Curaçao</option>
-                <option value="DK">DK - Dinamarca</option>
-                <option value="DJ">DJ - Djibuti</option>
-                <option value="DM">DM - Dominica</option>
-                <option value="EG">EG - Egito</option>
-                <option value="SV">SV - El Salvador</option>
-                <option value="AE">AE - Emirados Árabes Unidos</option>
-                <option value="EC">EC - Equador</option>
-                <option value="ER">ER - Eritreia</option>
-                <option value="SK">SK - Eslováquia</option>
-                <option value="SI">SI - Eslovênia</option>
-                <option value="ES">ES - Espanha</option>
-                <option value="US">US - Estados Unidos</option>
-                <option value="EE">EE - Estônia</option>
-                <option value="ET">ET - Etiópia</option>
-                <option value="FJ">FJ - Fiji</option>
-                <option value="PH">PH - Filipinas</option>
-                <option value="FI">FI - Finlândia</option>
-                <option value="FR">FR - França</option>
-                <option value="GA">GA - Gabão</option>
-                <option value="GM">GM - Gâmbia</option>
-                <option value="GH">GH - Gana</option>
-                <option value="GE">GE - Geórgia</option>
-                <option value="GI">GI - Gibraltar</option>
-                <option value="GD">GD - Granada</option>
-                <option value="GR">GR - Grécia</option>
-                <option value="GL">GL - Groenlândia</option>
-                <option value="GP">GP - Guadalupe</option>
-                <option value="GU">GU - Guam</option>
-                <option value="GT">GT - Guatemala</option>
-                <option value="GG">GG - Guernsey</option>
-                <option value="GY">GY - Guiana</option>
-                <option value="GF">GF - Guiana Francesa</option>
-                <option value="GN">GN - Guiné</option>
-                <option value="GW">GW - Guiné-Bissau</option>
-                <option value="GQ">GQ - Guiné Equatorial</option>
-                <option value="HT">HT - Haiti</option>
-                <option value="NL">NL - Holanda</option>
-                <option value="HN">HN - Honduras</option>
-                <option value="HK">HK - Hong Kong</option>
-                <option value="HU">HU - Hungria</option>
-                <option value="YE">YE - Iêmen</option>
-                <option value="BV">BV - Ilha Bouvet</option>
-                <option value="CX">CX - Ilha Christmas</option>
-                <option value="IM">IM - Ilha de Man</option>
-                <option value="NF">NF - Ilha Norfolk</option>
-                <option value="AX">AX - Ilhas Åland</option>
-                <option value="KY">KY - Ilhas Cayman</option>
-                <option value="CC">CC - Ilhas Cocos</option>
-                <option value="CK">CK - Ilhas Cook</option>
-                <option value="FO">FO - Ilhas Faroe</option>
-                <option value="GS">GS - Ilhas Geórgia do Sul e Sandwich do Sul</option>
-                <option value="HM">HM - Ilhas Heard e McDonald</option>
-                <option value="FK">FK - Ilhas Malvinas</option>
-                <option value="MP">MP - Ilhas Marianas do Norte</option>
-                <option value="MH">MH - Ilhas Marshall</option>
-                <option value="UM">UM - Ilhas Menores Distantes dos Estados Unidos</option>
-                <option value="PN">PN - Ilhas Pitcairn</option>
-                <option value="SB">SB - Ilhas Salomão</option>
-                <option value="TC">TC - Ilhas Turcas e Caicos</option>
-                <option value="VG">VG - Ilhas Virgens Britânicas</option>
-                <option value="VI">VI - Ilhas Virgens dos Estados Unidos</option>
-                <option value="IN">IN - Índia</option>
-                <option value="ID">ID - Indonésia</option>
-                <option value="IR">IR - Irã</option>
-                <option value="IQ">IQ - Iraque</option>
-                <option value="IE">IE - Irlanda</option>
-                <option value="IS">IS - Islândia</option>
-                <option value="IL">IL - Israel</option>
-                <option value="IT">IT - Itália</option>
-                <option value="JM">JM - Jamaica</option>
-                <option value="JP">JP - Japão</option>
-                <option value="JE">JE - Jersey</option>
-                <option value="JO">JO - Jordânia</option>
-                <option value="KI">KI - Kiribati</option>
-                <option value="KW">KW - Kuwait</option>
-                <option value="LA">LA - Laos</option>
-                <option value="LS">LS - Lesoto</option>
-                <option value="LV">LV - Letônia</option>
-                <option value="LB">LB - Líbano</option>
-                <option value="LR">LR - Libéria</option>
-                <option value="LY">LY - Líbia</option>
-                <option value="LI">LI - Liechtenstein</option>
-                <option value="LT">LT - Lituânia</option>
-                <option value="LU">LU - Luxemburgo</option>
-                <option value="MO">MO - Macau</option>
-                <option value="MK">MK - Macedônia do Norte</option>
-                <option value="MG">MG - Madagascar</option>
-                <option value="MY">MY - Malásia</option>
-                <option value="MW">MW - Malawi</option>
-                <option value="MV">MV - Maldivas</option>
-                <option value="ML">ML - Mali</option>
-                <option value="MT">MT - Malta</option>
-                <option value="MA">MA - Marrocos</option>
-                <option value="MQ">MQ - Martinica</option>
-                <option value="MU">MU - Maurício</option>
-                <option value="MR">MR - Mauritânia</option>
-                <option value="YT">YT - Mayotte</option>
-                <option value="MX">MX - México</option>
-                <option value="FM">FM - Micronésia</option>
-                <option value="MZ">MZ - Moçambique</option>
-                <option value="MD">MD - Moldávia</option>
-                <option value="MC">MC - Mônaco</option>
-                <option value="MN">MN - Mongólia</option>
-                <option value="ME">ME - Montenegro</option>
-                <option value="MS">MS - Montserrat</option>
-                <option value="MM">MM - Myanmar</option>
-                <option value="NA">NA - Namíbia</option>
-                <option value="NR">NR - Nauru</option>
-                <option value="NP">NP - Nepal</option>
-                <option value="NI">NI - Nicarágua</option>
-                <option value="NE">NE - Níger</option>
-                <option value="NG">NG - Nigéria</option>
-                <option value="NU">NU - Niue</option>
-                <option value="NO">NO - Noruega</option>
-                <option value="NC">NC - Nova Caledônia</option>
-                <option value="NZ">NZ - Nova Zelândia</option>
-                <option value="OM">OM - Omã</option>
-                <option value="NL">NL - Países Baixos</option>
-                <option value="PW">PW - Palau</option>
-                <option value="PS">PS - Palestina</option>
-                <option value="PA">PA - Panamá</option>
-                <option value="PG">PG - Papua Nova Guiné</option>
-                <option value="PK">PK - Paquistão</option>
-                <option value="PY">PY - Paraguai</option>
-                <option value="PE">PE - Peru</option>
-                <option value="PF">PF - Polinésia Francesa</option>
-                <option value="PL">PL - Polônia</option>
-                <option value="PR">PR - Porto Rico</option>
-                <option value="PT">PT - Portugal</option>
-                <option value="KE">KE - Quênia</option>
-                <option value="KG">KG - Quirguistão</option>
-                <option value="GB">GB - Reino Unido</option>
-                <option value="CF">CF - República Centro-Africana</option>
-                <option value="CZ">CZ - República Tcheca</option>
-                <option value="DO">DO - República Dominicana</option>
-                <option value="RE">RE - Reunião</option>
-                <option value="RO">RO - Romênia</option>
-                <option value="RW">RW - Ruanda</option>
-                <option value="RU">RU - Rússia</option>
-                <option value="EH">EH - Saara Ocidental</option>
-                <option value="WS">WS - Samoa</option>
-                <option value="AS">AS - Samoa Americana</option>
-                <option value="SM">SM - San Marino</option>
-                <option value="SH">SH - Santa Helena</option>
-                <option value="LC">LC - Santa Lúcia</option>
-                <option value="BL">BL - São Bartolomeu</option>
-                <option value="KN">KN - São Cristóvão e Nevis</option>
-                <option value="MF">MF - São Martinho</option>
-                <option value="ST">ST - São Tomé e Príncipe</option>
-                <option value="VC">VC - São Vicente e Granadinas</option>
-                <option value="SN">SN - Senegal</option>
-                <option value="SL">SL - Serra Leoa</option>
-                <option value="RS">RS - Sérvia</option>
-                <option value="SC">SC - Seychelles</option>
-                <option value="SG">SG - Singapura</option>
-                <option value="SY">SY - Síria</option>
-                <option value="SO">SO - Somália</option>
-                <option value="LK">LK - Sri Lanka</option>
-                <option value="SZ">SZ - Suazilândia</option>
-                <option value="SD">SD - Sudão</option>
-                <option value="SS">SS - Sudão do Sul</option>
-                <option value="SE">SE - Suécia</option>
-                <option value="CH">CH - Suíça</option>
-                <option value="SR">SR - Suriname</option>
-                <option value="SJ">SJ - Svalbard e Jan Mayen</option>
-                <option value="TH">TH - Tailândia</option>
-                <option value="TW">TW - Taiwan</option>
-                <option value="TJ">TJ - Tajiquistão</option>
-                <option value="TZ">TZ - Tanzânia</option>
-                <option value="IO">IO - Território Britânico do Oceano Índico</option>
-                <option value="TF">TF - Territórios Franceses do Sul</option>
-                <option value="TL">TL - Timor-Leste</option>
-                <option value="TG">TG - Togo</option>
-                <option value="TK">TK - Tokelau</option>
-                <option value="TO">TO - Tonga</option>
-                <option value="TT">TT - Trinidad e Tobago</option>
-                <option value="TN">TN - Tunísia</option>
-                <option value="TM">TM - Turcomenistão</option>
-                <option value="TR">TR - Turquia</option>
-                <option value="TV">TV - Tuvalu</option>
-                <option value="UA">UA - Ucrânia</option>
-                <option value="UG">UG - Uganda</option>
-                <option value="UY">UY - Uruguai</option>
-                <option value="UZ">UZ - Uzbequistão</option>
-                <option value="VU">VU - Vanuatu</option>
-                <option value="VA">VA - Vaticano</option>
-                <option value="VE">VE - Venezuela</option>
-                <option value="VN">VN - Vietnã</option>
-                <option value="WF">WF - Wallis e Futuna</option>
-                <option value="ZM">ZM - Zâmbia</option>
-                <option value="ZW">ZW - Zimbábue</option>
-              </select>
+                onChange={(value) => handleInputChange('pais', value)}
+                options={PAIS_OPTIONS}
+                maxVisibleItems={5}
+              />
             </div>
 
             <div style={fieldStyles}>
@@ -2720,299 +2523,22 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
             <div style={fieldStyles}>
               <RequiredLabel>UF</RequiredLabel>
-              <select
+              <CustomSelect
                 value={formData.ufEndereco}
-                onChange={(e) => handleInputChange('ufEndereco', e.target.value)}
-                style={selectStyles}
-              >
-                <option value="">Selecione</option>
-                <option value="AC">AC - Acre</option>
-                <option value="AL">AL - Alagoas</option>
-                <option value="AP">AP - Amapá</option>
-                <option value="AM">AM - Amazonas</option>
-                <option value="BA">BA - Bahia</option>
-                <option value="CE">CE - Ceará</option>
-                <option value="DF">DF - Distrito Federal</option>
-                <option value="ES">ES - Espírito Santo</option>
-                <option value="GO">GO - Goiás</option>
-                <option value="MA">MA - Maranhão</option>
-                <option value="MT">MT - Mato Grosso</option>
-                <option value="MS">MS - Mato Grosso do Sul</option>
-                <option value="MG">MG - Minas Gerais</option>
-                <option value="PA">PA - Pará</option>
-                <option value="PB">PB - Paraíba</option>
-                <option value="PR">PR - Paraná</option>
-                <option value="PE">PE - Pernambuco</option>
-                <option value="PI">PI - Piauí</option>
-                <option value="RJ">RJ - Rio de Janeiro</option>
-                <option value="RN">RN - Rio Grande do Norte</option>
-                <option value="RS">RS - Rio Grande do Sul</option>
-                <option value="RO">RO - Rondônia</option>
-                <option value="RR">RR - Roraima</option>
-                <option value="SC">SC - Santa Catarina</option>
-                <option value="SP">SP - São Paulo</option>
-                <option value="SE">SE - Sergipe</option>
-                <option value="TO">TO - Tocantins</option>
-              </select>
+                onChange={(value) => handleInputChange('ufEndereco', value)}
+                options={UF_OPTIONS}
+                maxVisibleItems={5}
+              />
             </div>
 
             <div style={fieldStyles}>
-              <label style={labelStyles}>País</label>
-              <select
+              <RequiredLabel>País</RequiredLabel>
+              <CustomSelect
                 value={formData.paisEndereco}
-                onChange={(e) => handleInputChange('paisEndereco', e.target.value)}
-                style={paisSelectStyles}
-                className="pais-select"
-                size={1}
-              >
-                <option value="">Selecione</option>
-                <option value="AF">AF - Afeganistão</option>
-                <option value="ZA">ZA - África do Sul</option>
-                <option value="AL">AL - Albânia</option>
-                <option value="DE">DE - Alemanha</option>
-                <option value="AD">AD - Andorra</option>
-                <option value="AO">AO - Angola</option>
-                <option value="AI">AI - Anguilla</option>
-                <option value="AQ">AQ - Antártida</option>
-                <option value="AG">AG - Antígua e Barbuda</option>
-                <option value="SA">SA - Arábia Saudita</option>
-                <option value="DZ">DZ - Argélia</option>
-                <option value="AR">AR - Argentina</option>
-                <option value="AM">AM - Armênia</option>
-                <option value="AW">AW - Aruba</option>
-                <option value="AU">AU - Austrália</option>
-                <option value="AT">AT - Áustria</option>
-                <option value="AZ">AZ - Azerbaijão</option>
-                <option value="BS">BS - Bahamas</option>
-                <option value="BH">BH - Bahrein</option>
-                <option value="BD">BD - Bangladesh</option>
-                <option value="BB">BB - Barbados</option>
-                <option value="BY">BY - Belarus</option>
-                <option value="BE">BE - Bélgica</option>
-                <option value="BZ">BZ - Belize</option>
-                <option value="BJ">BJ - Benin</option>
-                <option value="BM">BM - Bermudas</option>
-                <option value="BO">BO - Bolívia</option>
-                <option value="BA">BA - Bósnia e Herzegovina</option>
-                <option value="BW">BW - Botswana</option>
-                <option value="BR">BR - Brasil</option>
-                <option value="BN">BN - Brunei</option>
-                <option value="BG">BG - Bulgária</option>
-                <option value="BF">BF - Burkina Faso</option>
-                <option value="BI">BI - Burundi</option>
-                <option value="BT">BT - Butão</option>
-                <option value="CV">CV - Cabo Verde</option>
-                <option value="KH">KH - Camboja</option>
-                <option value="CM">CM - Camarões</option>
-                <option value="CA">CA - Canadá</option>
-                <option value="KZ">KZ - Cazaquistão</option>
-                <option value="TD">TD - Chade</option>
-                <option value="CL">CL - Chile</option>
-                <option value="CN">CN - China</option>
-                <option value="CY">CY - Chipre</option>
-                <option value="CO">CO - Colômbia</option>
-                <option value="KM">KM - Comores</option>
-                <option value="CG">CG - Congo</option>
-                <option value="CD">CD - Congo (República Democrática)</option>
-                <option value="KP">KP - Coreia do Norte</option>
-                <option value="KR">KR - Coreia do Sul</option>
-                <option value="CI">CI - Costa do Marfim</option>
-                <option value="CR">CR - Costa Rica</option>
-                <option value="HR">HR - Croácia</option>
-                <option value="CU">CU - Cuba</option>
-                <option value="CW">CW - Curaçao</option>
-                <option value="DK">DK - Dinamarca</option>
-                <option value="DJ">DJ - Djibuti</option>
-                <option value="DM">DM - Dominica</option>
-                <option value="EG">EG - Egito</option>
-                <option value="SV">SV - El Salvador</option>
-                <option value="AE">AE - Emirados Árabes Unidos</option>
-                <option value="EC">EC - Equador</option>
-                <option value="ER">ER - Eritreia</option>
-                <option value="SK">SK - Eslováquia</option>
-                <option value="SI">SI - Eslovênia</option>
-                <option value="ES">ES - Espanha</option>
-                <option value="US">US - Estados Unidos</option>
-                <option value="EE">EE - Estônia</option>
-                <option value="ET">ET - Etiópia</option>
-                <option value="FJ">FJ - Fiji</option>
-                <option value="PH">PH - Filipinas</option>
-                <option value="FI">FI - Finlândia</option>
-                <option value="FR">FR - França</option>
-                <option value="GA">GA - Gabão</option>
-                <option value="GM">GM - Gâmbia</option>
-                <option value="GH">GH - Gana</option>
-                <option value="GE">GE - Geórgia</option>
-                <option value="GI">GI - Gibraltar</option>
-                <option value="GD">GD - Granada</option>
-                <option value="GR">GR - Grécia</option>
-                <option value="GL">GL - Groenlândia</option>
-                <option value="GP">GP - Guadalupe</option>
-                <option value="GU">GU - Guam</option>
-                <option value="GT">GT - Guatemala</option>
-                <option value="GG">GG - Guernsey</option>
-                <option value="GY">GY - Guiana</option>
-                <option value="GF">GF - Guiana Francesa</option>
-                <option value="GN">GN - Guiné</option>
-                <option value="GW">GW - Guiné-Bissau</option>
-                <option value="GQ">GQ - Guiné Equatorial</option>
-                <option value="HT">HT - Haiti</option>
-                <option value="NL">NL - Holanda</option>
-                <option value="HN">HN - Honduras</option>
-                <option value="HK">HK - Hong Kong</option>
-                <option value="HU">HU - Hungria</option>
-                <option value="YE">YE - Iêmen</option>
-                <option value="BV">BV - Ilha Bouvet</option>
-                <option value="CX">CX - Ilha Christmas</option>
-                <option value="IM">IM - Ilha de Man</option>
-                <option value="NF">NF - Ilha Norfolk</option>
-                <option value="AX">AX - Ilhas Åland</option>
-                <option value="KY">KY - Ilhas Cayman</option>
-                <option value="CC">CC - Ilhas Cocos</option>
-                <option value="CK">CK - Ilhas Cook</option>
-                <option value="FO">FO - Ilhas Faroe</option>
-                <option value="GS">GS - Ilhas Geórgia do Sul e Sandwich do Sul</option>
-                <option value="HM">HM - Ilhas Heard e McDonald</option>
-                <option value="FK">FK - Ilhas Malvinas</option>
-                <option value="MP">MP - Ilhas Marianas do Norte</option>
-                <option value="MH">MH - Ilhas Marshall</option>
-                <option value="UM">UM - Ilhas Menores Distantes dos Estados Unidos</option>
-                <option value="PN">PN - Ilhas Pitcairn</option>
-                <option value="SB">SB - Ilhas Salomão</option>
-                <option value="TC">TC - Ilhas Turcas e Caicos</option>
-                <option value="VG">VG - Ilhas Virgens Britânicas</option>
-                <option value="VI">VI - Ilhas Virgens dos Estados Unidos</option>
-                <option value="IN">IN - Índia</option>
-                <option value="ID">ID - Indonésia</option>
-                <option value="IR">IR - Irã</option>
-                <option value="IQ">IQ - Iraque</option>
-                <option value="IE">IE - Irlanda</option>
-                <option value="IS">IS - Islândia</option>
-                <option value="IL">IL - Israel</option>
-                <option value="IT">IT - Itália</option>
-                <option value="JM">JM - Jamaica</option>
-                <option value="JP">JP - Japão</option>
-                <option value="JE">JE - Jersey</option>
-                <option value="JO">JO - Jordânia</option>
-                <option value="KI">KI - Kiribati</option>
-                <option value="KW">KW - Kuwait</option>
-                <option value="LA">LA - Laos</option>
-                <option value="LS">LS - Lesoto</option>
-                <option value="LV">LV - Letônia</option>
-                <option value="LB">LB - Líbano</option>
-                <option value="LR">LR - Libéria</option>
-                <option value="LY">LY - Líbia</option>
-                <option value="LI">LI - Liechtenstein</option>
-                <option value="LT">LT - Lituânia</option>
-                <option value="LU">LU - Luxemburgo</option>
-                <option value="MO">MO - Macau</option>
-                <option value="MK">MK - Macedônia do Norte</option>
-                <option value="MG">MG - Madagascar</option>
-                <option value="MY">MY - Malásia</option>
-                <option value="MW">MW - Malawi</option>
-                <option value="MV">MV - Maldivas</option>
-                <option value="ML">ML - Mali</option>
-                <option value="MT">MT - Malta</option>
-                <option value="MA">MA - Marrocos</option>
-                <option value="MQ">MQ - Martinica</option>
-                <option value="MU">MU - Maurício</option>
-                <option value="MR">MR - Mauritânia</option>
-                <option value="YT">YT - Mayotte</option>
-                <option value="MX">MX - México</option>
-                <option value="FM">FM - Micronésia</option>
-                <option value="MZ">MZ - Moçambique</option>
-                <option value="MD">MD - Moldávia</option>
-                <option value="MC">MC - Mônaco</option>
-                <option value="MN">MN - Mongólia</option>
-                <option value="ME">ME - Montenegro</option>
-                <option value="MS">MS - Montserrat</option>
-                <option value="MM">MM - Myanmar</option>
-                <option value="NA">NA - Namíbia</option>
-                <option value="NR">NR - Nauru</option>
-                <option value="NP">NP - Nepal</option>
-                <option value="NI">NI - Nicarágua</option>
-                <option value="NE">NE - Níger</option>
-                <option value="NG">NG - Nigéria</option>
-                <option value="NU">NU - Niue</option>
-                <option value="NO">NO - Noruega</option>
-                <option value="NC">NC - Nova Caledônia</option>
-                <option value="NZ">NZ - Nova Zelândia</option>
-                <option value="OM">OM - Omã</option>
-                <option value="NL">NL - Países Baixos</option>
-                <option value="PW">PW - Palau</option>
-                <option value="PS">PS - Palestina</option>
-                <option value="PA">PA - Panamá</option>
-                <option value="PG">PG - Papua Nova Guiné</option>
-                <option value="PK">PK - Paquistão</option>
-                <option value="PY">PY - Paraguai</option>
-                <option value="PE">PE - Peru</option>
-                <option value="PF">PF - Polinésia Francesa</option>
-                <option value="PL">PL - Polônia</option>
-                <option value="PR">PR - Porto Rico</option>
-                <option value="PT">PT - Portugal</option>
-                <option value="KE">KE - Quênia</option>
-                <option value="KG">KG - Quirguistão</option>
-                <option value="GB">GB - Reino Unido</option>
-                <option value="CF">CF - República Centro-Africana</option>
-                <option value="CZ">CZ - República Tcheca</option>
-                <option value="DO">DO - República Dominicana</option>
-                <option value="RE">RE - Reunião</option>
-                <option value="RO">RO - Romênia</option>
-                <option value="RW">RW - Ruanda</option>
-                <option value="RU">RU - Rússia</option>
-                <option value="EH">EH - Saara Ocidental</option>
-                <option value="WS">WS - Samoa</option>
-                <option value="AS">AS - Samoa Americana</option>
-                <option value="SM">SM - San Marino</option>
-                <option value="SH">SH - Santa Helena</option>
-                <option value="LC">LC - Santa Lúcia</option>
-                <option value="BL">BL - São Bartolomeu</option>
-                <option value="KN">KN - São Cristóvão e Nevis</option>
-                <option value="MF">MF - São Martinho</option>
-                <option value="ST">ST - São Tomé e Príncipe</option>
-                <option value="VC">VC - São Vicente e Granadinas</option>
-                <option value="SN">SN - Senegal</option>
-                <option value="SL">SL - Serra Leoa</option>
-                <option value="RS">RS - Sérvia</option>
-                <option value="SC">SC - Seychelles</option>
-                <option value="SG">SG - Singapura</option>
-                <option value="SY">SY - Síria</option>
-                <option value="SO">SO - Somália</option>
-                <option value="LK">LK - Sri Lanka</option>
-                <option value="SZ">SZ - Suazilândia</option>
-                <option value="SD">SD - Sudão</option>
-                <option value="SS">SS - Sudão do Sul</option>
-                <option value="SE">SE - Suécia</option>
-                <option value="CH">CH - Suíça</option>
-                <option value="SR">SR - Suriname</option>
-                <option value="SJ">SJ - Svalbard e Jan Mayen</option>
-                <option value="TH">TH - Tailândia</option>
-                <option value="TW">TW - Taiwan</option>
-                <option value="TJ">TJ - Tajiquistão</option>
-                <option value="TZ">TZ - Tanzânia</option>
-                <option value="IO">IO - Território Britânico do Oceano Índico</option>
-                <option value="TF">TF - Territórios Franceses do Sul</option>
-                <option value="TL">TL - Timor-Leste</option>
-                <option value="TG">TG - Togo</option>
-                <option value="TK">TK - Tokelau</option>
-                <option value="TO">TO - Tonga</option>
-                <option value="TT">TT - Trinidad e Tobago</option>
-                <option value="TN">TN - Tunísia</option>
-                <option value="TM">TM - Turcomenistão</option>
-                <option value="TR">TR - Turquia</option>
-                <option value="TV">TV - Tuvalu</option>
-                <option value="UA">UA - Ucrânia</option>
-                <option value="UG">UG - Uganda</option>
-                <option value="UY">UY - Uruguai</option>
-                <option value="UZ">UZ - Uzbequistão</option>
-                <option value="VU">VU - Vanuatu</option>
-                <option value="VA">VA - Vaticano</option>
-                <option value="VE">VE - Venezuela</option>
-                <option value="VN">VN - Vietnã</option>
-                <option value="WF">WF - Wallis e Futuna</option>
-                <option value="ZM">ZM - Zâmbia</option>
-                <option value="ZW">ZW - Zimbábue</option>
-              </select>
+                onChange={(value) => handleInputChange('paisEndereco', value)}
+                options={PAIS_OPTIONS}
+                maxVisibleItems={5}
+              />
             </div>
 
             <div style={fieldStyles}>
@@ -3057,15 +2583,19 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
             <div style={fieldStyles}>
               <label style={labelStyles}>E-mail</label>
               <input
-                type="email"
+                type="text"
                 value={formData.email}
                 onChange={(e) => handleFieldChange('email', e.target.value)}
                 onBlur={(e) => {
                   const email = e.target.value.trim()
                   if (email && !email.includes('@')) {
-                    alert('⚠️ E-mail inválido! O e-mail deve conter @')
-                  } else if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-                    alert('⚠️ E-mail inválido! Formato correto: usuario@exemplo.com')
+                    alert('⚠️ E-mail inválido!\n\nO e-mail deve conter o símbolo @\n\nExemplo: usuario@exemplo.com')
+                    // Focar novamente no campo
+                    e.target.focus()
+                  } else if (email && email.includes('@') && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                    alert('⚠️ E-mail inválido!\n\nFormato correto: usuario@exemplo.com')
+                    // Focar novamente no campo
+                    e.target.focus()
                   }
                 }}
                 style={inputStyles}

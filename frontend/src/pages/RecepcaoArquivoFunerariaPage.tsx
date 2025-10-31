@@ -4,6 +4,7 @@ import { useAccessibility } from '../hooks/useAccessibility'
 
 interface RecepcaoArquivoFunerariaPageProps {
   onClose: () => void
+  hideHeader?: boolean
 }
 
 interface Falecido {
@@ -12,7 +13,7 @@ interface Falecido {
   nome: string
 }
 
-export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerariaPageProps) {
+export function RecepcaoArquivoFunerariaPage({ onClose, hideHeader = false }: RecepcaoArquivoFunerariaPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   
@@ -159,18 +160,8 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
     ))
   }
 
-  return (
-    <BasePage
-      title="Recepção de Arquivo da Funerária"
-      onClose={onClose}
-      width="900px"
-      height="650px"
-      minWidth="900px"
-      minHeight="650px"
-      resizable={false}
-      headerColor={headerColor}
-    >
-      <div style={{
+  const conteudo = (
+    <div style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -239,7 +230,7 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
                 textAlign: 'center',
                 padding: '20px'
               }}>
-                <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>📄</div>
+                <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>⚰️</div>
                 <div>Nenhum arquivo importado</div>
                 <div style={{ fontSize: '12px', marginTop: '8px' }}>
                   Clique em "Importar Arquivo" para carregar os dados
@@ -487,6 +478,24 @@ export function RecepcaoArquivoFunerariaPage({ onClose }: RecepcaoArquivoFunerar
           )}
         </div>
       </div>
+  )
+
+  if (hideHeader) {
+    return conteudo
+  }
+
+  return (
+    <BasePage
+      title="Recepção de Arquivo da Funerária"
+      onClose={onClose}
+      width="900px"
+      height="650px"
+      minWidth="900px"
+      minHeight="650px"
+      resizable={false}
+      headerColor={headerColor}
+    >
+      {conteudo}
     </BasePage>
   )
 }

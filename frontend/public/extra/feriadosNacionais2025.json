@@ -1,0 +1,57 @@
+[
+  {
+    "descricao": "Ano Novo",
+    "dataInicial": "01/01/2025",
+    "dataFinal": "01/01/2025"
+  },
+  {
+    "descricao": "Sexta-feira Santa",
+    "dataInicial": "07/04/2025",
+    "dataFinal": "07/04/2025"
+  },
+  {
+    "descricao": "Páscoa",
+    "dataInicial": "09/04/2025",
+    "dataFinal": "09/04/2025"
+  },
+  {
+    "descricao": "Tiradentes",
+    "dataInicial": "21/04/2025",
+    "dataFinal": "21/04/2025"
+  },
+  {
+    "descricao": "Dia do Trabalho",
+    "dataInicial": "01/05/2025",
+    "dataFinal": "01/05/2025"
+  },
+  {
+    "descricao": "Independência do Brasil",
+    "dataInicial": "07/09/2025",
+    "dataFinal": "07/09/2025"
+  },
+  {
+    "descricao": "Nossa Senhora Aparecida",
+    "dataInicial": "12/10/2025",
+    "dataFinal": "12/10/2025"
+  },
+  {
+    "descricao": "Finados",
+    "dataInicial": "02/11/2025",
+    "dataFinal": "02/11/2025"
+  },
+  {
+    "descricao": "Proclamação da República",
+    "dataInicial": "15/11/2025",
+    "dataFinal": "15/11/2025"
+  },
+  {
+    "descricao": "Consciência Negra",
+    "dataInicial": "20/11/2025",
+    "dataFinal": "20/11/2025"
+  },
+  {
+    "descricao": "Natal",
+    "dataInicial": "25/12/2025",
+    "dataFinal": "25/12/2025"
+  }
+]

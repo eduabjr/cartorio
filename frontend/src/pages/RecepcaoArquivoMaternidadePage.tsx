@@ -4,6 +4,7 @@ import { useAccessibility } from '../hooks/useAccessibility'
 
 interface RecepcaoArquivoMaternidadePageProps {
   onClose: () => void
+  hideHeader?: boolean
 }
 
 interface Nascido {
@@ -12,7 +13,7 @@ interface Nascido {
   nome: string
 }
 
-export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMaternidadePageProps) {
+export function RecepcaoArquivoMaternidadePage({ onClose, hideHeader = false }: RecepcaoArquivoMaternidadePageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   
@@ -163,18 +164,8 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
     ))
   }
 
-  return (
-    <BasePage
-      title="Recepção de Arquivo da Maternidade"
-      onClose={onClose}
-      width="900px"
-      height="650px"
-      minWidth="900px"
-      minHeight="650px"
-      resizable={false}
-      headerColor={headerColor}
-    >
-      <div style={{
+  const conteudo = (
+    <div style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -491,6 +482,24 @@ export function RecepcaoArquivoMaternidadePage({ onClose }: RecepcaoArquivoMater
           )}
         </div>
       </div>
+  )
+
+  if (hideHeader) {
+    return conteudo
+  }
+
+  return (
+    <BasePage
+      title="Recepção de Arquivo da Maternidade"
+      onClose={onClose}
+      width="900px"
+      height="650px"
+      minWidth="900px"
+      minHeight="650px"
+      resizable={false}
+      headerColor={headerColor}
+    >
+      {conteudo}
     </BasePage>
   )
 }

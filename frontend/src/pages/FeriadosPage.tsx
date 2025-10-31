@@ -10,7 +10,8 @@ interface Feriado {
   id: string
   codigo: string
   descricao: string
-  data: string
+  dataInicial: string
+  dataFinal?: string
 }
 
 export function FeriadosPage({ onClose }: FeriadosPageProps) {
@@ -27,7 +28,38 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [codigo, setCodigo] = useState('0')
   const [descricao, setDescricao] = useState('')
-  const [data, setData] = useState('')
+  const [dataInicial, setDataInicial] = useState('')
+  const [dataFinal, setDataFinal] = useState('')
+  
+  // Interface para feriados do JSON
+  interface FeriadoJSON {
+    descricao: string
+    dataInicial: string
+    dataFinal?: string
+  }
+  
+  // Estado para armazenar os feriados do JSON
+  const [feriadosJSON, setFeriadosJSON] = useState<FeriadoJSON[]>([])
+  
+  // Carregar feriados do JSON
+  useEffect(() => {
+    const carregarFeriadosJSON = async () => {
+      try {
+        const response = await fetch('/extra/feriadosNacionais2025.json')
+        if (response.ok) {
+          const data = await response.json()
+          setFeriadosJSON(data)
+          console.log('✅ Feriados Nacionais 2025 carregados do JSON:', data)
+        } else {
+          console.warn('⚠️ Não foi possível carregar feriadosNacionais2025.json')
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar feriadosNacionais2025.json:', error)
+      }
+    }
+    
+    carregarFeriadosJSON()
+  }, [])
 
   // Salvar no localStorage sempre que feriados mudar
   useEffect(() => {
@@ -68,26 +100,37 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
     setSelectedId(null)
     setCodigo('0')
     setDescricao('')
-    setData('')
+    setDataInicial('')
+    setDataFinal('')
+  }
+
+  // Função auxiliar para converter data de YYYY-MM-DD para DD/MM/YYYY
+  const formatarDataParaBR = (dataISO: string): string => {
+    if (!dataISO) return ''
+    const [ano, mes, dia] = dataISO.split('-')
+    return `${dia}/${mes}/${ano}`
+  }
+
+  // Função auxiliar para converter data de DD/MM/YYYY para YYYY-MM-DD
+  const formatarDataParaISO = (dataBR: string): string => {
+    if (!dataBR) return ''
+    const [dia, mes, ano] = dataBR.split('/')
+    return `${ano}-${mes}-${dia}`
   }
 
   const handleGravar = () => {
-    if (!descricao.trim() || !data.trim()) {
-      console.log('⚠️ Por favor, preencha todos os campos obrigatórios (Descrição e Data).')
+    if (!descricao.trim() || !dataInicial.trim()) {
+      console.log('⚠️ Por favor, preencha todos os campos obrigatórios (Descrição e Data Inicial).')
       return
     }
 
-    // Validar formato da data (DD/MM/YYYY)
-    const regexData = /^(\d{2})\/(\d{2})\/(\d{4})$/
-    if (!regexData.test(data)) {
-      console.log('⚠️ Data inválida. Use o formato DD/MM/AAAA (ex: 25/12/2024)')
-      return
-    }
+    const dataFormatada = formatarDataParaBR(dataInicial)
+    const dataFinalFormatada = dataFinal ? formatarDataParaBR(dataFinal) : dataFormatada
 
     if (selectedId) {
       setFeriados(prev => prev.map(f => 
         f.id === selectedId 
-          ? { ...f, descricao, data }
+          ? { ...f, descricao, dataInicial: dataFormatada, dataFinal: dataFinalFormatada !== dataFormatada ? dataFinalFormatada : undefined }
           : f
       ))
       console.log('✅ Feriado atualizado!')
@@ -97,16 +140,22 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
       const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
       
       const novoCodigo = proximoCodigo.toString().padStart(3, '0')
-      localStorage.setItem('ultimoCodigoFeriado', proximoCodigo.toString())
       
       const novoFeriado: Feriado = {
         id: Date.now().toString(),
         codigo: novoCodigo,
         descricao,
-        data
+        dataInicial: dataFormatada,
+        dataFinal: dataFinal && dataFinal !== dataInicial ? dataFinalFormatada : undefined
       }
       setFeriados(prev => [...prev, novoFeriado])
-      console.log('✅ Feriado cadastrado! Código:', novoCodigo)
+      localStorage.setItem('ultimoCodigoFeriado', proximoCodigo.toString())
+      
+      if (dataFinal && dataFinal !== dataInicial) {
+        console.log(`✅ Feriado cadastrado de ${dataFormatada} até ${dataFinalFormatada}! Código: ${novoCodigo}`)
+      } else {
+        console.log('✅ Feriado cadastrado! Código:', novoCodigo)
+      }
     }
     handleNovo()
   }
@@ -123,7 +172,67 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
     setSelectedId(feriado.id)
     setCodigo(feriado.codigo)
     setDescricao(feriado.descricao)
-    setData(feriado.data)
+    setDataInicial(formatarDataParaISO(feriado.dataInicial))
+    setDataFinal(feriado.dataFinal ? formatarDataParaISO(feriado.dataFinal) : '')
+  }
+  
+  const handleGerarFeriadosAutomaticamente = () => {
+    if (feriadosJSON.length === 0) {
+      console.warn('⚠️ Nenhum feriado encontrado no JSON.')
+      return
+    }
+
+    let novosFeriados = [...feriados]
+    let ultimoCodigo = parseInt(localStorage.getItem('ultimoCodigoFeriado') || '0')
+    let countCriados = 0
+    let countJaExistentes = 0
+
+    feriadosJSON.forEach((feriadoJSON, index) => {
+      // Verificar se já existe (mesma descrição, dataInicial e dataFinal)
+      const jaExiste = novosFeriados.some(f => 
+        f.descricao.toLowerCase() === feriadoJSON.descricao.toLowerCase() &&
+        f.dataInicial === feriadoJSON.dataInicial &&
+        f.dataFinal === (feriadoJSON.dataFinal || undefined)
+      )
+      
+      if (jaExiste) {
+        const dataInfo = feriadoJSON.dataFinal && feriadoJSON.dataFinal !== feriadoJSON.dataInicial 
+          ? `${feriadoJSON.dataInicial} - ${feriadoJSON.dataFinal}` 
+          : feriadoJSON.dataInicial
+        console.log(`⚠️ Feriado "${feriadoJSON.descricao}" (${dataInfo}) já existe, pulando...`)
+        countJaExistentes++
+        return
+      }
+      
+      // Criar novo feriado
+      ultimoCodigo++
+      const novoCodigo = ultimoCodigo.toString().padStart(3, '0')
+      const novoFeriado: Feriado = {
+        id: Date.now().toString() + Math.random() + index,
+        codigo: novoCodigo,
+        descricao: feriadoJSON.descricao,
+        dataInicial: feriadoJSON.dataInicial,
+        dataFinal: feriadoJSON.dataFinal || undefined
+      }
+      novosFeriados.push(novoFeriado)
+      countCriados++
+      const dataInfo = feriadoJSON.dataFinal && feriadoJSON.dataFinal !== feriadoJSON.dataInicial 
+        ? `${feriadoJSON.dataInicial} - ${feriadoJSON.dataFinal}` 
+        : feriadoJSON.dataInicial
+      console.log(`✅ Feriado "${feriadoJSON.descricao}" (${dataInfo}) criado!`)
+    })
+
+    if (countCriados > 0) {
+      localStorage.setItem('ultimoCodigoFeriado', ultimoCodigo.toString())
+      setFeriados(novosFeriados)
+      handleNovo() // Limpar formulário
+      console.log(`🎉 ${countCriados} feriado(s) criado(s) com sucesso!`)
+      if (countJaExistentes > 0) {
+        console.log(`ℹ️ ${countJaExistentes} feriado(s) já existia(m) e foi(ram) ignorado(s).`)
+      }
+    } else {
+      console.log('ℹ️ Todos os feriados já existem no sistema.')
+    }
   }
 
   return (
@@ -174,41 +283,93 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
             />
           </div>
 
-          {/* Linha 2: Descrição do Feriado */}
-          <div style={{ marginBottom: '8px' }}>
-            <label style={labelStyles}>Descrição do Feriado</label>
-            <input
-              type="text"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              style={inputStyles}
-              placeholder="Ex: Natal, Ano Novo, Dia do Trabalho..."
-              maxLength={100}
-            />
+          {/* Linha 2: Descrição do Feriado e Botão Geração Automática */}
+          <div style={{ 
+            marginBottom: '8px',
+            display: 'grid',
+            gridTemplateColumns: '1fr 130px',
+            gap: '8px'
+          }}>
+            <div>
+              <label style={labelStyles}>Descrição do Feriado</label>
+              <input
+                type="text"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                style={inputStyles}
+                placeholder="Ex: Natal, Ano Novo, Dia do Trabalho..."
+                maxLength={100}
+              />
+            </div>
+            
+            {/* Botão Geração Automática */}
+            <div>
+              <label style={labelStyles}>Geração Automática</label>
+              <button
+                onClick={handleGerarFeriadosAutomaticamente}
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  backgroundColor: headerColor,
+                  color: 'white',
+                  height: '28px',
+                  boxSizing: 'border-box' as const,
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1'
+                }}
+                title="Gerar feriados nacionais de 2025 automaticamente"
+              >
+                ⚡ Gerar
+              </button>
+            </div>
           </div>
 
-          {/* Linha 3: Data */}
-          <div>
-            <label style={labelStyles}>Data</label>
-            <input
-              type="text"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              style={{
-                ...inputStyles,
-                width: '150px'
-              }}
-              placeholder="DD/MM/AAAA"
-              maxLength={10}
-            />
-            <p style={{ 
-              fontSize: '10px', 
-              color: theme.textSecondary, 
-              marginTop: '2px',
-              fontStyle: 'italic' 
-            }}>
-              ℹ️ Formato: DD/MM/AAAA (ex: 25/12/2024)
-            </p>
+          {/* Linha 3: Data Inicial e Data Final */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '8px'
+          }}>
+            <div>
+              <label style={labelStyles}>Data Inicial *</label>
+              <input
+                type="date"
+                value={dataInicial}
+                onChange={(e) => setDataInicial(e.target.value)}
+                style={{
+                  ...inputStyles,
+                  height: '28px'
+                }}
+              />
+            </div>
+            
+            <div>
+              <label style={labelStyles}>Data Final (opcional)</label>
+              <input
+                type="date"
+                value={dataFinal}
+                onChange={(e) => setDataFinal(e.target.value)}
+                style={{
+                  ...inputStyles,
+                  height: '28px'
+                }}
+                min={dataInicial}
+              />
+            </div>
           </div>
         </div>
 
@@ -256,16 +417,26 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
                   textAlign: 'left',
                   fontWeight: '600',
                   fontSize: '11px',
+                  borderRight: `1px solid rgba(255,255,255,0.2)`,
                   width: '120px'
                 }}>
-                  Data
+                  Data Inicial
+                </th>
+                <th style={{
+                  padding: '6px 8px',
+                  textAlign: 'left',
+                  fontWeight: '600',
+                  fontSize: '11px',
+                  width: '120px'
+                }}>
+                  Data Final
                 </th>
               </tr>
             </thead>
             <tbody>
               {feriados.length === 0 ? (
                 <tr>
-                  <td colSpan={3} style={{
+                  <td colSpan={4} style={{
                     padding: '40px 20px',
                     textAlign: 'center',
                     color: theme.textSecondary,
@@ -324,9 +495,15 @@ export function FeriadosPage({ onClose }: FeriadosPageProps) {
                       {feriado.descricao}
                     </td>
                     <td style={{
+                      padding: '6px 8px',
+                      borderRight: `1px solid ${theme.border}`
+                    }}>
+                      {feriado.dataInicial}
+                    </td>
+                    <td style={{
                       padding: '6px 8px'
                     }}>
-                      {feriado.data}
+                      {feriado.dataFinal || '-'}
                     </td>
                   </tr>
                 ))

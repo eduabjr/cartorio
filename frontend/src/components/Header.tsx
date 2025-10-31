@@ -247,7 +247,8 @@ export function Header({ onMenuClick }: HeaderProps) {
           gap: '4px',
           alignItems: 'center',
           paddingRight: '12px',
-          height: '100%',
+          paddingTop: '2px',
+          paddingBottom: '2px',
           WebkitAppRegion: 'no-drag' as any
         }}
       >
@@ -266,7 +267,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           }}
           style={{
             width: '22px',
-            height: '22px',
+            height: '20px',
             border: 'none',
             borderRadius: '3px',
             backgroundColor: '#3f3f3f',
@@ -281,8 +282,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             outline: 'none',
             pointerEvents: 'auto',
             WebkitAppRegion: 'no-drag' as any,
-            userSelect: 'none',
-            position: 'relative' as const
+            userSelect: 'none'
           }}
           title="Minimizar"
           aria-label="Minimizar janela"
@@ -325,7 +325,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           }}
           style={{
             width: '22px',
-            height: '22px',
+            height: '20px',
             border: 'none',
             borderRadius: '3px',
             backgroundColor: '#3f3f3f',
@@ -340,9 +340,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             outline: 'none',
             pointerEvents: 'auto',
             WebkitAppRegion: 'no-drag' as any,
-            userSelect: 'none',
-            zIndex: 10000,
-            position: 'relative' as const
+            userSelect: 'none'
           }}
           title={
             windowState === 'normal' ? "1º Clique: Reduzir janela (900x600)" :
@@ -393,7 +391,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           }}
           style={{
             width: '22px',
-            height: '22px',
+            height: '20px',
             border: 'none',
             borderRadius: '3px',
             backgroundColor: '#e81123',
@@ -408,8 +406,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             outline: 'none',
             pointerEvents: 'auto',
             WebkitAppRegion: 'no-drag' as any,
-            userSelect: 'none',
-            position: 'relative' as const
+            userSelect: 'none'
           }}
           title="Fechar"
           aria-label="Fechar janela"

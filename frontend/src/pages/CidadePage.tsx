@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { CustomSelect } from '../components/CustomSelect'
+import { UF_OPTIONS } from '../constants/selectOptions'
 
 interface CidadePageProps {
   onClose: () => void
@@ -98,6 +100,7 @@ export const CidadePage: React.FC<CidadePageProps> = ({ onClose }) => {
     paddingRight: '21px'
   })
 
+  const arrowColor = currentTheme === 'dark' ? '%23FFFFFF' : '%23333333'
   const getSelectStyles = (fieldName: string) => {
     return {
       width: '100%',
@@ -120,11 +123,11 @@ export const CidadePage: React.FC<CidadePageProps> = ({ onClose }) => {
       appearance: 'none' as const,
       WebkitAppearance: 'none' as const,
       MozAppearance: 'none' as const,
-      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666666' d='M1 1 L6 6 L11 1'/%3E%3C/svg%3E")`,
+      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='${arrowColor}' d='M1 1 L6 6 L11 1'/%3E%3C/svg%3E")`,
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'right 8px center',
-      backgroundSize: '12px 8px',
-      paddingRight: '28px',
+      backgroundSize: '14px 10px',
+      paddingRight: '30px',
       verticalAlign: 'middle'
     }
   }
@@ -223,42 +226,12 @@ export const CidadePage: React.FC<CidadePageProps> = ({ onClose }) => {
           {/* UF */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '120px' }}>
             <label style={{ ...labelStyles, minWidth: '20px' }}>UF</label>
-            <select
+            <CustomSelect
               value={formData.uf}
-              onChange={(e) => setFormData({ ...formData, uf: e.target.value })}
-              onFocus={() => setFocusedField('uf')}
-              onBlur={() => setFocusedField(null)}
-              style={{ ...getSelectStyles('uf'), flex: 1 }}
-            >
-              <option value="">Selecione...</option>
-              <option value="AC">AC</option>
-              <option value="AL">AL</option>
-              <option value="AP">AP</option>
-              <option value="AM">AM</option>
-              <option value="BA">BA</option>
-              <option value="CE">CE</option>
-              <option value="DF">DF</option>
-              <option value="ES">ES</option>
-              <option value="GO">GO</option>
-              <option value="MA">MA</option>
-              <option value="MT">MT</option>
-              <option value="MS">MS</option>
-              <option value="MG">MG</option>
-              <option value="PA">PA</option>
-              <option value="PB">PB</option>
-              <option value="PR">PR</option>
-              <option value="PE">PE</option>
-              <option value="PI">PI</option>
-              <option value="RJ">RJ</option>
-              <option value="RN">RN</option>
-              <option value="RS">RS</option>
-              <option value="RO">RO</option>
-              <option value="RR">RR</option>
-              <option value="SC">SC</option>
-              <option value="SP">SP</option>
-              <option value="SE">SE</option>
-              <option value="TO">TO</option>
-            </select>
+              onChange={(value) => setFormData({ ...formData, uf: value })}
+              options={UF_OPTIONS}
+              maxVisibleItems={5}
+            />
           </div>
         </div>
 

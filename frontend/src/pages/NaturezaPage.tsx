@@ -269,6 +269,7 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
   })
 
   // 🔒 BLOQUEIO: Estilos dos selects - NÃO MODIFICAR
+  const arrowColor = currentTheme === 'dark' ? '%23FFFFFF' : '%23333333'
   const selectStyles = {
     width: '100%',
     minWidth: '0', // 🔒 BLOQUEIO
@@ -279,7 +280,16 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
     backgroundColor: theme.surface,
     color: theme.text,
     outline: 'none',
-    flexShrink: 1 // 🔒 BLOQUEIO
+    cursor: 'pointer',
+    flexShrink: 1, // 🔒 BLOQUEIO
+    appearance: 'none' as const,
+    WebkitAppearance: 'none' as const,
+    MozAppearance: 'none' as const,
+    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${arrowColor}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 6px center',
+    backgroundSize: '14px',
+    paddingRight: '26px'
   }
 
   // 🔒 BLOQUEIO: Estilos dos botões - NÃO MODIFICAR

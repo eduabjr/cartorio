@@ -405,6 +405,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
     boxShadow: focusedField === fieldName ? `0 0 0 1000px ${focusColor} inset` : 'none'
   })
 
+  const arrowColor = currentTheme === 'dark' ? '%23FFFFFF' : '%23333333'
   const getSelectStyles = (fieldName: string) => {
     return {
       width: '100%',
@@ -427,11 +428,11 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
       appearance: 'none' as const,
       WebkitAppearance: 'none' as const,
       MozAppearance: 'none' as const,
-      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666666' d='M1 1 L6 6 L11 1'/%3E%3C/svg%3E")`,
+      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='${arrowColor}' d='M1 1 L6 6 L11 1'/%3E%3C/svg%3E")`,
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'right 8px center',
-      backgroundSize: '12px 8px',
-      paddingRight: '28px',
+      backgroundSize: '14px 10px',
+      paddingRight: '30px',
       verticalAlign: 'middle'
     }
   }
