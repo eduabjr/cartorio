@@ -7,6 +7,7 @@ import { BasePage } from '../components/BasePage'
 import { naturezaService, Natureza } from '../services/NaturezaService'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
+import { useModal } from '../hooks/useModal'
 
 interface ServicoCartorioPageProps {
   onClose: () => void
@@ -16,6 +17,7 @@ interface ServicoCartorioPageProps {
 export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: ServicoCartorioPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   // Cor do header: teal no light, laranja no dark (PADRÃO DO SISTEMA)
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
@@ -167,7 +169,7 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
   const handleGravarValores = async () => {
     try {
       if (!valoresForm.naturezaId) {
-        alert('⚠️ Selecione uma natureza!')
+        await modal.alert('Selecione uma natureza!', 'Atenção', '⚠️')
         return
       }
 
@@ -177,7 +179,7 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
       const natureza = naturezas.find(n => n.id === valoresForm.naturezaId)
       
       if (!natureza) {
-        alert('❌ Natureza não encontrada!')
+        await modal.alert('Natureza não encontrada!', 'Erro', '❌')
         return
       }
 
@@ -197,11 +199,11 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
       localStorage.setItem(valoresKey, JSON.stringify(dadosValores))
       console.log('✅ Valores salvos no localStorage:', dadosValores)
 
-      alert(`✅ Valores da natureza "${natureza.descricao}" salvos com sucesso!`)
+      await modal.alert(`Valores da natureza "${natureza.descricao}" salvos com sucesso!`, 'Sucesso', '✅')
       handleNovoValores()
     } catch (error: any) {
       console.error('❌ Erro ao salvar valores:', error)
-      alert(`❌ Erro ao salvar valores: ${error.message}`)
+      await modal.alert(`Erro ao salvar valores: ${error.message}`, 'Erro', '❌')
     }
   }
 
@@ -240,7 +242,7 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
     
     try {
       if (!naturezaForm.nome) {
-        alert('⚠️ Nome é obrigatório!')
+        await modal.alert('Nome é obrigatório!', 'Campo Obrigatório', '⚠️')
         return
       }
 
@@ -266,12 +268,12 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
         console.log('🔄 Atualizando natureza existente...')
         const resultado = await naturezaService.atualizar(naturezaSelecionada.id, naturezaData)
         console.log('✅ Resultado da atualização:', resultado)
-        alert('✅ Natureza atualizada com sucesso!')
+        await modal.alert('Natureza atualizada com sucesso!', 'Sucesso', '✅')
       } else {
         console.log('➕ Criando nova natureza...')
         const resultado = await naturezaService.criar(naturezaData)
         console.log('✅ Resultado da criação:', resultado)
-        alert('✅ Natureza cadastrada com sucesso!')
+        await modal.alert('Natureza cadastrada com sucesso!', 'Sucesso', '✅')
       }
 
       console.log('🔄 Recarregando lista de naturezas...')
@@ -297,20 +299,21 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
       console.error('❌ ERRO COMPLETO ao gravar natureza:', error)
       console.error('❌ Mensagem:', error.message)
       console.error('❌ Stack:', error.stack)
-      alert(`❌ Erro ao gravar natureza: ${error.message || 'Erro desconhecido'}`)
+      await modal.alert(`Erro ao gravar natureza: ${error.message || 'Erro desconhecido'}`, 'Erro', '❌')
     }
   }
 
   const handleExcluirNatureza = async () => {
     if (!naturezaSelecionada?.id) {
-      alert('⚠️ Selecione uma natureza para excluir!')
+      await modal.alert('Selecione uma natureza para excluir!', 'Atenção', '⚠️')
       return
     }
 
-    if (confirm('⚠️ Tem certeza que deseja excluir esta natureza?')) {
+    const confirmado = await modal.confirm('Tem certeza que deseja excluir esta natureza?', 'Confirmar Exclusão', '⚠️')
+    if (confirmado) {
       try {
         await naturezaService.remover(naturezaSelecionada.id)
-        alert('✅ Natureza excluída com sucesso!')
+        await modal.alert('Natureza excluída com sucesso!', 'Sucesso', '✅')
         await carregarNaturezas()
         setForceUpdate(prev => prev + 1)
         
@@ -320,7 +323,7 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
         handleNovoNatureza()
       } catch (error) {
         console.error('❌ Erro ao excluir natureza:', error)
-        alert('❌ Erro ao excluir natureza.')
+        await modal.alert('Erro ao excluir natureza.', 'Erro', '❌')
       }
     }
   }
@@ -349,11 +352,12 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
 
   const handleGeracaoAutomatica = async () => {
     if (naturezasJSON.length === 0) {
-      alert('⚠️ Nenhuma natureza encontrada no JSON. Verifique o arquivo naturezaProtocolo.json')
+      await modal.alert('Nenhuma natureza encontrada no JSON. Verifique o arquivo naturezaProtocolo.json', 'Atenção', '⚠️')
       return
     }
 
-    if (!confirm(`⚠️ Isso irá criar ${naturezasJSON.length} naturezas automaticamente. Deseja continuar?`)) {
+    const confirmado = await modal.confirm(`Isso irá criar ${naturezasJSON.length} naturezas automaticamente. Deseja continuar?`, 'Geração Automática', '⚠️')
+    if (!confirmado) {
       return
     }
 
@@ -397,14 +401,14 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
         mensagem += `\nℹ️ ${countJaExistentes} natureza(s) já existia(m) e foi(ram) ignorada(s).`
       }
       
-      alert(mensagem)
+      await modal.alert(mensagem, 'Geração Concluída', '✅')
       console.log('🎉 Geração automática concluída!')
       
       // Disparar evento para outras telas atualizarem
       window.dispatchEvent(new Event('naturezas-atualizadas'))
     } catch (error: any) {
       console.error('❌ Erro na geração automática:', error)
-      alert(`❌ Erro ao gerar naturezas: ${error.message}`)
+      await modal.alert(`Erro ao gerar naturezas: ${error.message}`, 'Erro', '❌')
     }
   }
 
@@ -531,17 +535,18 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
   }
 
   return (
+    <>
     <BasePage
       title="Cadastro de Naturezas - Tabela de Custas"
       onClose={onClose}
-      width="900px"
-      height="650px"
-      minWidth="900px"
-      minHeight="650px"
+        width="900px"
+        height="650px"
+        minWidth="900px"
+        minHeight="650px"
       headerColor={headerColor}
       resetToOriginalPosition={resetToOriginalPosition}
       draggable={true}
-      resizable={false}
+        resizable={false}
     >
       {/* Menu de Abas com Setas Separadoras */}
       <div style={{
@@ -737,12 +742,13 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
                           </td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
                             <span 
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation()
-                                if (confirm(`⚠️ Tem certeza que deseja excluir a natureza "${nat.descricao}"?`)) {
+                                const confirmadoExclusao = await modal.confirm(`Tem certeza que deseja excluir a natureza "${nat.descricao}"?`, 'Confirmar Exclusão', '⚠️')
+                                if (confirmadoExclusao) {
                                   naturezaService.remover(nat.id!)
                                   setForceUpdate(prev => prev + 1)
-                                  alert('✅ Natureza excluída!')
+                                  await modal.alert('Natureza excluída!', 'Sucesso', '✅')
                                 }
                               }}
                               style={{
@@ -850,7 +856,7 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
                     </thead>
                     <tbody>
                       {naturezas.map((nat) => {
-                        const valoresKey = `cartorio_valores_${nat.codigo}`
+                      const valoresKey = `cartorio_valores_${nat.codigo}`
                         const valoresSalvos = localStorage.getItem(valoresKey)
                         
                         // Verificar se tem valores E se não são todos zero
@@ -915,8 +921,8 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
                               </span>
                             </td>
                           </tr>
-                        )
-                      })}
+                      )
+                    })}
                     </tbody>
                   </table>
                 </div>
@@ -1143,6 +1149,8 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
         </>
       )}
     </BasePage>
+    <modal.ModalComponent />
+    </>
   )
 }
 

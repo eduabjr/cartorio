@@ -1,139 +1,1349 @@
+import React, { useState, useEffect } from 'react'
+import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { useModal } from '../hooks/useModal'
 
 interface ConfiguracaoSistemaPageProps {
   onClose: () => void
 }
 
+type AbaAtiva = 'gerais' | 'bloqueio-horario'
+
+interface ConfiguracoesGerais {
+  senhaConfiguracao: string
+  permitirAlteracoes: boolean
+  autoLogoutEnabled: boolean
+  autoLogoutMinutes: number
+  autoLogoutWarningMinutes: number // Minutos antes de avisar
+  autoLogoutWarningSeconds: number // Segundos antes de avisar (alternativa)
+  autoLogoutWarningUnit: 'segundos' | 'minutos' // Unidade escolhida
+}
+
+interface BloqueioHorario {
+  habilitado: boolean
+  horarioInicio: string
+  horarioFim: string
+  tempoExtraPermitido: number // em minutos
+  mensagemBloqueio: string
+}
+
 export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProps) {
-  const { getTheme } = useAccessibility()
+  const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
-
-  const configuracaoItems = [
-    { id: 'funcionario', label: 'Funcionário', icon: '👨‍💼', onClick: () => (window as any).navigateToPage?.('funcionario') },
-    { id: 'feriados', label: 'Feriados', icon: '📅', onClick: () => (window as any).navigateToPage?.('feriados') },
-    { id: 'ibge', label: 'IBGE', icon: '🏛️', onClick: () => (window as any).navigateToPage?.('ibge') },
-    { id: 'pais', label: 'País', icon: '🌍', onClick: () => (window as any).navigateToPage?.('pais') },
-    { id: 'cep', label: 'CEP', icon: '📮', onClick: () => (window as any).navigateToPage?.('cep') },
-    { id: 'cidade', label: 'Cidade', icon: '🏙️', onClick: () => (window as any).navigateToPage?.('cidade') }
-  ]
-
-  const containerStyles = {
-    padding: '20px',
-    background: theme.background,
-    color: theme.text,
-    minHeight: '100vh',
-    fontFamily: 'system-ui, -apple-system, sans-serif'
-  }
-
-  const headerStyles = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px',
-    paddingBottom: '15px',
-    borderBottom: `2px solid ${theme.border}`
-  }
-
-  const titleStyles = {
-    fontSize: '24px',
-    fontWeight: '600',
-    color: theme.primary,
-    margin: 0
-  }
-
-  const closeButtonStyles = {
-    padding: '8px 16px',
-    background: '#dc3545',
-    color: '#fff',
-    border: 'none',
+  const modal = useModal()
+  
+  const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
+  
+  const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('gerais')
+  const [senhaAtual, setSenhaAtual] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  
+  // Estados para Configurações Gerais
+  const [configGerais, setConfigGerais] = useState<ConfiguracoesGerais>(() => {
+    const saved = localStorage.getItem('config-gerais-sistema')
+    
+    // Se há configuração salva, usa ela
+    if (saved) {
+      return JSON.parse(saved)
+    }
+    
+    // Carregar auto-logout do accessibility-settings
+    const accessibilitySettings = localStorage.getItem('accessibility-settings')
+    let autoLogoutEnabled = false
+    let autoLogoutMinutes = 15
+    
+    if (accessibilitySettings) {
+      try {
+        const settings = JSON.parse(accessibilitySettings)
+        autoLogoutEnabled = settings.autoLogoutEnabled || false
+        autoLogoutMinutes = settings.autoLogoutMinutes || 15
+      } catch (error) {
+        console.error('❌ Erro ao carregar auto-logout:', error)
+      }
+    }
+    
+    return {
+      senhaConfiguracao: '',
+      permitirAlteracoes: true,
+      autoLogoutEnabled,
+      autoLogoutMinutes,
+      autoLogoutWarningMinutes: 2, // Padrão: avisar 2 minutos antes
+      autoLogoutWarningSeconds: 30, // Padrão: 30 segundos
+      autoLogoutWarningUnit: 'minutos' // Padrão: minutos
+    }
+  })
+  
+  // Estados para Bloqueio por Horário
+  const [configBloqueio, setConfigBloqueio] = useState<BloqueioHorario>(() => {
+    const saved = localStorage.getItem('config-bloqueio-horario')
+    if (saved) {
+      return JSON.parse(saved)
+    }
+    return {
+      habilitado: false,
+      horarioInicio: '08:00',
+      horarioFim: '18:00',
+      tempoExtraPermitido: 60, // 1 hora
+      mensagemBloqueio: 'Sistema bloqueado fora do horário de funcionamento.'
+    }
+  })
+  
+  const [horarioAtual, setHorarioAtual] = useState(new Date())
+  
+  // Atualizar horário a cada minuto
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHorarioAtual(new Date())
+    }, 60000)
+    
+    return () => clearInterval(timer)
+  }, [])
+  
+  // Helper para criar estilos consistentes dos cards de logout
+  const getCardStyle = (isSelected: boolean) => ({
+    padding: '10px 8px',
+    border: `2px solid ${isSelected ? headerColor : theme.border}`,
     borderRadius: '6px',
     cursor: 'pointer',
+    backgroundColor: isSelected 
+      ? (currentTheme === 'dark' ? 'rgba(255, 140, 0, 0.1)' : 'rgba(0, 128, 128, 0.05)')
+      : theme.surface,
+    transition: 'all 0.2s ease',
+    textAlign: 'center' as const,
+    boxShadow: isSelected 
+      ? '0 2px 4px rgba(0, 0, 0, 0.08)' 
+      : '0 1px 2px rgba(0, 0, 0, 0.05)',
+    transform: isSelected ? 'translateY(-1px)' : 'translateY(0)'
+  })
+  
+  const getCardHoverHandlers = (isSelected: boolean) => ({
+    onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!isSelected) {
+        e.currentTarget.style.borderColor = headerColor
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.08)'
+      } else {
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.12)'
+      }
+    },
+    onMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!isSelected) {
+        e.currentTarget.style.borderColor = theme.border
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)'
+      } else {
+        e.currentTarget.style.transform = 'translateY(-1px)'
+        e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.08)'
+      }
+    }
+  })
+  
+  // Verificar se está no horário permitido
+  const verificarHorario = () => {
+    if (!configBloqueio.habilitado) return true
+    
+    const agora = new Date()
+    const [horaInicio, minInicio] = configBloqueio.horarioInicio.split(':').map(Number)
+    const [horaFim, minFim] = configBloqueio.horarioFim.split(':').map(Number)
+    
+    const inicioComExtra = new Date()
+    inicioComExtra.setHours(horaInicio, minInicio - configBloqueio.tempoExtraPermitido, 0, 0)
+    
+    const fimComExtra = new Date()
+    fimComExtra.setHours(horaFim, minFim + configBloqueio.tempoExtraPermitido, 0, 0)
+    
+    return agora >= inicioComExtra && agora <= fimComExtra
+  }
+  
+  const salvarConfigGerais = async () => {
+    console.log('🔵 BOTÃO SALVAR CLICADO!')
+    console.log('📊 Estado atual:', configGerais)
+    
+    try {
+      // Salvar no localStorage
+      localStorage.setItem('config-gerais-sistema', JSON.stringify(configGerais))
+      console.log('✅ Salvo em config-gerais-sistema')
+      
+      // Sincronizar com configurações de acessibilidade (auto-logout)
+      const accessibilitySettings = localStorage.getItem('accessibility-settings')
+      if (accessibilitySettings) {
+        try {
+          const settings = JSON.parse(accessibilitySettings)
+          settings.autoLogoutEnabled = configGerais.autoLogoutEnabled
+          settings.autoLogoutMinutes = configGerais.autoLogoutMinutes
+          localStorage.setItem('accessibility-settings', JSON.stringify(settings))
+          
+          // Disparar evento para atualizar o useAccessibility (MESMO NOME QUE O HOOK USA!)
+          window.dispatchEvent(new CustomEvent('accessibility-settings-changed', {
+            detail: settings
+          }))
+          
+          console.log('✅ Configurações de auto-logout sincronizadas e evento disparado:', {
+            enabled: configGerais.autoLogoutEnabled,
+            minutes: configGerais.autoLogoutMinutes
+          })
+        } catch (error) {
+          console.error('❌ Erro ao sincronizar auto-logout:', error)
+        }
+      } else {
+        // Se não existe, criar as configurações de acessibilidade
+        const newSettings = {
+          highContrast: false,
+          contrastLevel: 'normal',
+          blueLightFilter: false,
+          blueLightIntensity: 'medium',
+          reducedMotion: false,
+          fontSize: 'padrao',
+          screenReader: false,
+          keyboardNavigation: false,
+          autoLogoutEnabled: configGerais.autoLogoutEnabled,
+          autoLogoutMinutes: configGerais.autoLogoutMinutes,
+          speechRate: 1.3,
+          speechPitch: 1.1,
+          hoverDelay: 300
+        }
+        localStorage.setItem('accessibility-settings', JSON.stringify(newSettings))
+        window.dispatchEvent(new CustomEvent('accessibility-settings-changed', {
+          detail: newSettings
+        }))
+        console.log('✅ Configurações de acessibilidade criadas!')
+      }
+      
+      // Disparar evento global para sincronizar
+      window.dispatchEvent(new CustomEvent('config-gerais-updated'))
+      console.log('✅ Evento config-gerais-updated disparado')
+      
+      await modal.alert(
+        `✅ Configurações salvas com sucesso!\n\n` +
+        `Auto-Logout: ${configGerais.autoLogoutEnabled ? 'ATIVADO ✅' : 'DESATIVADO ❌'}\n` +
+        `Tempo: ${configGerais.autoLogoutMinutes} minutos\n` +
+        `Aviso: ${configGerais.autoLogoutWarningUnit === 'segundos' ? configGerais.autoLogoutWarningSeconds + 's' : configGerais.autoLogoutWarningMinutes + 'min'}\n\n` +
+        `${configGerais.autoLogoutEnabled ? '⏰ O timer começará após qualquer atividade!\n\nPara testar: Não toque no mouse/teclado e aguarde.' : 'O logout automático está desativado.'}`,
+        'Configurações Salvas', 
+        '✅'
+      )
+      
+      console.log('🟢 SALVAMENTO CONCLUÍDO COM SUCESSO!')
+    } catch (error) {
+      console.error('❌ ERRO AO SALVAR:', error)
+      await modal.alert(
+        `❌ Erro ao salvar configurações:\n\n${error}`,
+        'Erro',
+        '❌'
+      )
+    }
+  }
+  
+  const salvarConfigBloqueio = async () => {
+    localStorage.setItem('config-bloqueio-horario', JSON.stringify(configBloqueio))
+    await modal.alert('✅ Configuração de bloqueio salva com sucesso!', 'Sucesso', '✅')
+  }
+  
+  const labelStyles = {
+    fontSize: '13px',
+    fontWeight: '600' as const,
+    marginBottom: '6px',
+    color: theme.text,
+    display: 'block'
+  }
+  
+  const inputStyles = {
+    width: '100%',
+    padding: '8px 12px',
     fontSize: '14px',
-    fontWeight: '500',
+    border: `1px solid ${theme.border}`,
+    borderRadius: '4px',
+    backgroundColor: theme.background,
+    color: theme.text,
+    outline: 'none'
+  }
+  
+  const buttonStyles = {
+    padding: '10px 20px',
+    fontSize: '14px',
+    fontWeight: '600' as const,
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
     transition: 'all 0.2s ease'
   }
 
-  const gridStyles = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '20px',
-    marginTop: '20px'
-  }
-
-  const itemStyles = {
-    padding: '20px',
-    background: theme.surface,
-    border: `1px solid ${theme.border}`,
-    borderRadius: '8px',
+  return (
+    <>
+      <BasePage
+        title="Configurações do Sistema"
+        onClose={onClose}
+        width="900px"
+        height="600px"
+        minWidth="900px"
+        minHeight="600px"
+        resizable={false}
+        headerColor={headerColor}
+      >
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          overflow: 'hidden'
+        }}>
+          {/* Abas */}
+          <div style={{
+            display: 'flex',
+            gap: '0',
+            borderBottom: `2px solid ${theme.border}`,
+            backgroundColor: theme.surface
+          }}>
+            <button
+              onClick={() => setAbaAtiva('gerais')}
+              style={{
+                flex: 1,
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                border: 'none',
+                borderBottom: abaAtiva === 'gerais' ? `3px solid ${headerColor}` : '3px solid transparent',
+                backgroundColor: abaAtiva === 'gerais' ? (currentTheme === 'dark' ? '#2a2a2a' : '#f0f0f0') : 'transparent',
+                color: abaAtiva === 'gerais' ? headerColor : theme.text,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-  }
-
-  const iconStyles = {
-    fontSize: '24px',
-    width: '40px',
-    height: '40px',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              ⚙️ Configurações Gerais
+            </button>
+            <button
+              onClick={() => setAbaAtiva('bloqueio-horario')}
+              style={{
+                flex: 1,
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                border: 'none',
+                borderBottom: abaAtiva === 'bloqueio-horario' ? `3px solid ${headerColor}` : '3px solid transparent',
+                backgroundColor: abaAtiva === 'bloqueio-horario' ? (currentTheme === 'dark' ? '#2a2a2a' : '#f0f0f0') : 'transparent',
+                color: abaAtiva === 'bloqueio-horario' ? headerColor : theme.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: theme.primary + '20',
-    borderRadius: '8px'
-  }
+                gap: '8px'
+              }}
+            >
+              🕐 Bloqueio por Horário
+            </button>
+          </div>
 
-  const labelStyles = {
+          {/* Conteúdo das Abas */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px',
+            backgroundColor: theme.background
+          }}>
+            {/* ABA: Configurações Gerais */}
+            {abaAtiva === 'gerais' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Seção: Segurança de Configurações */}
+                <div style={{
+                  padding: '16px',
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: theme.surface
+                }}>
+                  <h3 style={{
+                    margin: '0 0 16px 0',
     fontSize: '16px',
-    fontWeight: '500',
-    color: theme.text
-  }
-
-  return (
-    <div style={containerStyles}>
-      <div style={headerStyles}>
-        <h1 style={titleStyles}>Configurações do Sistema</h1>
+                    fontWeight: 'bold',
+                    color: theme.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    🔒 Segurança de Configurações
+                  </h3>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={labelStyles}>
+                        Senha de Proteção de Configurações
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type={mostrarSenha ? 'text' : 'password'}
+                          value={configGerais.senhaConfiguracao}
+                          onChange={(e) => setConfigGerais({ ...configGerais, senhaConfiguracao: e.target.value })}
+                          placeholder="Digite uma senha para proteger configurações"
+                          style={inputStyles}
+                        />
         <button
-          style={closeButtonStyles}
-          onClick={onClose}
+                          onClick={() => setMostrarSenha(!mostrarSenha)}
+                          style={{
+                            ...buttonStyles,
+                            backgroundColor: theme.surface,
+                            border: `1px solid ${theme.border}`,
+                            color: theme.text,
+                            minWidth: '100px'
+                          }}
+                        >
+                          {mostrarSenha ? '🙈 Ocultar' : '👁️ Mostrar'}
+                        </button>
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: theme.textSecondary,
+                        marginTop: '4px'
+                      }}>
+                        ℹ️ Quando definida, será solicitada para acessar configurações sensíveis
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        cursor: 'pointer'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={configGerais.permitirAlteracoes}
+                          onChange={(e) => setConfigGerais({ ...configGerais, permitirAlteracoes: e.target.checked })}
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            cursor: 'pointer'
+                          }}
+                        />
+                        <span style={{ fontSize: '14px', color: theme.text }}>
+                          Permitir alterações de configurações sem senha
+                        </span>
+                      </label>
+                    </div>
+                    
+                    {/* Logout Automático - Cards Selecionáveis */}
+                    <div style={{
+                      marginTop: '8px',
+                      paddingTop: '16px',
+                      borderTop: `1px solid ${theme.border}`
+                    }}>
+                      {/* Header com Toggle */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '16px'
+                      }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: theme.text, marginBottom: '4px' }}>
+                            ⏱️ Logout Automático
+                          </div>
+                          <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                            {configGerais.autoLogoutEnabled 
+                              ? `Sistema desconecta após ${configGerais.autoLogoutMinutes} minuto${configGerais.autoLogoutMinutes !== 1 ? 's' : ''} de inatividade`
+                              : 'Logout automático desativado'
+                            }
+                          </div>
+                        </div>
+                        
+                        {/* Toggle Switch */}
+                        <label style={{
+                          position: 'relative',
+                          display: 'inline-block',
+                          width: '56px',
+                          height: '28px',
+                          cursor: 'pointer'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={configGerais.autoLogoutEnabled}
+                            onChange={(e) => {
+                              const novoEstado = e.target.checked
+                              setConfigGerais({ 
+                                ...configGerais, 
+                                autoLogoutEnabled: novoEstado,
+                                autoLogoutMinutes: novoEstado ? (configGerais.autoLogoutMinutes || 30) : configGerais.autoLogoutMinutes
+                              })
+                            }}
+                            style={{ opacity: 0, width: 0, height: 0 }}
+                          />
+                          <span style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: configGerais.autoLogoutEnabled ? headerColor : '#d1d5db',
+                            borderRadius: '28px',
+                            transition: 'all 0.2s ease'
+                          }}>
+                            <span style={{
+                              position: 'absolute',
+                              height: '22px',
+                              width: '22px',
+                              left: configGerais.autoLogoutEnabled ? '30px' : '3px',
+                              bottom: '3px',
+                              backgroundColor: 'white',
+                              borderRadius: '50%',
+                              transition: 'all 0.2s ease',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                            }} />
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Grid de Cards - Só aparece quando ativado */}
+                      {configGerais.autoLogoutEnabled && (
+                        <>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(3, 1fr)',
+                          gap: '10px'
+                        }}>
+                        {/* Card: 15 minutos */}
+                        <div
+                          onClick={() => setConfigGerais({ ...configGerais, autoLogoutEnabled: true, autoLogoutMinutes: 15 })}
+                          style={getCardStyle(configGerais.autoLogoutEnabled && configGerais.autoLogoutMinutes === 15)}
+                          {...getCardHoverHandlers(configGerais.autoLogoutEnabled && configGerais.autoLogoutMinutes === 15)}
+                        >
+                          <div style={{ fontSize: '24px', marginBottom: '4px' }}>⚡</div>
+                          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.text, marginBottom: '2px' }}>
+                            15 min
+                          </div>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, lineHeight: '1.2' }}>
+                            Segurança alta
+                          </div>
+                        </div>
+
+                        {/* Card: 30 minutos */}
+                        <div
+                          onClick={() => setConfigGerais({ ...configGerais, autoLogoutEnabled: true, autoLogoutMinutes: 30 })}
+                          style={getCardStyle(configGerais.autoLogoutEnabled && configGerais.autoLogoutMinutes === 30)}
+                          {...getCardHoverHandlers(configGerais.autoLogoutEnabled && configGerais.autoLogoutMinutes === 30)}
+                        >
+                          <div style={{ fontSize: '24px', marginBottom: '4px' }}>🔒</div>
+                          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.text, marginBottom: '2px' }}>
+                            30 min
+                          </div>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, lineHeight: '1.2' }}>
+                            Recomendado
+                          </div>
+                        </div>
+
+                        {/* Card: 1 hora */}
+                        <div
+                          onClick={() => setConfigGerais({ ...configGerais, autoLogoutEnabled: true, autoLogoutMinutes: 60 })}
+                          style={getCardStyle(configGerais.autoLogoutEnabled && configGerais.autoLogoutMinutes === 60)}
+                          {...getCardHoverHandlers(configGerais.autoLogoutEnabled && configGerais.autoLogoutMinutes === 60)}
+                        >
+                          <div style={{ fontSize: '24px', marginBottom: '4px' }}>⏰</div>
+                          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.text, marginBottom: '2px' }}>
+                            1 hora
+                          </div>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, lineHeight: '1.2' }}>
+                            Balanceado
+                          </div>
+                        </div>
+
+                        {/* Card: 2 horas */}
+                        <div
+                          onClick={() => setConfigGerais({ ...configGerais, autoLogoutEnabled: true, autoLogoutMinutes: 120 })}
+                          style={getCardStyle(configGerais.autoLogoutEnabled && configGerais.autoLogoutMinutes === 120)}
+                          {...getCardHoverHandlers(configGerais.autoLogoutEnabled && configGerais.autoLogoutMinutes === 120)}
+                        >
+                          <div style={{ fontSize: '24px', marginBottom: '4px' }}>⌛</div>
+                          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.text, marginBottom: '2px' }}>
+                            2 horas
+                          </div>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, lineHeight: '1.2' }}>
+                            Relaxado
+                          </div>
+                        </div>
+
+                        {/* Card: Personalizado */}
+                        <div
+                          onClick={() => {
+                            // Ativa o Personalizado mantendo o valor atual ou usando um padrão
+                            const valorAtual = configGerais.autoLogoutMinutes
+                            const isPersonalizado = ![15, 30, 60, 120].includes(valorAtual)
+                            setConfigGerais({ 
+                              ...configGerais, 
+                              autoLogoutEnabled: true,
+                              autoLogoutMinutes: isPersonalizado ? valorAtual : 45 // Usa 45 min como padrão
+                            })
+                          }}
+                          style={{
+                            ...getCardStyle(configGerais.autoLogoutEnabled && ![15, 30, 60, 120].includes(configGerais.autoLogoutMinutes)),
+                            cursor: 'pointer'
+                          }}
+                          {...getCardHoverHandlers(configGerais.autoLogoutEnabled && ![15, 30, 60, 120].includes(configGerais.autoLogoutMinutes))}
+                        >
+                          <div style={{ fontSize: '24px', marginBottom: '4px' }}>✏️</div>
+                          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.text, marginBottom: '4px' }}>
+                            Personalizado
+                          </div>
+                          <div 
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="number"
+                              min="1"
+                              max="1440"
+                              value={configGerais.autoLogoutMinutes}
+                              onChange={(e) => {
+                                const valor = parseInt(e.target.value) || 1
+                                setConfigGerais({ 
+                                  ...configGerais, 
+                                  autoLogoutEnabled: true,
+                                  autoLogoutMinutes: Math.max(1, Math.min(1440, valor))
+                                })
+                              }}
+                              style={{
+                                width: '60px',
+                                padding: '4px 8px',
+                                border: `1px solid ${theme.border}`,
+                                borderRadius: '4px',
+                                backgroundColor: theme.background,
+                                color: theme.text,
+                                fontSize: '13px',
+                                textAlign: 'center',
+                                fontWeight: 'bold'
+                              }}
+                            />
+                            <span style={{ fontSize: '11px', color: theme.textSecondary }}>min</span>
+                          </div>
+                          <div style={{ fontSize: '10px', color: theme.textSecondary, marginTop: '6px' }}>
+                            1 a 1440 min
+                          </div>
+                          </div>
+                        </div>
+
+                        {/* Configuração de Aviso - Aparece quando logout automático está ativo */}
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '12px',
+                          backgroundColor: theme.surface,
+                          border: `2px solid ${theme.border}`,
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{ marginBottom: '10px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: theme.text, marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              ⚠️ Aviso de Desconexão
+                            </div>
+                            <div style={{ fontSize: '10px', color: theme.textSecondary }}>
+                              Escolha quanto tempo antes do logout o sistema deve avisar
+                            </div>
+      </div>
+
+                          {/* Opções de aviso em cards menores */}
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '0.7fr 0.7fr 0.7fr 1.9fr',
+                            gap: '6px',
+                            marginBottom: '12px'
+                          }}>
+                            {/* Cards fixos: 1, 2, 3 min */}
+                            {[1, 2, 3].map((minutos) => {
+                              const isSelected = configGerais.autoLogoutWarningMinutes === minutos && configGerais.autoLogoutWarningUnit === 'minutos'
+                              return (
+                                <div
+                                  key={minutos}
+                                  onClick={() => setConfigGerais({ 
+                                    ...configGerais, 
+                                    autoLogoutWarningMinutes: minutos,
+                                    autoLogoutWarningUnit: 'minutos'
+                                  })}
+                                  style={{
+                                    padding: '8px 4px',
+                                    border: `2px solid ${isSelected ? headerColor : theme.border}`,
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    backgroundColor: isSelected
+                                      ? (currentTheme === 'dark' ? 'rgba(255, 140, 0, 0.12)' : 'rgba(0, 128, 128, 0.08)')
+                                      : theme.surface,
+                                    transition: 'all 0.2s ease',
+                                    textAlign: 'center',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    boxShadow: isSelected
+                                      ? '0 2px 4px rgba(0, 0, 0, 0.1)'
+                                      : 'none',
+                                    minHeight: '60px'
+                                  }}
           onMouseEnter={(e) => {
-            (e.target as HTMLButtonElement).style.opacity = '0.8'
+                                    if (!isSelected) {
+                                      e.currentTarget.style.borderColor = headerColor
+                                      e.currentTarget.style.backgroundColor = currentTheme === 'dark' ? 'rgba(255, 140, 0, 0.06)' : 'rgba(0, 128, 128, 0.04)'
+                                      e.currentTarget.style.transform = 'translateY(-1px)'
+                                    }
           }}
           onMouseLeave={(e) => {
-            (e.target as HTMLButtonElement).style.opacity = '1'
-          }}
-        >
-          ✕ Fechar
-        </button>
+                                    if (!isSelected) {
+                                      e.currentTarget.style.borderColor = theme.border
+                                      e.currentTarget.style.backgroundColor = theme.surface
+                                      e.currentTarget.style.transform = 'translateY(0)'
+                                    }
+                                  }}
+                                >
+                                  {/* Ícone de Relógio */}
+                                  <svg
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <circle
+                                      cx="12"
+                                      cy="12"
+                                      r="9"
+                                      stroke={isSelected ? headerColor : theme.textSecondary}
+                                      strokeWidth="2"
+                                      fill="none"
+                                    />
+                                    <path
+                                      d="M12 7V12L15 15"
+                                      stroke={isSelected ? headerColor : theme.textSecondary}
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                    />
+                                  </svg>
+                                  <div style={{ fontSize: '13px', fontWeight: isSelected ? '700' : '600', color: theme.text }}>
+                                    {minutos} min
+                                  </div>
       </div>
-
-      <div style={gridStyles}>
-        {configuracaoItems.map((item) => (
-          <div
-            key={item.id}
-            style={itemStyles}
-            onClick={item.onClick}
+                              )
+                            })}
+                            
+                            {/* Card: Personalizado com toggle segundos/minutos */}
+                            {(() => {
+                              const isPersonalizado = (![1, 2, 3].includes(configGerais.autoLogoutWarningMinutes) && configGerais.autoLogoutWarningUnit === 'minutos') || configGerais.autoLogoutWarningUnit === 'segundos'
+                              return (
+                                <div
+                                  onClick={() => {
+                                    // Ativa o Personalizado com valores padrão se necessário
+                                    if (!isPersonalizado) {
+                                      setConfigGerais({ 
+                                        ...configGerais, 
+                                        autoLogoutWarningUnit: 'minutos',
+                                        autoLogoutWarningMinutes: 5 // Padrão: 5 min
+                                      })
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '8px 12px',
+                                    border: `2px solid ${isPersonalizado ? headerColor : theme.border}`,
+                                    borderRadius: '6px',
+                                    backgroundColor: isPersonalizado
+                                      ? (currentTheme === 'dark' ? 'rgba(255, 140, 0, 0.12)' : 'rgba(0, 128, 128, 0.08)')
+                                      : theme.surface,
+                                    transition: 'all 0.2s ease',
+                                    textAlign: 'center',
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    cursor: 'pointer',
+                                    boxShadow: isPersonalizado
+                                      ? '0 2px 4px rgba(0, 0, 0, 0.1)'
+                                      : 'none',
+                                    minHeight: '60px'
+                                  }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'
-              ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)'
-              ;(e.currentTarget as HTMLDivElement).style.borderColor = theme.primary
+                                    if (!isPersonalizado) {
+                                      e.currentTarget.style.borderColor = headerColor
+                                      e.currentTarget.style.backgroundColor = currentTheme === 'dark' ? 'rgba(255, 140, 0, 0.06)' : 'rgba(0, 128, 128, 0.04)'
+                                      e.currentTarget.style.transform = 'translateY(-1px)'
+                                    }
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'
-              ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)'
-              ;(e.currentTarget as HTMLDivElement).style.borderColor = theme.border
-            }}
-          >
-            <div style={iconStyles}>
-              {item.icon}
+                                    if (!isPersonalizado) {
+                                      e.currentTarget.style.borderColor = theme.border
+                                      e.currentTarget.style.backgroundColor = theme.surface
+                                      e.currentTarget.style.transform = 'translateY(0)'
+                                    }
+                                  }}
+                                >
+                                  {/* Seção Esquerda: Ícone e Título */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <svg
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="3"
+                                        stroke={isPersonalizado ? headerColor : theme.textSecondary}
+                                        strokeWidth="1.5"
+                                        fill="none"
+                                      />
+                                      <path
+                                        d="M12 1V3M12 21V23M23 12H21M3 12H1M19.778 4.222L18.364 5.636M5.636 18.364L4.222 19.778M19.778 19.778L18.364 18.364M5.636 5.636L4.222 4.222"
+                                        stroke={isPersonalizado ? headerColor : theme.textSecondary}
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
+                                      />
+                                    </svg>
+                                    <div style={{ fontSize: '13px', fontWeight: '700', color: theme.text }}>
+                                      Personalizado
+                                    </div>
+                                  </div>
+
+                                  {/* Seção Direita: Controles */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end' }}>
+                                    {/* Toggle Segundos/Minutos */}
+                                    <div 
+                                      style={{ 
+                                        display: 'flex', 
+                                        gap: '1px',
+                                        backgroundColor: theme.background,
+                                        padding: '1px',
+                                        borderRadius: '2px',
+                                        border: `1px solid ${theme.border}`
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setConfigGerais({ ...configGerais, autoLogoutWarningUnit: 'segundos', autoLogoutWarningSeconds: 30 })
+                                  }}
+                                  style={{
+                                    padding: '2px 5px',
+                                    fontSize: '9px',
+                                    fontWeight: '700',
+                                    border: 'none',
+                                    borderRadius: '2px',
+                                    cursor: 'pointer',
+                                    backgroundColor: configGerais.autoLogoutWarningUnit === 'segundos' ? headerColor : 'transparent',
+                                    color: configGerais.autoLogoutWarningUnit === 'segundos' ? '#fff' : theme.textSecondary,
+                                    transition: 'all 0.15s',
+                                    flex: 1
+                                  }}
+                                >
+                                  seg
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setConfigGerais({ ...configGerais, autoLogoutWarningUnit: 'minutos', autoLogoutWarningMinutes: 2 })
+                                  }}
+                                  style={{
+                                    padding: '2px 5px',
+                                    fontSize: '9px',
+                                    fontWeight: '700',
+                                    border: 'none',
+                                    borderRadius: '2px',
+                                    cursor: 'pointer',
+                                    backgroundColor: configGerais.autoLogoutWarningUnit === 'minutos' ? headerColor : 'transparent',
+                                    color: configGerais.autoLogoutWarningUnit === 'minutos' ? '#fff' : theme.textSecondary,
+                                    transition: 'all 0.15s',
+                                    flex: 1
+                                  }}
+                                >
+                                  min
+                                </button>
+                                    </div>
+                              
+                                    {/* Input de valor */}
+                                    <div 
+                                      style={{ display: 'flex', alignItems: 'center', gap: '2px' }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                <input
+                                  type="number"
+                                  min={configGerais.autoLogoutWarningUnit === 'segundos' ? '10' : '1'}
+                                  max={configGerais.autoLogoutWarningUnit === 'segundos' ? '59' : '30'}
+                                  value={configGerais.autoLogoutWarningUnit === 'segundos' ? configGerais.autoLogoutWarningSeconds : configGerais.autoLogoutWarningMinutes}
+                                  onChange={(e) => {
+                                    const valor = parseInt(e.target.value) || (configGerais.autoLogoutWarningUnit === 'segundos' ? 10 : 1)
+                                    if (configGerais.autoLogoutWarningUnit === 'segundos') {
+                                      setConfigGerais({ 
+                                        ...configGerais, 
+                                        autoLogoutWarningSeconds: Math.max(10, Math.min(59, valor))
+                                      })
+                                    } else {
+                                      setConfigGerais({ 
+                                        ...configGerais, 
+                                        autoLogoutWarningMinutes: Math.max(1, Math.min(30, valor))
+                                      })
+                                    }
+                                  }}
+                                  style={{
+                                    width: '32px',
+                                    padding: '2px 3px',
+                                    border: `1px solid ${theme.border}`,
+                                    borderRadius: '2px',
+                                    backgroundColor: theme.surface,
+                                    color: theme.text,
+                                    fontSize: '12px',
+                                    textAlign: 'center',
+                                    fontWeight: 'bold'
+                                  }}
+                                />
+                                      <span style={{ fontSize: '10px', color: theme.textSecondary, fontWeight: '700' }}>
+                                        {configGerais.autoLogoutWarningUnit === 'segundos' ? 's' : 'min'}
+                                      </span>
+                                    </div>
+                                    
+                                    <div style={{ fontSize: '8px', color: theme.textSecondary }}>
+                                      {configGerais.autoLogoutWarningUnit === 'segundos' ? '10-59s' : '1-30min'}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })()}
+                          </div>
+
+                          {/* Informação visual do aviso */}
+                          <div style={{
+                            padding: '10px',
+                            backgroundColor: currentTheme === 'dark' ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff',
+                            border: `1px solid ${currentTheme === 'dark' ? 'rgba(59, 130, 246, 0.3)' : '#3b82f6'}`,
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            color: theme.text,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span>ℹ️</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ marginBottom: '2px' }}>
+                                Logout automático em <strong>{configGerais.autoLogoutMinutes} minuto{configGerais.autoLogoutMinutes !== 1 ? 's' : ''}</strong> de inatividade
+                                {configGerais.autoLogoutMinutes >= 60 && (
+                                  <span style={{ color: theme.textSecondary }}>
+                                    {' '}({Math.floor(configGerais.autoLogoutMinutes / 60)}h{configGerais.autoLogoutMinutes % 60 > 0 ? ` ${configGerais.autoLogoutMinutes % 60}min` : ''})
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '10px', color: theme.textSecondary }}>
+                                {configGerais.autoLogoutWarningUnit === 'segundos' ? (
+                                  <>
+                                    Aviso aparecerá <strong>{configGerais.autoLogoutWarningSeconds} segundo{configGerais.autoLogoutWarningSeconds !== 1 ? 's' : ''}</strong> antes
+                                    {' '}({configGerais.autoLogoutMinutes} min menos {configGerais.autoLogoutWarningSeconds}s de inatividade)
+                                  </>
+                                ) : (
+                                  <>
+                                    Aviso aparecerá <strong>{configGerais.autoLogoutWarningMinutes} minuto{configGerais.autoLogoutWarningMinutes !== 1 ? 's' : ''}</strong> antes
+                                    {' '}({configGerais.autoLogoutMinutes - configGerais.autoLogoutWarningMinutes} min de inatividade)
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        </>
+                      )}
+
+                      {/* Aviso quando desativado */}
+                      {!configGerais.autoLogoutEnabled && (
+                        <div style={{
+                          marginTop: '16px',
+                          padding: '16px',
+                          backgroundColor: currentTheme === 'dark' ? 'rgba(245, 158, 11, 0.1)' : '#fef3c7',
+                          border: `1px solid ${currentTheme === 'dark' ? 'rgba(245, 158, 11, 0.3)' : '#f59e0b'}`,
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          color: theme.text,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px'
+                        }}>
+                          <span style={{ fontSize: '24px' }}>⚠️</span>
+                          <div>
+                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                              Logout automático desativado
+                            </div>
+                            <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                              Ative o toggle acima para maior segurança do sistema
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ABA: Bloqueio por Horário */}
+            {abaAtiva === 'bloqueio-horario' && (
+              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                {/* Toggle Principal - Minimalista */}
+                <div style={{
+                  padding: '24px',
+                  backgroundColor: theme.surface,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '12px',
+                  marginBottom: '24px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        color: theme.text,
+                        marginBottom: '4px'
+                      }}>
+                        🔒 Bloqueio por Horário
+                      </div>
+                      <div style={{
+                        fontSize: '13px',
+                        color: theme.textSecondary
+                      }}>
+                        {configBloqueio.habilitado 
+                          ? `Sistema acessível das ${configBloqueio.horarioInicio} às ${configBloqueio.horarioFim}`
+                          : 'Sistema disponível 24 horas'
+                        }
+                      </div>
+                    </div>
+                    
+                    {/* Toggle Simples */}
+                    <label style={{
+                      position: 'relative',
+                      display: 'inline-block',
+                      width: '56px',
+                      height: '28px',
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={configBloqueio.habilitado}
+                        onChange={(e) => setConfigBloqueio({ ...configBloqueio, habilitado: e.target.checked })}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: configBloqueio.habilitado ? headerColor : '#d1d5db',
+                        borderRadius: '28px',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <span style={{
+                          position: 'absolute',
+                          height: '22px',
+                          width: '22px',
+                          left: configBloqueio.habilitado ? '30px' : '3px',
+                          bottom: '3px',
+                          backgroundColor: 'white',
+                          borderRadius: '50%',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                        }} />
+                      </span>
+                    </label>
+                  </div>
+                </div>
+                    
+                {configBloqueio.habilitado && (
+                  <div style={{
+                    padding: '28px',
+                    backgroundColor: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '12px'
+                  }}>
+                    {/* Horários em Grid Horizontal */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '24px',
+                      marginBottom: '28px'
+                    }}>
+                      {/* Horário de Início */}
+                      <div style={{ flex: 1 }}>
+                        <label style={{
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: theme.textSecondary,
+                          marginBottom: '8px',
+                          display: 'block'
+                        }}>
+                          Início do Expediente
+                        </label>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '16px',
+                          backgroundColor: theme.background,
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '8px'
+                        }}>
+                          <span style={{ fontSize: '24px' }}>🌅</span>
+                          <input
+                            type="time"
+                            value={configBloqueio.horarioInicio}
+                            onChange={(e) => setConfigBloqueio({ ...configBloqueio, horarioInicio: e.target.value })}
+                            style={{
+                              flex: 1,
+                              padding: '8px',
+                              fontSize: '20px',
+                              fontWeight: '600',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: theme.text,
+                              outline: 'none',
+                              textAlign: 'center'
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Seta */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingTop: '32px',
+                        fontSize: '24px',
+                        color: theme.textSecondary
+                      }}>
+                        →
+                      </div>
+                      
+                      {/* Horário de Fim */}
+                      <div style={{ flex: 1 }}>
+                        <label style={{
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: theme.textSecondary,
+                          marginBottom: '8px',
+                          display: 'block'
+                        }}>
+                          Fim do Expediente
+                        </label>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '16px',
+                          backgroundColor: theme.background,
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '8px'
+                        }}>
+                          <span style={{ fontSize: '24px' }}>🌙</span>
+                          <input
+                            type="time"
+                            value={configBloqueio.horarioFim}
+                            onChange={(e) => setConfigBloqueio({ ...configBloqueio, horarioFim: e.target.value })}
+                            style={{
+                              flex: 1,
+                              padding: '8px',
+                              fontSize: '20px',
+                              fontWeight: '600',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: theme.text,
+                              outline: 'none',
+                              textAlign: 'center'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Tempo Extra - Minimalista */}
+                    <div style={{
+                      padding: '20px',
+                      backgroundColor: theme.background,
+                      borderRadius: '8px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '12px'
+                      }}>
+                        <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>
+                          Margem de Tolerância
+                        </span>
+                        <span style={{
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          color: headerColor,
+                          backgroundColor: currentTheme === 'dark' ? 'rgba(255,140,0,0.1)' : 'rgba(0,128,128,0.1)',
+                          padding: '6px 16px',
+                          borderRadius: '20px'
+                        }}>
+                          {configBloqueio.tempoExtraPermitido} min
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="180"
+                        step="15"
+                        value={configBloqueio.tempoExtraPermitido}
+                        onChange={(e) => setConfigBloqueio({ ...configBloqueio, tempoExtraPermitido: parseInt(e.target.value) })}
+                        style={{
+                          width: '100%',
+                          height: '6px',
+                          borderRadius: '3px',
+                          outline: 'none',
+                          background: `linear-gradient(to right, ${headerColor} 0%, ${headerColor} ${(configBloqueio.tempoExtraPermitido / 180) * 100}%, ${theme.border} ${(configBloqueio.tempoExtraPermitido / 180) * 100}%, ${theme.border} 100%)`,
+                          cursor: 'pointer',
+                          appearance: 'none',
+                          WebkitAppearance: 'none'
+                        }}
+                      />
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '11px',
+                        color: theme.textSecondary,
+                        marginTop: '8px'
+                      }}>
+                        <span>0 min</span>
+                        <span>180 min (3h)</span>
+                      </div>
+                    </div>
+                    
+                    {/* Preview do Horário Final */}
+                    <div style={{
+                      padding: '16px',
+                      backgroundColor: currentTheme === 'dark' ? 'rgba(59,130,246,0.05)' : '#eff6ff',
+                      border: `1px solid ${currentTheme === 'dark' ? 'rgba(59,130,246,0.2)' : '#3b82f6'}`,
+                      borderRadius: '8px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: theme.text,
+                        marginBottom: '8px'
+                      }}>
+                        ⏰ Horário efetivo de acesso:
+                      </div>
+                      <div style={{
+                        fontSize: '20px',
+                        fontWeight: '700',
+                        color: headerColor,
+                        textAlign: 'center'
+                      }}>
+                        {(() => {
+                          const inicio = new Date(`2000-01-01 ${configBloqueio.horarioInicio}`)
+                          inicio.setMinutes(inicio.getMinutes() - configBloqueio.tempoExtraPermitido)
+                          return inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                        })()}
+                        <span style={{ fontSize: '16px', margin: '0 8px' }}>até</span>
+                        {(() => {
+                          const fim = new Date(`2000-01-01 ${configBloqueio.horarioFim}`)
+                          fim.setMinutes(fim.getMinutes() + configBloqueio.tempoExtraPermitido)
+                          return fim.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                        })()}
+                      </div>
+                    </div>
+                    
+                    {/* Mensagem de Bloqueio - Compacta */}
+                    <div>
+                      <label style={{
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: theme.textSecondary,
+                        marginBottom: '8px',
+                        display: 'block'
+                      }}>
+                        Mensagem de Bloqueio
+                      </label>
+                      <textarea
+                        value={configBloqueio.mensagemBloqueio}
+                        onChange={(e) => setConfigBloqueio({ ...configBloqueio, mensagemBloqueio: e.target.value })}
+                        rows={2}
+                        placeholder="Mensagem exibida quando o acesso estiver bloqueado..."
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          fontSize: '13px',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '8px',
+                          backgroundColor: theme.background,
+                          color: theme.text,
+                          outline: 'none',
+                          resize: 'none',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
             </div>
-            <div style={labelStyles}>
-              {item.label}
+                )}
             </div>
+            )}
           </div>
-        ))}
+
+          {/* Rodapé com Botões */}
+          <div style={{
+            padding: '16px',
+            borderTop: `2px solid ${theme.border}`,
+            backgroundColor: theme.surface,
+            display: 'flex',
+            gap: '10px',
+            justifyContent: 'center'
+          }}>
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (abaAtiva === 'gerais') {
+                  salvarConfigGerais()
+                } else {
+                  salvarConfigBloqueio()
+                }
+              }}
+              style={{
+                ...buttonStyles,
+                backgroundColor: '#10b981',
+                color: '#fff',
+                cursor: 'pointer',
+                position: 'relative',
+                zIndex: 10
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#059669'
+                e.currentTarget.style.transform = 'scale(1.05)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#10b981'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              💾 Salvar Configurações
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                ...buttonStyles,
+                backgroundColor: '#6c757d',
+                color: '#fff'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#495057'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
+            >
+              🚪 Retornar
+            </button>
       </div>
     </div>
+      </BasePage>
+      {/* Modal Component */}
+      <modal.ModalComponent />
+    </>
   )
 }

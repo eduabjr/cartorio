@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { useModal } from '../hooks/useModal'
 import { pdfService } from '../services/PDFService'
 
 interface OficiosMandadosPageProps {
@@ -10,6 +11,7 @@ interface OficiosMandadosPageProps {
 export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClose }) => {
   const { currentTheme, getTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   // Cor do header: teal no light, laranja no dark
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
@@ -136,7 +138,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
       if (pdfService.isImageFile(file)) {
         imageFiles.push(file)
       } else {
-        alert(`❌ Arquivo ${file.name} não é uma imagem válida`)
+        await modal.alert(`Arquivo ${file.name} não é uma imagem válida`, 'Arquivo Inválido', '❌')
       }
     }
 
@@ -149,7 +151,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
       const url = URL.createObjectURL(firstImage)
       setPreviewUrl(url)
       
-      alert(`✅ ${imageFiles.length} imagem(ns) importada(s) com sucesso!`)
+      await modal.alert(`${imageFiles.length} imagem(ns) importada(s) com sucesso!`, 'Sucesso', '✅')
     }
   }
 
@@ -183,13 +185,14 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
   }
 
   // Excluir imagem atual
-  const handleExcluirImagem = () => {
+  const handleExcluirImagem = async () => {
     if (scannedImages.length === 0) {
-      alert('⚠️ Não há imagens para excluir')
+      await modal.alert('Não há imagens para excluir', 'Atenção', '⚠️')
       return
     }
 
-    if (confirm('⚠️ Deseja realmente excluir esta imagem?')) {
+    const confirmado = await modal.confirm('Deseja realmente excluir esta imagem?', 'Confirmar Exclusão', '⚠️')
+    if (confirmado) {
       const newImages = [...scannedImages]
       newImages.splice(currentImageIndex, 1)
       setScannedImages(newImages)
@@ -207,14 +210,14 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
         updatePreview(newIndex)
       }
 
-      alert('✅ Imagem excluída com sucesso!')
+      await modal.alert('Imagem excluída com sucesso!', 'Sucesso', '✅')
     }
   }
 
   // Converter imagens para PDF (IPDF)
   const handleIPDF = async () => {
     if (scannedImages.length === 0) {
-      alert('⚠️ Não há imagens para converter em PDF')
+      await modal.alert('Não há imagens para converter em PDF', 'Atenção', '⚠️')
       return
     }
 
@@ -241,17 +244,17 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
       // Abrir PDF em nova aba
       pdfService.openPDFInNewTab(pdfBlob)
       
-      alert(`✅ PDF gerado com sucesso!\n${scannedImages.length} página(s) convertida(s)`)
+      await modal.alert(`PDF gerado com sucesso!\n${scannedImages.length} página(s) convertida(s)`, 'Sucesso', '✅')
     } catch (error) {
       console.error('Erro ao gerar PDF:', error)
-      alert('❌ Erro ao gerar PDF. Verifique as imagens e tente novamente.')
+      await modal.alert('Erro ao gerar PDF. Verifique as imagens e tente novamente.', 'Erro', '❌')
     }
   }
 
   // Visualizar imagem em tamanho completo
-  const handleVisualizarImagem = () => {
+  const handleVisualizarImagem = async () => {
     if (scannedImages.length === 0 || !previewUrl) {
-      alert('⚠️ Não há imagens para visualizar')
+      await modal.alert('Não há imagens para visualizar', 'Atenção', '⚠️')
       return
     }
 
@@ -262,7 +265,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
   // Função para imprimir documento
   const handleImprimir = async () => {
     if (scannedImages.length === 0) {
-      alert('⚠️ Não há imagens para imprimir')
+      await modal.alert('Não há imagens para imprimir', 'Atenção', '⚠️')
       return
     }
 
@@ -293,17 +296,17 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
       }
     } catch (error) {
       console.error('Erro ao imprimir:', error)
-      alert('❌ Erro ao preparar documento para impressão')
+      await modal.alert('Erro ao preparar documento para impressão', 'Erro', '❌')
     }
   }
 
   // Função para digitalizar via scanner
-  const handleScanner = () => {
+  const handleScanner = async () => {
     // Simular abertura de múltiplos arquivos (Scanner)
     if (fileInputRef.current) {
       fileInputRef.current.click()
     }
-    alert('📷 Selecione as imagens digitalizadas\n\n💡 Dica: Você pode selecionar múltiplos arquivos de uma vez (Ctrl+Click ou Shift+Click)')
+    await modal.alert('Selecione as imagens digitalizadas\n\n💡 Dica: Você pode selecionar múltiplos arquivos de uma vez (Ctrl+Click ou Shift+Click)', 'Importar Imagens', '📷')
   }
 
   // Funções de Zoom
@@ -542,6 +545,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
   })
 
   return (
+    <>
     <BasePage
       title="Controle de Ofícios e Mandados"
       onClose={onClose}
@@ -1491,6 +1495,8 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
         </div>
       </div>
     </BasePage>
+    <modal.ModalComponent />
+    </>
   )
 }
 

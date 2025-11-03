@@ -111,7 +111,33 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
   }
 
   const handleTamanhoFonte = (tamanho: 'padrao' | 'grande') => {
+    console.log('🔤🔤🔤 TAMANHO DA FONTE ALTERADO!')
+    console.log('   De:', settings.fontSize, '→ Para:', tamanho)
+    
+    // 1. Aplicar CSS IMEDIATAMENTE (antes mesmo de salvar)
+    const sizes = {
+      'padrao': '16px',
+      'grande': '18px'
+    }
+    const fontSize = sizes[tamanho]
+    
+    // Aplicar em TODOS os lugares possíveis para garantir mudança instantânea
+    document.body.style.fontSize = fontSize
+    document.documentElement.style.setProperty('--base-font-size', fontSize)
+    document.documentElement.style.fontSize = fontSize
+    
+    // Forçar com !important programaticamente
+    document.body.style.setProperty('font-size', fontSize, 'important')
+    
+    // 2. Atualizar settings (dispara evento de sincronização)
     updateSettings({ fontSize: tamanho })
+    
+    // 3. Disparar evento customizado adicional
+    window.dispatchEvent(new CustomEvent('font-size-changed', {
+      detail: { fontSize: tamanho, pixels: fontSize }
+    }))
+    
+    console.log('   ✅ Font-size aplicado INSTANTANEAMENTE em TODA a página:', fontSize)
   }
 
   const handleAnimacoesReduzidas = (ativo: boolean) => {
@@ -271,18 +297,20 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
                     Melhora a navegação usando apenas o teclado
                   </p>
                 </div>
-                <label style={{
+                <label 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const novoValor = !settings.keyboardNavigation
+                    updateSettings({ keyboardNavigation: novoValor })
+                  }}
+                  style={{
                   position: 'relative',
                   display: 'inline-block',
                   width: '44px',
-                  height: '24px'
+                  height: '24px',
+                  cursor: 'pointer'
                 }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.keyboardNavigation}
-                    onChange={(e) => updateSettings({ keyboardNavigation: e.target.checked })}
-                    style={{ opacity: 0, width: 0, height: 0 }}
-                  />
                   <span style={{
                     position: 'absolute',
                     cursor: 'pointer',
@@ -292,7 +320,9 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
                     bottom: 0,
                     background: settings.keyboardNavigation ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                     transition: '0.3s',
-                    borderRadius: '24px'
+                    borderRadius: '24px',
+                    pointerEvents: 'all',
+                    zIndex: 1
                   }}>
                     <span style={{
                       position: 'absolute',
@@ -326,18 +356,20 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
                     Reduz animações e transições do sistema
                   </p>
                 </div>
-                <label style={{
+                <label 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    console.log('🎭 Label Movimento Reduzido clicado!')
+                    console.log('   Valor atual:', settings.reducedMotion)
+                    handleAnimacoesReduzidas(!settings.reducedMotion)
+                  }}
+                  style={{
                   position: 'relative',
                   display: 'inline-block',
                   width: '44px',
-                  height: '24px'
+                  height: '24px',
+                  cursor: 'pointer'
                 }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.reducedMotion}
-                    onChange={(e) => handleAnimacoesReduzidas(e.target.checked)}
-                    style={{ opacity: 0, width: 0, height: 0 }}
-                  />
                   <span style={{
                     position: 'absolute',
                     cursor: 'pointer',
@@ -347,7 +379,9 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
                     bottom: 0,
                     background: settings.reducedMotion ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
                     transition: '0.3s',
-                    borderRadius: '24px'
+                    borderRadius: '24px',
+                    pointerEvents: 'all',
+                    zIndex: 1
                   }}>
                     <span style={{
                       position: 'absolute',
@@ -1006,6 +1040,131 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
                 </span>
               </label>
             </div>
+            
+            {/* Configurações Avançadas de Voz */}
+            {settings.screenReader && (
+              <div style={{ padding: '12px', backgroundColor: isDarkMode ? '#2a2a2a' : '#f9f9f9', borderRadius: '6px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Velocidade da Fala */}
+                <div>
+                  <label style={{ 
+                    color: theme.text, 
+                    fontSize: '13px', 
+                    fontWeight: '500',
+                    display: 'block',
+                    marginBottom: '6px'
+                  }}>
+                    🎙️ Velocidade da Fala
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2.0"
+                      step="0.1"
+                      value={settings.speechRate}
+                      onChange={(e) => {
+                        const newRate = parseFloat(e.target.value)
+                        console.log('🎙️ Alterando velocidade de fala para:', newRate)
+                        updateSettings({ speechRate: newRate })
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      color: theme.primary,
+                      minWidth: '45px',
+                      textAlign: 'center'
+                    }}>
+                      {settings.speechRate.toFixed(1)}x
+                    </span>
+                  </div>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: theme.textSecondary }}>
+                    {settings.speechRate < 1 ? '🐢 Mais devagar' : settings.speechRate > 1.2 ? '🚀 Mais rápido' : '⚡ Normal'}
+                  </p>
+                </div>
+                
+                {/* Tom da Voz */}
+                <div>
+                  <label style={{ 
+                    color: theme.text, 
+                    fontSize: '13px', 
+                    fontWeight: '500',
+                    display: 'block',
+                    marginBottom: '6px'
+                  }}>
+                    🎵 Tom da Voz
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2.0"
+                      step="0.1"
+                      value={settings.speechPitch}
+                      onChange={(e) => {
+                        const newPitch = parseFloat(e.target.value)
+                        console.log('🎵 Alterando tom da voz para:', newPitch)
+                        updateSettings({ speechPitch: newPitch })
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      color: theme.primary,
+                      minWidth: '45px',
+                      textAlign: 'center'
+                    }}>
+                      {settings.speechPitch.toFixed(1)}
+                    </span>
+                  </div>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: theme.textSecondary }}>
+                    {settings.speechPitch < 1 ? '🎺 Tom grave' : settings.speechPitch > 1.2 ? '🎻 Tom agudo' : '🎹 Natural'}
+                  </p>
+                </div>
+                
+                {/* Delay do Hover */}
+                <div>
+                  <label style={{ 
+                    color: theme.text, 
+                    fontSize: '13px', 
+                    fontWeight: '500',
+                    display: 'block',
+                    marginBottom: '6px'
+                  }}>
+                    ⏱️ Delay ao Passar o Mouse
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1000"
+                      step="100"
+                      value={settings.hoverDelay}
+                      onChange={(e) => {
+                        const newDelay = parseInt(e.target.value)
+                        console.log('⏱️ Alterando delay do hover para:', newDelay, 'ms')
+                        updateSettings({ hoverDelay: newDelay })
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      color: theme.primary,
+                      minWidth: '55px',
+                      textAlign: 'center'
+                    }}>
+                      {settings.hoverDelay}ms
+                    </span>
+                  </div>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: theme.textSecondary }}>
+                    {settings.hoverDelay === 0 ? '⚡ Instantâneo' : settings.hoverDelay < 300 ? '🏃 Rápido' : '🚶 Normal'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Filtro de Luz Azul */}
             <div style={{
@@ -1211,154 +1370,6 @@ export function ConfiguracoesPage({ onClose, isDarkMode, onThemeChange, userRole
               </div>
             )}
 
-          </div>
-
-          {/* Coluna 3: Segurança */}
-          <div style={{
-            background: theme.background,
-            borderRadius: '10px',
-            padding: '16px',
-            border: `1px solid ${theme.border}`,
-            height: 'fit-content',
-            gridColumn: '1 / -1'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 12px 0', 
-              fontSize: '16px', 
-              fontWeight: '600',
-              color: theme.text,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              🔒 Segurança
-            </h3>
-
-            {/* Logout Automático */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '8px 0',
-              borderBottom: `1px solid ${theme.border}`,
-              opacity: isAdmin ? 1 : 0.6
-            }}>
-              <div>
-                <span style={{ color: theme.text, fontSize: '14px', fontWeight: '500' }}>
-                  Logout Automático {!isAdmin && '🔒'}
-                </span>
-                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
-                  {isAdmin 
-                    ? 'Desconecta automaticamente após período de inatividade'
-                    : 'Apenas administradores podem alterar esta configuração'}
-                </p>
-              </div>
-              <label style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '44px',
-                height: '24px'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={settings.autoLogoutEnabled}
-                  onChange={(e) => {
-                    if (!isAdmin) {
-                      alert('🔒 Apenas administradores podem alterar esta configuração!')
-                      e.preventDefault()
-                      return
-                    }
-                    const novoStatus = e.target.checked
-                    console.log('🔐 Alterando auto-logout para:', novoStatus)
-                    updateSettings({ autoLogoutEnabled: novoStatus })
-                  }}
-                  disabled={!isAdmin}
-                  style={{ opacity: 0, width: 0, height: 0 }}
-                />
-                <span style={{
-                  position: 'absolute',
-                  cursor: isAdmin ? 'pointer' : 'not-allowed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: settings.autoLogoutEnabled ? '#10b981' : (isDarkMode ? '#3a3a3a' : '#f3f4f6'),
-                  transition: '0.3s',
-                  borderRadius: '24px'
-                }}>
-                  <span style={{
-                    position: 'absolute',
-                    content: '""',
-                    height: '18px',
-                    width: '18px',
-                    left: '3px',
-                    bottom: '3px',
-                    background: '#D0D0D0',
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                    transform: settings.autoLogoutEnabled ? 'translateX(20px)' : 'translateX(0)'
-                  }} />
-                </span>
-              </label>
-            </div>
-
-            {/* Tempo de Inatividade */}
-            {settings.autoLogoutEnabled && (
-              <div style={{ padding: '8px 0', opacity: isAdmin ? 1 : 0.6 }}>
-                <label htmlFor="autoLogoutMinutes" style={{ 
-                  color: theme.text, 
-                  fontSize: '14px', 
-                  fontWeight: '500',
-                  marginBottom: '6px',
-                  display: 'block'
-                }}>
-                  Tempo de Inatividade (minutos) {!isAdmin && '🔒'}
-                </label>
-                <select
-                  id="autoLogoutMinutes"
-                  value={settings.autoLogoutMinutes}
-                  onChange={(e) => {
-                    if (!isAdmin) {
-                      alert('🔒 Apenas administradores podem alterar esta configuração!')
-                      return
-                    }
-                    const novoValor = parseInt(e.target.value)
-                    console.log('⏰ Alterando tempo de logout para:', novoValor, 'minutos')
-                    updateSettings({ autoLogoutMinutes: novoValor })
-                  }}
-                  disabled={!isAdmin}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    fontSize: '13px',
-                    border: 'none',
-                    borderRadius: '20px',
-                    background: isDarkMode ? '#3a3a3a' : '#f3f4f6',
-                    color: theme.text,
-                    cursor: isAdmin ? 'pointer' : 'not-allowed',
-                    outline: 'none',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 8px center',
-                    backgroundSize: '16px',
-                    paddingRight: '32px'
-                  }}
-                >
-                  <option value="2">2 minutos</option>
-                  <option value="5">5 minutos</option>
-                  <option value="10">10 minutos</option>
-                  <option value="15">15 minutos</option>
-                  <option value="30">30 minutos</option>
-                  <option value="60">1 hora</option>
-                  <option value="120">2 horas</option>
-                </select>
-                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: theme.textSecondary }}>
-                  O sistema fará logout após {settings.autoLogoutMinutes} minuto(s) sem atividade
-                </p>
-              </div>
-            )}
           </div>
         </div>
 

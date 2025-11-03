@@ -13,6 +13,9 @@ export interface AccessibilitySettings {
   keyboardNavigation: boolean
   autoLogoutEnabled: boolean
   autoLogoutMinutes: number
+  speechRate: number // 0.5 a 2.0 (velocidade da fala)
+  speechPitch: number // 0 a 2.0 (tom da voz)
+  hoverDelay: number // em ms (delay antes de ler no hover)
 }
 
 export interface ThemeColors {
@@ -257,7 +260,10 @@ export function useAccessibility() {
           screenReader: false,
           keyboardNavigation: false,
           autoLogoutEnabled: false,
-          autoLogoutMinutes: 120
+          autoLogoutMinutes: 120,
+          speechRate: 1.3,
+          speechPitch: 1.1,
+          hoverDelay: 300
         }, ...parsed }
       } catch (e) {
         console.warn('❌ Erro ao parsear settings, usando padrão')
@@ -273,9 +279,27 @@ export function useAccessibility() {
       screenReader: false,
       keyboardNavigation: false,
       autoLogoutEnabled: false,
-      autoLogoutMinutes: 120
+      autoLogoutMinutes: 120,
+      speechRate: 1.3,
+      speechPitch: 1.1,
+      hoverDelay: 300
     }
   })
+  
+  // 🔥 LISTENER para sincronizar TODAS as instâncias do hook
+  useEffect(() => {
+    const handleSettingsChange = (e: Event) => {
+      const customEvent = e as CustomEvent
+      console.log('🔥 Evento recebido! Sincronizando settings:', customEvent.detail)
+      setSettings(customEvent.detail)
+    }
+    
+    window.addEventListener('accessibility-settings-changed', handleSettingsChange)
+    
+    return () => {
+      window.removeEventListener('accessibility-settings-changed', handleSettingsChange)
+    }
+  }, [])
 
   // 🔒 CORREÇÃO CRÍTICA: Inicializar currentTheme do localStorage ANTES do primeiro render
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'highContrast'>(() => {
@@ -508,16 +532,22 @@ export function useAccessibility() {
 
 
   const updateSettings = (newSettings: Partial<AccessibilitySettings>) => {
-    console.log('🔧 updateSettings chamado com:', newSettings)
-    
     setSettings(prev => {
       const updated = { ...prev, ...newSettings }
       
       // Salvar no localStorage
       localStorage.setItem('accessibility-settings', JSON.stringify(updated))
       
-      console.log('💾 Configurações atualizadas e salvas:', updated)
-      console.log('📦 Verificando localStorage:', localStorage.getItem('accessibility-settings'))
+      // 🔥 CRÍTICO: Disparar evento customizado para sincronizar TODAS as instâncias
+      window.dispatchEvent(new CustomEvent('accessibility-settings-changed', {
+        detail: updated
+      }))
+      
+      // Log específico para navegação por teclado
+      if ('keyboardNavigation' in newSettings) {
+        console.log('⌨️ Badge:', newSettings.keyboardNavigation ? 'EXIBIR ✅' : 'OCULTAR ❌')
+        console.log('🔥 Evento disparado para sincronizar todas as instâncias')
+      }
       
       // Log específico para autoLogout
       if (newSettings.autoLogoutEnabled !== undefined) {
@@ -768,9 +798,12 @@ export function useAccessibility() {
     root.style.setProperty('--error-color', theme.error)
     root.style.setProperty('--info-color', theme.info)
     
-    // Aplicar tamanho da fonte globalmente
+    // Aplicar tamanho da fonte globalmente IMEDIATAMENTE
     document.body.style.fontSize = fontSize
     document.documentElement.style.setProperty('--base-font-size', fontSize)
+    document.documentElement.style.fontSize = fontSize
+    document.body.style.setProperty('font-size', fontSize, 'important')
+    console.log('🔤 Font-size aplicado:', fontSize, '(settings.fontSize:', settings.fontSize, ')')
     
     // Aplicar multiplicadores para diferentes tamanhos
     const multiplier = getFontMultiplier()
@@ -783,10 +816,12 @@ export function useAccessibility() {
     // 🔒 SEPARAÇÃO: Aplicar reducedMotion ANTES de contraste (não pode interferir)
     if (settings.reducedMotion) {
       console.log('⏸️  Aplicando modo de movimento reduzido')
+      document.body.classList.add('reduced-motion')
       document.body.style.setProperty('--animation-duration', '0.01s')
       document.body.style.setProperty('--transition-duration', '0.01s')
     } else {
       console.log('▶️  Removendo modo de movimento reduzido')
+      document.body.classList.remove('reduced-motion')
       document.body.style.removeProperty('--animation-duration')
       document.body.style.removeProperty('--transition-duration')
     }

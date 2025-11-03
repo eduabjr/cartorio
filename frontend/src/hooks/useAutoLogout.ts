@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 interface AutoLogoutConfig {
   enabled: boolean
   timeoutMinutes: number
+  warningMinutes?: number // Minutos antes do logout para mostrar aviso (padrão: 1)
   onLogout: () => void
 }
 
-export function useAutoLogout({ enabled, timeoutMinutes, onLogout }: AutoLogoutConfig) {
-  const [remainingTime, setRemainingTime] = useState<number>(timeoutMinutes * 60)
+export function useAutoLogout({ enabled, timeoutMinutes, warningMinutes = 1, onLogout }: AutoLogoutConfig) {
+  const [remainingTime, setRemainingTime] = useState<number>(warningMinutes * 60)
   const [showWarning, setShowWarning] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -20,21 +21,21 @@ export function useAutoLogout({ enabled, timeoutMinutes, onLogout }: AutoLogoutC
     if (countdownRef.current) clearInterval(countdownRef.current)
     
     setShowWarning(false)
-    setRemainingTime(timeoutMinutes * 60)
+    setRemainingTime(warningMinutes * 60)
 
     if (!enabled) return
 
-    console.log(`⏰ Timer de inatividade resetado: ${timeoutMinutes} minutos`)
+    console.log(`⏰ Timer resetado: ${timeoutMinutes}min total, aviso em ${warningMinutes}min antes`)
 
-    // Aviso 1 minuto antes
-    const warningTime = (timeoutMinutes - 1) * 60 * 1000
+    // Aviso X minutos antes (configurável)
+    const warningTime = (timeoutMinutes - warningMinutes) * 60 * 1000
     if (warningTime > 0) {
       warningTimeoutRef.current = setTimeout(() => {
         setShowWarning(true)
-        console.log('⚠️ Aviso: 1 minuto para logout automático!')
+        console.log(`⚠️ Aviso: ${warningMinutes} minuto(s) para logout automático!`)
         
-        // Countdown de 60 segundos
-        let seconds = 60
+        // Countdown
+        let seconds = warningMinutes * 60
         setRemainingTime(seconds)
         
         countdownRef.current = setInterval(() => {
@@ -56,7 +57,7 @@ export function useAutoLogout({ enabled, timeoutMinutes, onLogout }: AutoLogoutC
   }
 
   useEffect(() => {
-    console.log('🔄 useAutoLogout useEffect - enabled:', enabled, 'timeoutMinutes:', timeoutMinutes)
+    console.log('🔄 useAutoLogout useEffect - enabled:', enabled, 'timeoutMinutes:', timeoutMinutes, 'warningMinutes:', warningMinutes)
     
     if (!enabled) {
       console.log('⏸️ Auto-logout DESABILITADO - limpando timers')
@@ -68,7 +69,7 @@ export function useAutoLogout({ enabled, timeoutMinutes, onLogout }: AutoLogoutC
       return
     }
     
-    console.log(`✅ Auto-logout HABILITADO com ${timeoutMinutes} minutos`)
+    console.log(`✅ Auto-logout HABILITADO com ${timeoutMinutes} minutos (aviso ${warningMinutes} min antes)`)
 
     // Eventos que resetam o timer
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']
@@ -88,7 +89,7 @@ export function useAutoLogout({ enabled, timeoutMinutes, onLogout }: AutoLogoutC
       if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current)
       if (countdownRef.current) clearInterval(countdownRef.current)
     }
-  }, [enabled, timeoutMinutes])
+  }, [enabled, timeoutMinutes, warningMinutes])
 
   const cancelLogout = () => {
     resetTimer()

@@ -45,11 +45,13 @@ import { ScannerConfig } from '../components/ScannerConfig'
 import { WebScannerConfig } from '../components/WebScannerConfig'
 import { ExtractedData } from '../utils/ocrUtils'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
 import { scannerService } from '../services/ScannerService'
 import { ocrService } from '../services/OCRService'
 import QRCode from 'qrcode'
 import { useFieldValidation } from '../hooks/useFieldValidation'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
+import { useModal } from '../hooks/useModal'
 // import { useTJSPApi } from '../hooks/useTJSPApi'
 
 // CSS específico para dropdowns de países com scroll pequeno quando expandido
@@ -171,16 +173,60 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const { getTheme, currentTheme } = useAccessibility()
   // const tjspApi = useTJSPApi()
   const theme = getTheme()
+  const modal = useModal()
   
   // Cor do header: teal no light, laranja no dark
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
   const [activeTab, setActiveTab] = useState('cadastro')
+  
+  // Atalhos de teclado específicos para Cliente (definidos antes de serem usados)
+  const atalhosTeclado = [
+    {
+      key: 's',
+      ctrl: true,
+      action: async () => {
+        console.log('⌨️ Ctrl+S - Salvando cliente...')
+        await handleGravar()
+      },
+      description: 'Salvar cliente'
+    },
+    {
+      key: 'n',
+      ctrl: true,
+      action: () => {
+        console.log('⌨️ Ctrl+N - Novo cliente')
+        handleNovo()
+      },
+      description: 'Novo cliente'
+    },
+    {
+      key: 'Escape',
+      action: () => {
+        if (showResultados) {
+          console.log('⌨️ ESC - Fechando resultados')
+          setShowResultados(false)
+        } else {
+          console.log('⌨️ ESC - Fechando janela')
+          onClose()
+        }
+      },
+      description: 'Fechar'
+    }
+  ]
+  
+  // Ativar navegação por teclado
+  useKeyboardNavigation(atalhosTeclado)
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
   const [_focusedField, setFocusedField] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState({ isVisible: false, progress: 0, status: '' })
   const [showScannerConfig, setShowScannerConfig] = useState(false)
   const [isWebEnvironment, setIsWebEnvironment] = useState(false)
+  
+  // Estados para tela intermediária de resultados
+  const [showResultados, setShowResultados] = useState(false)
+  const [resultadosBusca, setResultadosBusca] = useState<any[]>([])
+  const [termoBusca, setTermoBusca] = useState('')
   
   // Detectar ambiente (web vs desktop)
   useEffect(() => {
@@ -723,7 +769,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       setOcrProgress({ isVisible: true, progress: 1.0, status: 'Concluído!' })
 
       // 6. MOSTRAR RESULTADO
-      setTimeout(() => {
+      setTimeout(async () => {
         setOcrProgress({ isVisible: false, progress: 0, status: '' })
         
         const camposPreenchidos = Object.keys(formattedData).filter(key => formattedData[key as keyof ExtractedData])
@@ -736,7 +782,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         
         message += `📄 Dados extraídos:\n${camposPreenchidos.map(campo => `• ${campo}: ${formattedData[campo as keyof ExtractedData]}`).join('\n')}\n\nVerifique os dados e faça ajustes se necessário.`
         
-        alert(message)
+        await modal.alert(message, 'Scanner', 'ℹ️')
       }, 1000)
 
     } catch (error) {
@@ -744,7 +790,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       setOcrProgress({ isVisible: false, progress: 0, status: '' })
       
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-      alert(`❌ Erro no Scanner + OCR:\n\n${errorMessage}\n\nTente novamente ou use o upload manual de arquivo.`)
+      await modal.alert(`Erro no Scanner + OCR:\n\n${errorMessage}\n\nTente novamente ou use o upload manual de arquivo.`, 'Erro', '❌')
     }
   }
 
@@ -777,38 +823,48 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
 
   // Função para iniciar um novo cadastro
-  const handleConsultarCliente = () => {
-    const codigoConsulta = formData.codigo.trim()
-    
-    if (!codigoConsulta || codigoConsulta === '0') {
-      console.log('⚠️ Digite um código para consultar')
-      return
-    }
-    
-    // Buscar clientes salvos no localStorage
+  const handleConsultarCliente = async () => {
     const clientesSalvos = localStorage.getItem('clientes-cadastrados')
+    
     if (!clientesSalvos) {
-      console.log('⚠️ Nenhum cliente cadastrado no sistema')
-      alert('Nenhum cliente cadastrado no sistema')
+      await modal.alert('Nenhum cliente cadastrado no sistema', 'Informação', 'ℹ️')
       return
     }
     
     try {
       const clientes = JSON.parse(clientesSalvos)
-      const clienteEncontrado = clientes.find((c: any) => c.codigo === codigoConsulta)
       
-      if (clienteEncontrado) {
-        // Preencher formulário com os dados do cliente encontrado
-        setFormData(clienteEncontrado)
-        console.log('✅ Cliente encontrado:', clienteEncontrado.nome)
-        alert(`Cliente encontrado:\n${clienteEncontrado.nome}\nCPF: ${clienteEncontrado.cpf}`)
-      } else {
-        console.log('❌ Cliente não encontrado com código:', codigoConsulta)
-        alert(`Cliente com código ${codigoConsulta} não encontrado`)
+      if (clientes.length === 0) {
+        await modal.alert('Nenhum cliente cadastrado no sistema', 'Informação', 'ℹ️')
+        return
       }
+      
+      // Se não digitou código, mostra TODOS
+      const codigoConsulta = formData.codigo.trim()
+      if (!codigoConsulta || codigoConsulta === '0') {
+        setTermoBusca('Todos os Clientes')
+        setResultadosBusca(clientes)
+        setShowResultados(true)
+        return
+      }
+      
+      // Se digitou código, filtra por código
+      const encontrados = clientes.filter((c: any) => 
+        c.codigo.includes(codigoConsulta)
+      )
+      
+      if (encontrados.length === 0) {
+        await modal.alert('Nenhum cliente encontrado', 'Não Encontrado', '❌')
+        return
+      }
+      
+      // SEMPRE mostra tela intermediária
+      setTermoBusca(`Código: ${codigoConsulta}`)
+      setResultadosBusca(encontrados)
+      setShowResultados(true)
     } catch (error) {
       console.error('❌ Erro ao consultar cliente:', error)
-      alert('Erro ao consultar cliente')
+      await modal.alert('Erro ao consultar cliente', 'Erro', '❌')
     }
   }
 
@@ -854,7 +910,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   }
 
   // Função para gravar os dados
-  const handleGravar = () => {
+  const handleGravar = async () => {
     // Validação de campos obrigatórios
     const camposObrigatorios = [
       { campo: 'nome', label: 'Nome' },
@@ -882,7 +938,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       const mensagem = `Por favor, preencha os seguintes campos obrigatórios:\n\n${listaCampos}`
       
       console.log(`❌ ${mensagem}`)
-      alert(mensagem)
+      await modal.alert(mensagem, 'Campos Obrigatórios', '⚠️')
       
       // Focar no primeiro campo vazio se possível
       const primeiroCampo = camposVazios[0].campo
@@ -892,6 +948,23 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       }
       
       return
+    }
+
+    // Verificar se CPF já existe no sistema
+    const clientesSalvosTemp = localStorage.getItem('clientes-cadastrados')
+    if (clientesSalvosTemp) {
+      const clientesTemp = JSON.parse(clientesSalvosTemp)
+      const cpfJaExiste = clientesTemp.filter((c: any) => 
+        c.cpf === formData.cpf && c.codigo !== formData.codigo
+      )
+      
+      if (cpfJaExiste.length > 0) {
+        // Mostrar tela intermediária com os clientes encontrados
+        setTermoBusca(`CPF: ${formData.cpf}`)
+        setResultadosBusca(cpfJaExiste)
+        setShowResultados(true)
+        return
+      }
     }
 
     // Gera código sequencial se ainda não foi gerado (código = '0')
@@ -928,20 +1001,49 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     // Salvar cliente no localStorage
     const clienteParaSalvar = { ...formData, codigo: codigoFinal, numeroCartao: numeroCartaoFinal }
     
+    console.log('🔍 [DEBUG GRAVAÇÃO] Iniciando gravação de cliente...')
+    console.log('   Código:', codigoFinal)
+    console.log('   Nome:', formData.nome)
+    
     const clientesSalvos = localStorage.getItem('clientes-cadastrados')
-    let clientes = clientesSalvos ? JSON.parse(clientesSalvos) : []
+    console.log('   Clientes já salvos:', clientesSalvos ? 'SIM' : 'NÃO')
+    
+    const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : []
+    console.log('   Total de clientes antes:', clientes.length)
     
     // Verificar se já existe (atualizar) ou criar novo
     const indexExistente = clientes.findIndex((c: any) => c.codigo === codigoFinal)
     if (indexExistente >= 0) {
       clientes[indexExistente] = clienteParaSalvar
-      console.log('✏️ Cliente atualizado:', codigoFinal)
+      console.log('✏️ Cliente atualizado no índice:', indexExistente)
     } else {
       clientes.push(clienteParaSalvar)
-      console.log('➕ Novo cliente adicionado:', codigoFinal)
+      console.log('➕ Novo cliente adicionado')
     }
     
-    localStorage.setItem('clientes-cadastrados', JSON.stringify(clientes))
+    console.log('   Total de clientes depois:', clientes.length)
+    
+    const dadosParaSalvar = JSON.stringify(clientes)
+    console.log('   Tamanho dos dados:', dadosParaSalvar.length, 'caracteres')
+    
+    try {
+      localStorage.setItem('clientes-cadastrados', dadosParaSalvar)
+      console.log('💾 localStorage.setItem EXECUTADO')
+      
+      // VERIFICAÇÃO IMEDIATA
+      const verificacao = localStorage.getItem('clientes-cadastrados')
+      if (verificacao) {
+        const clientesVerificados = JSON.parse(verificacao)
+        console.log('✅ VERIFICAÇÃO: Total de clientes após salvar:', clientesVerificados.length)
+        console.log('✅ VERIFICAÇÃO: Cliente salvo existe?', clientesVerificados.some((c: any) => c.codigo === codigoFinal))
+      } else {
+        console.error('❌ VERIFICAÇÃO FALHOU: localStorage.getItem retornou null!')
+      }
+    } catch (error) {
+      console.error('❌ ERRO ao salvar no localStorage:', error)
+      throw error
+    }
+    
     console.log('💾 Cliente gravado com sucesso no localStorage!')
     
     let mensagemSucesso = `✅ Cliente gravado com sucesso!\n\nCódigo: ${codigoFinal}\nNome: ${formData.nome}`
@@ -949,10 +1051,17 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       mensagemSucesso += `\nNúmero Cartão: ${numeroCartaoFinal}`
     }
     
-    alert(mensagemSucesso)
+    await modal.alert(mensagemSucesso, 'Sucesso', '✅')
   }
 
   // Função para limpar os campos
+  // Função para selecionar cliente da lista
+  const handleSelecionarDaLista = (cliente: any) => {
+    setFormData(cliente)
+    setShowResultados(false)
+    console.log('✅ Cliente selecionado da lista:', cliente.nome)
+  }
+
   const handleLimpar = () => {
     setFormData(prev => ({
       ...prev,
@@ -1209,16 +1318,16 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       const scanners = await window.electronAPI.detectScanners()
       
       if (!scanners || scanners.length === 0) {
-        alert('❌ Nenhum scanner detectado!\n\nVerifique se:\n• O scanner está conectado\n• Os drivers TWAIN/SANE estão instalados\n• O dispositivo está ligado')
+        await modal.alert('Nenhum scanner detectado!\n\nVerifique se:\n• O scanner está conectado\n• Os drivers TWAIN/SANE estão instalados\n• O dispositivo está ligado', 'Scanner Não Detectado', '❌')
         return
       }
 
       console.log('📷 Scanners detectados:', scanners)
-      alert('Scanner detectado com sucesso!')
+      await modal.alert('Scanner detectado com sucesso!', 'Sucesso', '✅')
     } catch (error) {
       console.error('❌ Erro ao acessar scanner:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-      alert(`❌ Erro ao acessar scanner:\n${errorMessage}`)
+      await modal.alert(`Erro ao acessar scanner:\n${errorMessage}`, 'Erro', '❌')
     }
   }
 
@@ -1227,13 +1336,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     try {
       // Verificar se Image Capture API está disponível
       if ('ImageCapture' in window) {
-        alert('📷 Funcionalidade de câmera disponível. Utilize seu dispositivo para capturar imagens.')
+        await modal.alert('Funcionalidade de câmera disponível. Utilize seu dispositivo para capturar imagens.', 'Câmera', '📷')
       } else {
-        alert('⚠️ Camera/Scanner não disponível neste navegador.\n\nUtilize um navegador moderno como Chrome, Firefox ou Edge.')
+        await modal.alert('Camera/Scanner não disponível neste navegador.\n\nUtilize um navegador moderno como Chrome, Firefox ou Edge.', 'Não Disponível', '⚠️')
       }
     } catch (error) {
       console.error('❌ Erro ao acessar câmera:', error)
-      alert('❌ Erro ao acessar câmera/scanner')
+      await modal.alert('Erro ao acessar câmera/scanner', 'Erro', '❌')
     }
   }
 
@@ -1245,7 +1354,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       const videoDevices = devices.filter(device => device.kind === 'videoinput')
       
       if (videoDevices.length === 0) {
-        alert('❌ Nenhuma câmera/scanner detectado!')
+        await modal.alert('Nenhuma câmera/scanner detectado!', 'Não Detectado', '❌')
         return
       }
 
@@ -1319,9 +1428,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
   // Configurações reais do scanner (não utilizada - funcionalidade futura)
   /*const showRealScannerConfig = async (scanner: any) => {
-    const resolution = prompt('📐 Resolução (DPI):', '300')
-    const colorMode = prompt('🎨 Modo de cor (Color/Grayscale/Black&White):', 'Color')
-    const pageSize = prompt('📄 Tamanho da página (A4/Letter/Legal):', 'A4')
+    const resolution = await modal.prompt('Resolução (DPI):', '300', 'Configuração', '📐')
+    const colorMode = await modal.prompt('Modo de cor (Color/Grayscale/Black&White):', 'Color', 'Configuração', '🎨')
+    const pageSize = await modal.prompt('Tamanho da página (A4/Letter/Legal):', 'A4', 'Configuração', '📄')
     
     if (!resolution || !colorMode || !pageSize) {
       return null
@@ -1366,7 +1475,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         
         await addScannedDocument(file, 'real-scanner', config)
         
-        alert(`✅ Documento digitalizado com sucesso!\n\n📄 Nome: ${file.name}\n📐 Resolução: ${config.resolution} DPI\n🎨 Modo: ${config.colorMode}\n📏 Tamanho: ${config.pageSize}`)
+        await modal.alert(`Documento digitalizado com sucesso!\n\n📄 Nome: ${file.name}\n📐 Resolução: ${config.resolution} DPI\n🎨 Modo: ${config.colorMode}\n📏 Tamanho: ${config.pageSize}`, 'Sucesso', '✅')
       } else {
         throw new Error(scanResult.error || 'Erro desconhecido na digitalização')
       }
@@ -1474,7 +1583,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     } catch (error) {
       console.error('❌ Erro ao imprimir:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-      alert(`❌ Erro ao imprimir documento:\n${errorMessage}`)
+      await modal.alert(`Erro ao imprimir documento:\n${errorMessage}`, 'Erro', '❌')
     }
   }
 
@@ -1513,7 +1622,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
       if (printResult.success) {
         console.log('✅ Impressão concluída com sucesso!')
-        alert(`✅ Documento "${documento.nome}" enviado para impressão com sucesso!\n\n📄 Cópias: ${printConfig.copies}\n🎨 Modo: ${printConfig.colorMode}\n📏 Papel: ${printConfig.paperSize}\n📐 Orientação: ${printConfig.orientation}`)
+        await modal.alert(`Documento "${documento.nome}" enviado para impressão com sucesso!\n\n📄 Cópias: ${printConfig.copies}\n🎨 Modo: ${printConfig.colorMode}\n📏 Papel: ${printConfig.paperSize}\n📐 Orientação: ${printConfig.orientation}`, 'Sucesso', '✅')
       } else {
         throw new Error(printResult.error || 'Erro desconhecido na impressão')
       }
@@ -1639,29 +1748,29 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         setSelosDigitais(novosSelos)
         
         // Copiar os dados do QR Code para área de transferência
-        navigator.clipboard.writeText(qrData).then(() => {
-          alert('QR Code gerado e dados copiados para a área de transferência!')
-        }).catch(() => {
-          alert('QR Code gerado, mas erro ao copiar dados')
+        navigator.clipboard.writeText(qrData).then(async () => {
+          await modal.alert('QR Code gerado e dados copiados para a área de transferência!', 'Sucesso', '✅')
+        }).catch(async () => {
+          await modal.alert('QR Code gerado, mas erro ao copiar dados', 'Atenção', '⚠️')
         })
       } catch (error) {
         console.error('Erro ao gerar QR Code:', error)
-        alert('Erro ao gerar QR Code')
+        await modal.alert('Erro ao gerar QR Code', 'Erro', '❌')
       }
     }
   }
 
 
-  const handleExcluirSeloLocal = () => {
+  const handleExcluirSeloLocal = async () => {
     if (selosDigitais[seloSelecionado]) {
-      const confirmacao = confirm('Tem certeza que deseja excluir o selo digital local?')
+      const confirmacao = await modal.confirm('Tem certeza que deseja excluir o selo digital local?', 'Confirmar Exclusão', '⚠️')
       if (confirmacao) {
         const novosSelos = selosDigitais.filter((_, index) => index !== seloSelecionado)
         setSelosDigitais(novosSelos)
         if (seloSelecionado >= novosSelos.length) {
           setSeloSelecionado(Math.max(0, novosSelos.length - 1))
         }
-        alert('Selo digital local excluído com sucesso!')
+        await modal.alert('Selo digital local excluído com sucesso!', 'Sucesso', '✅')
       }
     }
   }
@@ -1669,10 +1778,10 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const handleExcluirSeloTJ = async () => {
     if (selosDigitais[seloSelecionado]) {
       const selo = selosDigitais[seloSelecionado]
-      const motivo = prompt('Digite o motivo do cancelamento:')
+      const motivo = await modal.prompt('Digite o motivo do cancelamento:', '', 'Cancelar Selo', '⚠️')
       
       if (motivo && motivo.trim()) {
-        const confirmacao = confirm(`Tem certeza que deseja cancelar o selo digital "${selo.seloDigital}" no TJSP?`)
+        const confirmacao = await modal.confirm(`Tem certeza que deseja cancelar o selo digital "${selo.seloDigital}" no TJSP?`, 'Confirmar Cancelamento', '⚠️')
         if (confirmacao) {
           // const sucesso = await tjspApi.cancelarSelo(selo.id, motivo.trim())
           // if (sucesso) {
@@ -2080,7 +2189,80 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       </div>
 
       {/* Content */}
-      {activeTab === 'cadastro' && (
+      
+      {/* Tela Intermediária de Resultados */}
+      {showResultados && activeTab === 'cadastro' && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: theme.background,
+          zIndex: 100,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '15px',
+          boxSizing: 'border-box',
+          border: `1px solid ${theme.border}`,
+          borderRadius: '8px'
+        }}>
+          <h3 style={{ color: theme.text, marginBottom: '10px', textAlign: 'center' }}>
+            📋 Resultados da Busca: {termoBusca} - Encontrados: {resultadosBusca.length}
+          </h3>
+          <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${theme.border}`, borderRadius: '4px', padding: '5px' }}>
+            {resultadosBusca.map((cliente: any) => (
+              <div
+                key={cliente.codigo}
+                onClick={() => handleSelecionarDaLista(cliente)}
+                style={{
+                  padding: '10px',
+                  borderBottom: `1px solid ${theme.border}`,
+                  cursor: 'pointer',
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  marginBottom: '4px',
+                  borderRadius: '4px',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.primary}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.surface}
+              >
+                <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
+                  {cliente.nome}
+                </div>
+                <div style={{ fontSize: '11px', opacity: 0.8, display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                  <span>Código: {cliente.codigo}</span>
+                  <span>CPF: {cliente.cpf}</span>
+                  <span>Nasc: {cliente.nascimento}</span>
+                  <span>Tel: {cliente.telefone}</span>
+                </div>
+                <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
+                  {cliente.endereco && `${cliente.endereco}, ${cliente.numero} - ${cliente.bairro} - ${cliente.cidade}/${cliente.ufEndereco}`}
+                </div>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowResultados(false)}
+            style={{
+              padding: '8px 16px',
+              marginTop: '15px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            ← Voltar ao Formulário
+          </button>
+        </div>
+      )}
+      
+      {activeTab === 'cadastro' && !showResultados && (
         <form style={formStyles}>
 
           {/* Linha 1: Código, Nome, Número Cartão */}
@@ -2134,26 +2316,23 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                   onClick={handleConsultarCliente}
                   style={{
                     padding: '0',
-                    border: `1px solid ${theme.border}`,
-                    backgroundColor: theme.surface,
+                    border: 'none',
+                    backgroundColor: 'transparent',
                     cursor: 'pointer',
-                    fontSize: '12px',
+                    fontSize: '14px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '24px',
                     width: '24px',
                     minWidth: '24px',
-                    borderRadius: '3px',
+                    borderRadius: '0',
                     flexShrink: 0,
-                    transition: 'all 0.2s ease'
+                    transition: 'opacity 0.2s ease',
+                    color: '#4CAF50'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.border
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.surface
-                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                   title="Consultar cliente pelo código"
                 >
                   🔍
@@ -2173,7 +2352,50 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                   maxLength={100}
                   required
                 />
-                <button type="button" style={{...secondaryButtonStyles, height: '24px'}}>...</button>
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                    const clientesSalvos = localStorage.getItem('clientes-cadastrados')
+                    if (!clientesSalvos) {
+                      await modal.alert('Nenhum cliente cadastrado', 'Informação', 'ℹ️')
+                      return
+                    }
+                    
+                    const clientes = JSON.parse(clientesSalvos)
+                    const nomeBusca = formData.nome.trim()
+                    
+                    // Se não digitou nada, mostra TODOS
+                    if (!nomeBusca) {
+                      setTermoBusca('Todos os Clientes')
+                      setResultadosBusca(clientes)
+                      setShowResultados(true)
+                      return
+                    }
+                    
+                    // Se digitou algo, filtra por nome
+                    const encontrados = clientes.filter((c: any) => 
+                      c.nome.toUpperCase().includes(nomeBusca.toUpperCase())
+                    )
+                    
+                    if (encontrados.length === 0) {
+                      await modal.alert('Nenhum cliente encontrado', 'Não Encontrado', '❌')
+                      return
+                    }
+                    
+                    // SEMPRE mostra tela intermediária
+                    setTermoBusca(nomeBusca ? `Nome: ${nomeBusca}` : 'Todos os Clientes')
+                    setResultadosBusca(encontrados)
+                    setShowResultados(true)
+                  }}
+                  style={{
+                    ...secondaryButtonStyles, 
+                    height: '24px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    padding: '0 6px'
+                  }}
+                  title="Buscar cliente por nome"
+                >🔍</button>
               </div>
             </div>
 
@@ -3422,6 +3644,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
       progress={ocrProgress.progress}
       status={ocrProgress.status}
     />
+    <modal.ModalComponent />
   </>
   )
 }

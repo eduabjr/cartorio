@@ -5,6 +5,7 @@ import React, { useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { getRelativeFontSize } from '../utils/fontUtils'
+import { useModal } from '../hooks/useModal'
 
 interface ProtocoloCancelamentoPageProps {
   onClose: () => void
@@ -15,6 +16,7 @@ interface ProtocoloCancelamento {
   id: string
   protocolo: string
   dataEntrada: string
+  natureza: string
   tipo: string
   outorgante: string
   outorgado: string
@@ -31,6 +33,7 @@ interface ProtocoloCancelamento {
 export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: ProtocoloCancelamentoPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
@@ -38,6 +41,7 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
   const [formData, setFormData] = useState({
     protocolo: '',
     dataEntrada: '',
+    natureza: '',
     tipo: '',
     outorgante: '',
     outorgado: '',
@@ -66,6 +70,7 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
     setFormData({
       protocolo: '',
       dataEntrada: '',
+      natureza: '',
       tipo: '',
       outorgante: '',
       outorgado: '',
@@ -81,39 +86,53 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
     setSelectedId(null)
   }
 
-  const handleGravar = () => {
-    if (!formData.protocolo || !formData.tipo || !formData.dataCancelamento || !formData.motivoCancelamento) {
-      alert('⚠️ Por favor, preencha os campos obrigatórios: Protocolo, Tipo, Data Cancelamento e Motivo Cancelamento')
+  const handleGravar = async () => {
+    if (!formData.tipo || !formData.dataCancelamento || !formData.motivoCancelamento) {
+      await modal.alert('Por favor, preencha os campos obrigatórios: Tipo, Data Cancelamento e Motivo Cancelamento', 'Campos Obrigatórios', '⚠️')
       return
+    }
+
+    // Gerar código sequencial se for novo (protocolo vazio ou '0')
+    let protocoloFinal = formData.protocolo
+    if (!formData.protocolo || formData.protocolo === '0' || formData.protocolo === '') {
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoProtocoloCancelamento')
+      const proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      protocoloFinal = proximoCodigo.toString()
+      localStorage.setItem('ultimoCodigoProtocoloCancelamento', protocoloFinal)
+      
+      setFormData(prev => ({ ...prev, protocolo: protocoloFinal }))
+      console.log('🆔 Código de protocolo gerado:', protocoloFinal)
     }
 
     if (selectedId) {
       // Atualizar existente
       const novosProtocolos = protocolos.map(p => 
         p.id === selectedId 
-          ? { ...p, ...formData }
+          ? { ...p, ...formData, protocolo: protocoloFinal }
           : p
       )
       setProtocolos(novosProtocolos)
       localStorage.setItem('protocolos-cancelamento', JSON.stringify(novosProtocolos))
-      alert('✅ Protocolo atualizado com sucesso!')
+      await modal.alert('Protocolo atualizado com sucesso!', 'Sucesso', '✅')
     } else {
       // Criar novo
       const novoProtocolo: ProtocoloCancelamento = {
         id: Date.now().toString(),
-        ...formData
+        ...formData,
+        protocolo: protocoloFinal
       }
       const novosProtocolos = [...protocolos, novoProtocolo]
       setProtocolos(novosProtocolos)
       localStorage.setItem('protocolos-cancelamento', JSON.stringify(novosProtocolos))
-      alert('✅ Protocolo cancelado e gravado com sucesso!')
+      await modal.alert(`Protocolo cancelado e gravado com sucesso!\n\nProtocolo: ${protocoloFinal}`, 'Sucesso', '✅')
     }
     
     handleNovo()
   }
 
-  const handlePesquisar = () => {
-    const protocolo = prompt('Digite o número do protocolo:')
+  const handlePesquisar = async () => {
+    const protocolo = await modal.prompt('Digite o número do protocolo:', '', 'Pesquisar Protocolo', '🔍')
     if (!protocolo) return
     
     const encontrado = protocolos.find(p => p.protocolo === protocolo.trim())
@@ -122,18 +141,19 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
       setSelectedId(encontrado.id)
       console.log('✅ Protocolo encontrado:', encontrado)
     } else {
-      alert('❌ Protocolo não encontrado!')
+      await modal.alert('Protocolo não encontrado!', 'Não Encontrado', '❌')
     }
   }
 
-  const handleExcluir = () => {
+  const handleExcluir = async () => {
     if (selectedId) {
-      if (confirm('⚠️ Tem certeza que deseja excluir este protocolo?')) {
+      const confirmado = await modal.confirm('Tem certeza que deseja excluir este protocolo?', 'Confirmar Exclusão', '⚠️')
+      if (confirmado) {
         const novosProtocolos = protocolos.filter(p => p.id !== selectedId)
         setProtocolos(novosProtocolos)
         localStorage.setItem('protocolos-cancelamento', JSON.stringify(novosProtocolos))
         handleNovo()
-        alert('✅ Protocolo excluído!')
+        await modal.alert('Protocolo excluído com sucesso!', 'Sucesso', '✅')
       }
     }
   }
@@ -250,7 +270,8 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
   }
 
   return (
-    <BasePage
+    <>
+      <BasePage
       title="Cancelamento de Protocolos"
       onClose={onClose}
       width="900px"
@@ -279,7 +300,7 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                 <div style={rowStyles}>
                   <div style={fieldStyles('0 0 250px')}>
                     <label style={labelStyles}>Protocolo *</label>
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'stretch' }}>
+                    <div style={{ display: 'flex', gap: '4px' }}>
                       <input
                         type="text"
                         value={formData.protocolo}
@@ -290,7 +311,12 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                             handlePesquisar()
                           }
                         }}
-                        style={{...inputStyles, height: '32px'}}
+                        style={{
+                          ...inputStyles,
+                          padding: '7px 10px',
+                          height: '34px',
+                          boxSizing: 'border-box' as const
+                        }}
                         placeholder="Número do protocolo"
                       />
                       <button
@@ -305,8 +331,9 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: '32px',
-                          minWidth: '32px',
+                          height: '34px',
+                          width: '34px',
+                          minWidth: '34px',
                           flexShrink: 0,
                           borderRadius: '4px',
                           transition: 'all 0.2s ease',
@@ -345,9 +372,19 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                   </div>
                 </div>
 
-                {/* Linha 2: Tipo, Data p/ Entrega e Hora p/ Entrega */}
+                {/* Linha 2: Natureza, Tipo, Data p/ Entrega e Hora p/ Entrega */}
                 <div style={rowStyles}>
-                  <div style={fieldStyles('0 0 250px')}>
+                  <div style={fieldStyles('2')}>
+                    <label style={labelStyles}>Natureza</label>
+                    <input
+                      type="text"
+                      value={formData.natureza}
+                      onChange={(e) => handleInputChange('natureza', e.target.value)}
+                      style={inputStyles}
+                      placeholder="Natureza"
+                    />
+                  </div>
+                  <div style={fieldStyles('0 0 200px')}>
                     <label style={labelStyles}>Tipo *</label>
                     <select
                       value={formData.tipo}
@@ -362,7 +399,7 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                       ))}
                     </select>
                   </div>
-                  <div style={{...fieldStyles('0 0 165px'), marginLeft: 'auto'}}>
+                  <div style={fieldStyles('0 0 165px')}>
                     <label style={labelStyles}>Data p/ Entrega</label>
                     <input
                       type="date"
@@ -406,7 +443,7 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                   </div>
                 </div>
 
-                {/* Linha 5: Descrição */}
+                {/* Linha 4: Descrição */}
                 <div style={fieldStyles()}>
                   <label style={labelStyles}>Descrição</label>
                   <textarea
@@ -421,7 +458,7 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                   />
                 </div>
 
-                {/* Linha 6: Ordem Sinal Público e Responsável */}
+                {/* Linha 5: Ordem Sinal Público e Responsável */}
                 <div style={rowStyles}>
                   <div style={fieldStyles('0 0 200px')}>
                     <label style={labelStyles}>Ordem Sinal Público</label>
@@ -445,7 +482,7 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                   </div>
                 </div>
 
-                {/* Linha 7: Data Cancelamento */}
+                {/* Linha 6: Data Cancelamento */}
                 <div style={{ ...fieldStyles(), maxWidth: '220px' }}>
                   <label style={labelStyles}>Data Cancelamento *</label>
                   <input
@@ -456,7 +493,7 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
                   />
                 </div>
 
-                {/* Linha 8: Motivo Cancelamento */}
+                {/* Linha 7: Motivo Cancelamento */}
                 <div style={fieldStyles()}>
                   <label style={labelStyles}>Motivo Cancelamento *</label>
                   <textarea
@@ -505,6 +542,8 @@ export function ProtocoloCancelamentoPage({ onClose, resetToOriginalPosition }: 
           </>
       </div>
     </BasePage>
+    <modal.ModalComponent />
+    </>
   )
 }
 

@@ -5,6 +5,7 @@ import { UF_OPTIONS } from '../constants/selectOptions'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { viaCepService } from '../services/ViaCepService'
+import { useModal } from '../hooks/useModal'
 
 interface DNVDOBloqueadasPageProps {
   onClose: () => void
@@ -13,6 +14,7 @@ interface DNVDOBloqueadasPageProps {
 export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   // Cor do header: teal no light, laranja no dark
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
@@ -106,7 +108,7 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
   }
 
   // Função para gravar registro
-  const handleGravar = () => {
+  const handleGravar = async () => {
     console.log('Salvando declaração bloqueada:', formData)
     
     // Gerar código sequencial se novo registro
@@ -169,7 +171,7 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
     localStorage.setItem('declaracoesBloqueadas', JSON.stringify(declaracoes))
     
     console.log('✅ Declaração bloqueada salva com sucesso!')
-    alert(`✅ Declaração bloqueada salva com sucesso!\n\nCódigo: ${codigoFinal}\nTipo: ${formData.tipoDeclaracao}\nNúmero: ${formData.numeroDeclaracao}`)
+    await modal.alert(`Declaração bloqueada salva com sucesso!\n\nCódigo: ${codigoFinal}\nTipo: ${formData.tipoDeclaracao}\nNúmero: ${formData.numeroDeclaracao}`, 'Sucesso', '✅')
     
     // Reset do formulário para próximo preenchimento (mantém próximo código)
     const proximoCodigo = parseInt(codigoFinal) + 1
@@ -198,15 +200,16 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
   }
 
   // Função para excluir registro
-  const handleExcluir = () => {
+  const handleExcluir = async () => {
     if (!selectedId) {
-      alert('⚠️ Nenhuma declaração selecionada para excluir.')
+      await modal.alert('Nenhuma declaração selecionada para excluir.', 'Atenção', '⚠️')
       console.log('⚠️ Nenhuma declaração selecionada para excluir.')
       return
     }
     
     // Confirmar exclusão
-    if (!confirm('Tem certeza que deseja excluir esta declaração bloqueada?')) {
+    const confirmado = await modal.confirm('Tem certeza que deseja excluir esta declaração bloqueada?', 'Confirmar Exclusão', '⚠️')
+    if (!confirmado) {
       return
     }
     
@@ -223,7 +226,7 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
         localStorage.setItem('declaracoesBloqueadas', JSON.stringify(declaracoes))
         
         console.log('✅ Declaração bloqueada excluída.')
-        alert('✅ Declaração bloqueada excluída com sucesso!')
+        await modal.alert('Declaração bloqueada excluída com sucesso!', 'Sucesso', '✅')
         
         // Limpar formulário
         handleNovo()
@@ -232,7 +235,7 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
         carregarDeclaracoes()
       } catch (error) {
         console.error('Erro ao excluir declaração:', error)
-        alert('❌ Erro ao excluir declaração.')
+        await modal.alert('Erro ao excluir declaração.', 'Erro', '❌')
       }
     }
   }
@@ -418,16 +421,17 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
   })
 
   return (
-      <BasePage
-        title="Cadastro de Declaração Bloqueada"
-        onClose={onClose}
-        width="700px"
-        height="660px"
-        minWidth="700px"
-        minHeight="660px"
-        resizable={false}
-        headerColor={headerColor}
-      >
+      <>
+        <BasePage
+          title="Cadastro de Declaração Bloqueada"
+          onClose={onClose}
+          width="700px"
+          height="660px"
+          minWidth="700px"
+          minHeight="660px"
+          resizable={false}
+          headerColor={headerColor}
+        >
       <div style={{
         padding: '16px',
         height: '100%',
@@ -1104,9 +1108,9 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
                   🧹 Limpar
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (declaracoesFiltradas.length === 0) {
-                      alert('⚠️ Não há registros para gerar o relatório.')
+                      await modal.alert('Não há registros para gerar o relatório.', 'Atenção', '⚠️')
                       return
                     }
 
@@ -1168,10 +1172,10 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
                       window.URL.revokeObjectURL(url)
                       
                       console.log(`✅ Relatório gerado com sucesso! ${declaracoesFiltradas.length} registro(s)`)
-                      alert(`✅ Relatório Excel gerado com sucesso!\n\n${declaracoesFiltradas.length} registro(s) exportado(s)`)
+                      await modal.alert(`Relatório Excel gerado com sucesso!\n\n${declaracoesFiltradas.length} registro(s) exportado(s)`, 'Sucesso', '✅')
                     } catch (error) {
                       console.error('Erro ao gerar relatório:', error)
-                      alert('❌ Erro ao gerar relatório. Tente novamente.')
+                      await modal.alert('Erro ao gerar relatório. Tente novamente.', 'Erro', '❌')
                     }
                   }}
                   style={{
@@ -1222,6 +1226,8 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
         )}
       </div>
     </BasePage>
+    <modal.ModalComponent />
+    </>
   )
 }
 

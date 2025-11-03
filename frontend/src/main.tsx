@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import ProtectedApp from './components/ProtectedApp.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { translateError } from './utils/errorTranslator.ts'
 import './index.css'
 
 /**
@@ -50,15 +52,31 @@ const queryClient = new QueryClient({
 })
 
 
+// Tratador global de erros não capturados
+window.addEventListener('error', (event) => {
+  console.error('❌ Erro global capturado:')
+  console.error('   Original:', event.message)
+  console.error('   Traduzido:', translateError(event.error || event.message))
+})
+
+// Tratador global de promises rejeitadas
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('❌ Promise rejeitada não tratada:')
+  console.error('   Original:', event.reason)
+  console.error('   Traduzido:', translateError(event.reason))
+})
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ProtectedApp>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ProtectedApp>
+    <ErrorBoundary>
+      <ProtectedApp>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ProtectedApp>
+    </ErrorBoundary>
   </React.StrictMode>,
 )
 

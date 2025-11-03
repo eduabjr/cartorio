@@ -213,7 +213,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
   })
 
   // Hook para modais internos
-  const { modalState, showAlert, showConfirm, showPrompt, closeModal } = useModal()
+  const modal = useModal()
 
   // Carregar dados do localStorage
   useEffect(() => {
@@ -292,7 +292,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
    */
   const handleGravarTipo = async () => {
     if (!tipoForm.tipoLivroSeletor || !tipoForm.indice || !tipoForm.atoLivro) {
-      await showAlert('⚠️ Preencha todos os campos obrigatórios!')
+      await modal.alert('⚠️ Preencha todos os campos obrigatórios!')
       return
     }
 
@@ -327,7 +327,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
     setTiposLivro(tipos)
     localStorage.setItem('tiposLivro', JSON.stringify(tipos))
     
-    await showAlert(`✅ Tipo de livro salvo com sucesso!\n\nCódigo: ${codigoFinal}`)
+    await modal.alert(`✅ Tipo de livro salvo com sucesso!\n\nCódigo: ${codigoFinal}`)
     
     // Reset para próximo cadastro com código incrementado
     const proximoCodigo = parseInt(codigoFinal) + 1
@@ -347,17 +347,17 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
    */
   const handleExcluirTipo = async () => {
     if (!selectedTipoId) {
-      await showAlert('⚠️ Selecione um tipo de livro para excluir')
+      await modal.alert('⚠️ Selecione um tipo de livro para excluir')
       return
     }
 
-    const confirmado = await showConfirm('Tem certeza que deseja excluir este tipo de livro?')
+    const confirmado = await modal.confirm('Tem certeza que deseja excluir este tipo de livro?')
     if (confirmado) {
       const tipos = tiposLivro.filter(t => t.id !== selectedTipoId)
       setTiposLivro(tipos)
       localStorage.setItem('tiposLivro', JSON.stringify(tipos))
       handleNovoTipo()
-      await showAlert('✅ Tipo de livro excluído com sucesso!')
+      await modal.alert('✅ Tipo de livro excluído com sucesso!')
     }
   }
 
@@ -380,12 +380,12 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
   const handleGravarConfiguracao = async () => {
     // Validação
     if (!configForm.atoLivro || !configForm.quantidade) {
-      await showAlert('⚠️ Preencha os campos obrigatórios: Ato Livro e Quantidade!')
+      await modal.alert('⚠️ Preencha os campos obrigatórios: Ato Livro e Quantidade!')
       return
     }
     
     if (configForm.codigo === '') {
-      await showAlert('⚠️ Código não foi gerado! Selecione um Ato Livro.')
+      await modal.alert('⚠️ Código não foi gerado! Selecione um Ato Livro.')
       return
     }
     
@@ -488,7 +488,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
     
     console.log(`📚 ${livrosAtualizadosCount} livros ativos atualizados para ${configForm.atoLivro}`)
     
-    await showAlert('✅ Configuração de livro salva com sucesso! Livros ativos atualizados.')
+    await modal.alert('✅ Configuração de livro salva com sucesso! Livros ativos atualizados.')
     handleCancelarConfiguracao()
   }
 
@@ -650,7 +650,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
         
         if (livrosDoTipo.length === 0) {
           // Primeiro livro deste tipo: solicitar código inicial
-          const codigoInicialInput = await showPrompt(
+          const codigoInicialInput = await modal.prompt(
             `📚 Livro ${livro.tipo} nº ${livro.livro} ENCERRADO!\n\nInforme o código inicial para o próximo livro:\n\nTipo: ${livro.tipo}\nLivro: ${proximoNumeroLivro}\n\nDigite o número inicial do código:`,
             '',
             'Código Inicial'
@@ -659,7 +659,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
           // Validar se o usuário cancelou ou digitou algo inválido
           if (codigoInicialInput === null) {
             // Usuário cancelou - não criar o próximo livro
-            await showAlert(`📚 Livro ${livro.tipo} nº ${livro.livro} ENCERRADO!\n\n⚠️ Criação do próximo livro cancelada pelo usuário.`)
+            await modal.alert(`📚 Livro ${livro.tipo} nº ${livro.livro} ENCERRADO!\n\n⚠️ Criação do próximo livro cancelada pelo usuário.`)
             setLivrosCorrente(livrosAtualizados)
             localStorage.setItem('livrosCorrente', JSON.stringify(livrosAtualizados))
             return
@@ -668,7 +668,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
           const codigoInicial = parseInt(codigoInicialInput.trim())
           
           if (isNaN(codigoInicial) || codigoInicial < 0) {
-            await showAlert('⚠️ Por favor, digite um número válido (0 ou maior)!')
+            await modal.alert('⚠️ Por favor, digite um número válido (0 ou maior)!')
             setLivrosCorrente(livrosAtualizados)
             localStorage.setItem('livrosCorrente', JSON.stringify(livrosAtualizados))
             return
@@ -688,7 +688,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
         )
         
         if (codigoExistente) {
-          await showAlert(`⚠️ Já existe um livro com código ${proximoCodigo} para este tipo!\n\nEscolha outro número.`)
+          await modal.alert(`⚠️ Já existe um livro com código ${proximoCodigo} para este tipo!\n\nEscolha outro número.`)
           setLivrosCorrente(livrosAtualizados)
           localStorage.setItem('livrosCorrente', JSON.stringify(livrosAtualizados))
           return
@@ -712,7 +712,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
         
         livrosAtualizados.push(novoLivro)
         console.log(`✅ Novo livro criado:`, novoLivro)
-        await showAlert(`📚 Livro ${livro.tipo} nº ${livro.livro} ENCERRADO!\n✅ Livro ${livro.tipo} nº ${proximoNumeroLivro} criado automaticamente!\n📋 Código: ${proximoCodigo}`)
+        await modal.alert(`📚 Livro ${livro.tipo} nº ${livro.livro} ENCERRADO!\n✅ Livro ${livro.tipo} nº ${proximoNumeroLivro} criado automaticamente!\n📋 Código: ${proximoCodigo}`)
       } else {
         console.log(`❌ Configuração não encontrada para ${livro.atoLivro}`)
       }
@@ -742,7 +742,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
   const handleUsarFolha = async (livroId: string) => {
     const livro = livrosCorrente.find(l => l.id === livroId)
     if (!livro || livro.encerrado) {
-      await showAlert('⚠️ Este livro está encerrado!')
+      await modal.alert('⚠️ Este livro está encerrado!')
       return
     }
     
@@ -805,7 +805,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
    */
   const handleAlterarLivro = async () => {
     if (!selectedLivroId) {
-      await showAlert('⚠️ Selecione um livro para alterar')
+      await modal.alert('⚠️ Selecione um livro para alterar')
       return
     }
     
@@ -813,7 +813,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
     if (!livro) return
     
     if (livro.encerrado) {
-      await showAlert('⚠️ Não é possível alterar um livro encerrado!')
+      await modal.alert('⚠️ Não é possível alterar um livro encerrado!')
       return
     }
     
@@ -846,7 +846,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
     
     // Validar termo
     if (!dadosEdicao.termo || isNaN(parseInt(dadosEdicao.termo))) {
-      await showAlert('⚠️ Termo deve ser um número válido!')
+      await modal.alert('⚠️ Termo deve ser um número válido!')
       return
     }
     
@@ -856,7 +856,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
     const novaFolha = dadosEdicao.folhas.trim()
     
     if (!novaFolha) {
-      await showAlert('⚠️ Folha não pode estar vazia!')
+      await modal.alert('⚠️ Folha não pode estar vazia!')
       return
     }
     
@@ -864,14 +864,14 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
       // Para página, deve ser apenas número
       novaFolhaAtual = parseInt(novaFolha)
       if (isNaN(novaFolhaAtual)) {
-        await showAlert('⚠️ Para numeração por PÁGINA, digite apenas o número (ex: 15)')
+        await modal.alert('⚠️ Para numeração por PÁGINA, digite apenas o número (ex: 15)')
         return
       }
     } else {
       // Para folhas, deve ser número + F ou V
       const match = novaFolha.match(/^(\d+)([FV])$/i)
       if (!match) {
-        await showAlert('⚠️ Para numeração por FOLHAS, digite número + F ou V (ex: 15F ou 15V)')
+        await modal.alert('⚠️ Para numeração por FOLHAS, digite número + F ou V (ex: 15F ou 15V)')
         return
       }
       novaFolhaAtual = parseInt(match[1])
@@ -896,7 +896,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
     setLivrosCorrente(livrosAtualizados)
     localStorage.setItem('livrosCorrente', JSON.stringify(livrosAtualizados))
     setEditandoLivroId(null)
-    await showAlert('✅ Livro alterado com sucesso!')
+    await modal.alert('✅ Livro alterado com sucesso!')
   }
 
   /**
@@ -919,7 +919,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
    */
   const handleEditarConfiguracao = async () => {
     if (!selectedLivroId) {
-      await showAlert('⚠️ Selecione um livro para editar a configuração')
+      await modal.alert('⚠️ Selecione um livro para editar a configuração')
       return
     }
 
@@ -932,7 +932,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
     const config = configs.find((c: any) => c.atoLivro === livro.atoLivro)
 
     if (!config) {
-      await showAlert('⚠️ Configuração não encontrada para este livro!')
+      await modal.alert('⚠️ Configuração não encontrada para este livro!')
       return
     }
 
@@ -980,24 +980,24 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
    */
   const handleExcluirLivro = async () => {
     if (!selectedLivroId) {
-      await showAlert('⚠️ Selecione um livro para excluir')
+      await modal.alert('⚠️ Selecione um livro para excluir')
       return
     }
 
     // Verificar se o livro está encerrado
     const livroSelecionado = livrosCorrente.find(l => l.id === selectedLivroId)
     if (livroSelecionado?.encerrado) {
-      await showAlert('⚠️ Não é possível excluir um livro encerrado!')
+      await modal.alert('⚠️ Não é possível excluir um livro encerrado!')
       return
     }
 
-    const confirmado = await showConfirm('Tem certeza que deseja excluir este livro?')
+    const confirmado = await modal.confirm('Tem certeza que deseja excluir este livro?')
     if (confirmado) {
       const livros = livrosCorrente.filter(l => l.id !== selectedLivroId)
       setLivrosCorrente(livros)
       localStorage.setItem('livrosCorrente', JSON.stringify(livros))
       setSelectedLivroId(null)
-      await showAlert('✅ Livro excluído com sucesso!')
+      await modal.alert('✅ Livro excluído com sucesso!')
     }
   }
 
@@ -1210,7 +1210,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                       { indice: '7', tipo: 'E', ato: 'Livro E - Outros Atos (Emancipação, Interdição, etc.)' }
                     ]
                     
-                    const confirmado = await showConfirm('Deseja gerar automaticamente os 7 tipos de livro padrão? Isso irá sobrescrever os registros existentes.')
+                    const confirmado = await modal.confirm('Deseja gerar automaticamente os 7 tipos de livro padrão? Isso irá sobrescrever os registros existentes.')
                     if (confirmado) {
                       const novosAtos = atosAutomaticos.map((ato, index) => ({
                         id: Date.now().toString() + index,
@@ -1225,7 +1225,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                       localStorage.setItem('ultimoCodigoTipoLivro', '7')
                       
                       handleNovoTipo()
-                      await showAlert('✅ 7 tipos de livro gerados automaticamente com sucesso!')
+                      await modal.alert('✅ 7 tipos de livro gerados automaticamente com sucesso!')
                     }
                   }}
                   disabled={tiposLivro.length >= 7}
@@ -1641,9 +1641,8 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '6px', 
-                        cursor: (!configForm.codigo || configForm.codigo === '') ? 'not-allowed' : 'pointer', 
-                        color: (!configForm.codigo || configForm.codigo === '') ? '#6b7280' : theme.text,
-                        opacity: (!configForm.codigo || configForm.codigo === '') ? 0.5 : 1
+                        cursor: 'pointer', 
+                        color: theme.text
                       }}>
                         <input
                           type="radio"
@@ -1651,7 +1650,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                           onChange={async () => {
                             const quantidadeAtual = parseInt(configForm.quantidade) || 0
                             if (quantidadeAtual > 150) {
-                              await showAlert(`⚠️ A quantidade atual (${quantidadeAtual}) excede o limite máximo para Livro Desdobrado (150)!\n\nA quantidade será ajustada para 150.`)
+                              await modal.alert(`⚠️ A quantidade atual (${quantidadeAtual}) excede o limite máximo para Livro Desdobrado (150)!\n\nA quantidade será ajustada para 150.`)
                               setConfigForm({ 
                                 ...configForm, 
                                 livroDesdobrado: 'sim',
@@ -1662,7 +1661,6 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                               setConfigForm({ ...configForm, livroDesdobrado: 'sim' })
                             }
                           }}
-                          disabled={!configForm.codigo || configForm.codigo === ''}
                         />
                         Sim
                       </label>
@@ -1670,15 +1668,13 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '6px', 
-                        cursor: (!configForm.codigo || configForm.codigo === '') ? 'not-allowed' : 'pointer', 
-                        color: (!configForm.codigo || configForm.codigo === '') ? '#6b7280' : theme.text,
-                        opacity: (!configForm.codigo || configForm.codigo === '') ? 0.5 : 1
+                        cursor: 'pointer', 
+                        color: theme.text
                       }}>
                         <input
                           type="radio"
                           checked={configForm.livroDesdobrado === 'nao'}
                           onChange={() => setConfigForm({ ...configForm, livroDesdobrado: 'nao' })}
-                          disabled={!configForm.codigo || configForm.codigo === ''}
                         />
                         Não
                       </label>
@@ -1731,11 +1727,11 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                       // Validar limite máximo
                       if (quantidade && !isNaN(quantidadeNum)) {
                         if (quantidadeNum > limiteMaximo) {
-                          await showAlert(`⚠️ A quantidade máxima permitida é ${limiteMaximo} ${configForm.livroDesdobrado === 'sim' ? '(Livro Desdobrado)' : '(Livro Não Desdobrado)'}!`)
+                          await modal.alert(`⚠️ A quantidade máxima permitida é ${limiteMaximo} ${configForm.livroDesdobrado === 'sim' ? '(Livro Desdobrado)' : '(Livro Não Desdobrado)'}!`)
                           return
                         }
                         if (quantidadeNum < 1) {
-                          await showAlert('⚠️ A quantidade deve ser no mínimo 1!')
+                          await modal.alert('⚠️ A quantidade deve ser no mínimo 1!')
                           return
                         }
                       }
@@ -1874,16 +1870,48 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                   ✅ Gravar
                 </button>
                 <button
-                  onClick={handleCancelarConfiguracao}
+                  onClick={() => {
+                    // Limpar formulário
+                    setConfigForm({
+                      id: '',
+                      codigo: '',
+                      atoLivro: '',
+                      quantidade: '',
+                      folhaInicial: '',
+                      folhaInicialTipo: 'V',
+                      folhaFinal: '',
+                      folhaFinalTipo: 'F',
+                      livroDesdobrado: 'nao',
+                      tipoNumeracao: 'folhas',
+                      atosLivroE: [],
+                      ultimaNumLivro: '',
+                      ultimaNumTermo: '',
+                      ultimaNumFolhas: '',
+                      ultimaNumFolhasTipo: 'V'
+                    })
+                    console.log('🧹 Formulário de configuração limpo!')
+                  }}
                   style={{
                     ...buttonStyles,
-                    backgroundColor: '#ef4444',
+                    backgroundColor: '#f59e0b',
                     color: 'white'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
                 >
-                  ❌ Cancelar
+                  🧹 Limpar
+                </button>
+                <button
+                  onClick={onClose}
+                  style={{
+                    ...buttonStyles,
+                    backgroundColor: '#6c757d',
+                    color: 'white'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#495057'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
+                >
+                  🚪 Retornar
                 </button>
               </div>
             </div>
@@ -1917,7 +1945,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                           )
                           
                           if (livroAtivoDoTipo) {
-                            await showAlert(`⚠️ Já existe um livro ativo do tipo ${tipoSelecionado.tipoLivroSeletor}!\n\nApenas 1 livro por tipo pode estar ativo por vez.\nO próximo livro será criado automaticamente quando o atual atingir sua última folha.`)
+                            await modal.alert(`⚠️ Já existe um livro ativo do tipo ${tipoSelecionado.tipoLivroSeletor}!\n\nApenas 1 livro por tipo pode estar ativo por vez.\nO próximo livro será criado automaticamente quando o atual atingir sua última folha.`)
                             return
                           }
                           
@@ -1927,7 +1955,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                           const config = configs.find((c: any) => c.atoLivro === tipoSelecionado.atoLivro)
                           
                           if (!config) {
-                            await showAlert('⚠️ Configure este tipo de livro antes de criar um livro corrente!')
+                            await modal.alert('⚠️ Configure este tipo de livro antes de criar um livro corrente!')
                             return
                           }
                           
@@ -1940,7 +1968,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                           
                           if (livrosDoTipo.length === 0) {
                             // Primeiro livro deste tipo: solicitar código inicial
-                            const codigoInicialInput = await showPrompt(
+                            const codigoInicialInput = await modal.prompt(
                               `📚 Informe o código inicial para o livro:\n\nTipo: ${tipoSelecionado.tipoLivroSeletor} - ${tipoSelecionado.atoLivro}\n\nDigite o número inicial do código:`,
                               '',
                               'Código Inicial'
@@ -1955,7 +1983,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                             const codigoInicial = parseInt(codigoInicialInput.trim())
                             
                             if (isNaN(codigoInicial) || codigoInicial < 0) {
-                              await showAlert('⚠️ Por favor, digite um número válido (0 ou maior)!')
+                              await modal.alert('⚠️ Por favor, digite um número válido (0 ou maior)!')
                               return
                             }
                             
@@ -1972,7 +2000,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                           )
                           
                           if (codigoExistente) {
-                            await showAlert(`⚠️ Já existe um livro com código ${proximoCodigo} para este tipo!\n\nEscolha outro número.`)
+                            await modal.alert(`⚠️ Já existe um livro com código ${proximoCodigo} para este tipo!\n\nEscolha outro número.`)
                             return
                           }
                           
@@ -2032,7 +2060,7 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
                           const novosLivros = [...livrosCorrente, novoLivro]
                           setLivrosCorrente(novosLivros)
                           localStorage.setItem('livrosCorrente', JSON.stringify(novosLivros))
-                          await showAlert(`✅ Livro ${tipoSelecionado.tipoLivroSeletor} nº ${proximoNumeroLivro} criado com sucesso!\n📋 Código: ${proximoCodigo}`)
+                          await modal.alert(`✅ Livro ${tipoSelecionado.tipoLivroSeletor} nº ${proximoNumeroLivro} criado com sucesso!\n📋 Código: ${proximoCodigo}`)
                         }
                       }}
                       style={{
@@ -2393,19 +2421,8 @@ export function CadastroLivrosPage({ onClose }: CadastroLivrosPageProps) {
           )}
         </div>
       </div>
-      <Modal
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        type={modalState.type}
-        title={modalState.title}
-        message={modalState.message}
-        defaultValue={modalState.defaultValue}
-        onConfirm={modalState.onConfirm}
-        onCancel={modalState.onCancel}
-        confirmText={modalState.confirmText}
-        cancelText={modalState.cancelText}
-        icon={modalState.icon}
-      />
+      {/* Modal Component */}
+      <modal.ModalComponent />
     </BasePage>
   )
 }

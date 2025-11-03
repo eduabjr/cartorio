@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
-import { Modal } from '../components/Modal'
 import { useModal } from '../hooks/useModal'
 
 interface TiposCadastroPageProps {
@@ -11,6 +10,7 @@ interface TiposCadastroPageProps {
 export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   const [activeTab, setActiveTab] = useState<'tipoAto' | 'tipoDocumento' | 'acessoRapido' | 'diretorio'>('tipoAto')
   
@@ -36,16 +36,17 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
   })
 
   return (
-    <BasePage
-      title="Cadastro de Digitalização"
-      onClose={onClose}
-      width="900px"
-      height="580px"
-      minWidth="900px"
-      minHeight="580px"
-      resizable={false}
-      headerColor={headerColor}
-    >
+    <>
+      <BasePage
+        title="Cadastro de Digitalização"
+        onClose={onClose}
+        width="900px"
+        height="580px"
+        minWidth="900px"
+        minHeight="580px"
+        resizable={false}
+        headerColor={headerColor}
+      >
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -182,6 +183,9 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
         </div>
       </div>
     </BasePage>
+      {/* Modal Component */}
+      <modal.ModalComponent />
+    </>
   )
 }
 
@@ -1313,7 +1317,7 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
 
   // Hook para modais internos
-  const { modalState, showAlert, showConfirm, showPrompt, closeModal } = useModal()
+  const modal = useModal()
 
   // Carregar tipos de ato (apenas leitura - sem setter necessário)
   const [tiposAto] = useState<any[]>(() => {
@@ -1372,7 +1376,7 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
     localStorage.setItem('acessoRapido', JSON.stringify(acessoRapido))
     window.dispatchEvent(new CustomEvent('acesso-rapido-atualizado'))
     console.log('✅ Configurações de Acesso Rápido gravadas.')
-    await showAlert(`✅ Configurações de Acesso Rápido gravadas com sucesso!\n\n${acessoRapido.length} documento(s) configurado(s).`)
+    await modal.alert(`✅ Configurações de Acesso Rápido gravadas com sucesso!\n\n${acessoRapido.length} documento(s) configurado(s).`)
   }
 
   const labelStyles = {
@@ -1625,19 +1629,8 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
           🚪 Retornar
         </button>
       </div>
-      <Modal
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        type={modalState.type}
-        title={modalState.title}
-        message={modalState.message}
-        defaultValue={modalState.defaultValue}
-        onConfirm={modalState.onConfirm}
-        onCancel={modalState.onCancel}
-        confirmText={modalState.confirmText}
-        cancelText={modalState.cancelText}
-        icon={modalState.icon}
-      />
+      {/* Modal Component */}
+      <modal.ModalComponent />
     </div>
   )
 }
@@ -1658,6 +1651,7 @@ function DiretorioContent({
 }) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
@@ -1856,15 +1850,15 @@ function DiretorioContent({
         paddingTop: '4px'
       }}>
         <button
-          onClick={() => {
+          onClick={async () => {
             if (!diretorioGravacao || diretorioGravacao.trim() === '') {
-              alert('⚠️ Por favor, informe o diretório de gravação')
+              await modal.alert('Por favor, informe o diretório de gravação', 'Campo Obrigatório', '⚠️')
               return
             }
             localStorage.setItem('diretorio-digitalizacao', diretorioGravacao)
             setDiretorioValido(true)
             console.log('✅ Diretório de gravação gravado:', diretorioGravacao)
-            alert('✅ Diretório de gravação salvo com sucesso!')
+            await modal.alert('Diretório de gravação salvo com sucesso!', 'Sucesso', '✅')
           }}
           style={{
             padding: '6px 16px',

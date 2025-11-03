@@ -13,6 +13,7 @@ import { SideMenu } from './components/SideMenu'
 import { ConfigOverlay } from './components/ConfigOverlay'
 import { PasswordPrompt } from './components/PasswordPrompt'
 import { MovableTabs } from './components/MovableTabs'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { ClientePage } from './pages/ClientePage'
 import { FuncionarioPage } from './pages/FuncionarioPage'
 import { FirmasPage } from './pages/FirmasPage'
@@ -32,6 +33,18 @@ import { CadastroLivrosPage } from './pages/CadastroLivrosPage'
 import { ProtocoloLancamentoPage } from './pages/ProtocoloLancamentoPage'
 import { NaturezaPage } from './pages/NaturezaPage'
 import { ServicoCartorioPage } from './pages/ServicoCartorioPage'
+import { IndicesPage } from './pages/IndicesPage'
+import { IndiceXPage } from './pages/IndiceXPage'
+import { ConfiguracaoMenuPage } from './pages/ConfiguracaoMenuPage'
+import { ConfiguracaoSistemaPage } from './pages/ConfiguracaoSistemaPage'
+import { ConfiguracaoSenhaPage } from './pages/ConfiguracaoSenhaPage'
+import { ControladorSenhaPage } from './pages/ControladorSenhaPage'
+import { PainelSenhasPage } from './pages/PainelSenhasPage'
+import { TelaSenhaPublicaPage } from './pages/TelaSenhaPublicaPage'
+import { TerminalSenhaPage } from './pages/TerminalSenhaPage'
+import { PainelPublicoPage } from './pages/PainelPublicoPage'
+import { GerenciamentoGuichesPage } from './pages/GerenciamentoGuichesPage'
+import { BasePage } from './components/BasePage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
 import { SystemStatus } from './components/SystemStatus'
@@ -40,12 +53,15 @@ import { AutoLogoutWarning } from './components/AutoLogoutWarning'
 import { useAccessibility } from './hooks/useAccessibility'
 import { useAutoLogout } from './hooks/useAutoLogout'
 import { useWindowState } from './hooks/useWindowState'
+import { useKeyboardNavigation } from './hooks/useKeyboardNavigation'
 import { getRelativeFontSize } from './utils/fontUtils'
 import { announcementService } from './services/AnnouncementService'
 import { WindowProvider, useWindowManager } from './contexts/WindowContext'
 import { FormDataProvider } from './contexts/FormDataContext'
 import { singleInstanceService } from './services/SingleInstanceService'
 import { ThemeProtector } from './components/ThemeProtector'
+import { GLOBAL_SHORTCUTS, generateHelpText } from './utils/globalShortcuts'
+import { KeyboardIndicator } from './components/KeyboardIndicator'
 
 interface User {
   id: string
@@ -61,6 +77,39 @@ function WindowRenderer() {
     <>
       {windows.map((window) => {
         const Component = window.component
+        
+        // Páginas que NÃO usam BasePage internamente precisam ser envolvidas
+        const needsBasePage = [].includes(window.type) // ConfiguracaoMenuPage agora usa BasePage interno
+        
+        console.log(`🪟 WindowRenderer - Tipo: ${window.type}, needsBasePage: ${needsBasePage}`)
+        
+        if (needsBasePage) {
+          console.log(`✅ Envolvendo ${window.type} em BasePage`)
+          return (
+            <BasePage
+              key={window.id}
+              title={window.title}
+              windowId={window.id}
+              initialPosition={window.position}
+              initialZIndex={window.zIndex}
+              isMinimized={window.isMinimized}
+              isMaximized={window.isMaximized}
+              width={window.defaultSize?.width ? `${window.defaultSize.width}px` : '1000px'}
+              height={window.defaultSize?.height ? `${window.defaultSize.height}px` : '600px'}
+              onClose={() => closeWindow(window.id)}
+              draggable={true}
+              resizable={true}
+            >
+              <Component
+                {...window.props}
+                onClose={() => closeWindow(window.id)}
+              />
+            </BasePage>
+          )
+        }
+        
+        // Páginas que JÁ usam BasePage internamente
+        console.log(`📦 Renderizando ${window.type} direto (já tem BasePage interno)`)
         return (
           <Component
             key={window.id}
@@ -70,9 +119,7 @@ function WindowRenderer() {
             isMinimized={window.isMinimized}
             isMaximized={window.isMaximized}
             {...window.props}
-            onClose={() => {
-              closeWindow(window.id)
-            }}
+            onClose={() => closeWindow(window.id)}
           />
         )
       })}
@@ -102,6 +149,7 @@ function AppContent() {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
   const [showConfigOverlay, setShowConfigOverlay] = useState(false)
+  const [menuConfigVersion, setMenuConfigVersion] = useState(0) // Contador para forçar atualização dos menus
   const [movableTabs, setMovableTabs] = useState<Array<{
     id: string
     title: string
@@ -121,6 +169,56 @@ function AppContent() {
   const accessibility = useAccessibility()
   const windowState = useWindowState()
   
+  // Atalhos de teclado globais
+  const keyboardNav = useKeyboardNavigation([
+    {
+      key: 'F1',
+      action: () => {
+        const helpText = generateHelpText(GLOBAL_SHORTCUTS)
+        alert(helpText)
+      },
+      description: 'Mostrar ajuda de atalhos'
+    },
+    {
+      key: 'Escape',
+      action: () => {
+        // Fechar modal/janela aberta
+        if (isSideMenuOpen) {
+          setIsSideMenuOpen(false)
+        } else if (showConfiguracoes) {
+          setShowConfiguracoes(false)
+        } else if (showAccessibilitySettings) {
+          setShowAccessibilitySettings(false)
+        }
+        console.log('⌨️ ESC pressionado - fechando overlays')
+      },
+      description: 'Fechar janela/modal'
+    },
+    {
+      key: 'm',
+      ctrl: true,
+      shift: true,
+      action: () => {
+        setIsSideMenuOpen(!isSideMenuOpen)
+        console.log('⌨️ Ctrl+Shift+M - Alternando menu do usuário')
+      },
+      description: 'Abrir/fechar menu do usuário'
+    },
+    {
+      key: 'l',
+      ctrl: true,
+      shift: true,
+      action: () => {
+        if (isLoggedIn) {
+          handleLogout()
+          console.log('⌨️ Ctrl+Shift+L - Logout')
+        }
+      },
+      description: 'Fazer logout',
+      enabled: isLoggedIn
+    }
+  ])
+  
   // Sincronizar isDarkMode com o tema do hook de acessibilidade
   useEffect(() => {
     console.log('\n🔄🔄🔄 ═══════════════════════════════════════════════')
@@ -139,6 +237,20 @@ function AppContent() {
     console.log('🎨 Deixando background do body usar var(--background-color) do tema')
     console.log('🔄🔄🔄 ═══════════════════════════════════════════════\n')
   }, [accessibility.currentTheme])
+
+  // Listener para atualização de configuração de menus em tempo real
+  useEffect(() => {
+    const handleMenuConfigUpdate = () => {
+      console.log('🔄 Evento menu-config-updated recebido! Atualizando menus...')
+      setMenuConfigVersion(prev => prev + 1) // Incrementa para forçar re-renderização
+    }
+
+    window.addEventListener('menu-config-updated', handleMenuConfigUpdate)
+    
+    return () => {
+      window.removeEventListener('menu-config-updated', handleMenuConfigUpdate)
+    }
+  }, [])
 
   // Estados para navegação
   const [currentPage, setCurrentPage] = useState<string | null>(null)
@@ -230,6 +342,49 @@ function AppContent() {
     }
   }, [navigateToPage, closeCurrentPage])
 
+  // Verificar se está no horário permitido
+  const verificarHorarioPermitido = (): { permitido: boolean; mensagem: string } => {
+    const configBloqueioStr = localStorage.getItem('config-bloqueio-horario')
+    if (!configBloqueioStr) {
+      return { permitido: true, mensagem: '' }
+    }
+    
+    try {
+      const configBloqueio = JSON.parse(configBloqueioStr)
+      
+      if (!configBloqueio.habilitado) {
+        return { permitido: true, mensagem: '' }
+      }
+      
+      const agora = new Date()
+      const [horaInicio, minInicio] = configBloqueio.horarioInicio.split(':').map(Number)
+      const [horaFim, minFim] = configBloqueio.horarioFim.split(':').map(Number)
+      
+      const inicioComExtra = new Date()
+      inicioComExtra.setHours(horaInicio, minInicio - configBloqueio.tempoExtraPermitido, 0, 0)
+      
+      const fimComExtra = new Date()
+      fimComExtra.setHours(horaFim, minFim + configBloqueio.tempoExtraPermitido, 0, 0)
+      
+      const dentroDoHorario = agora >= inicioComExtra && agora <= fimComExtra
+      
+      if (!dentroDoHorario) {
+        const horarioInicioStr = inicioComExtra.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        const horarioFimStr = fimComExtra.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        return { 
+          permitido: false, 
+          mensagem: configBloqueio.mensagemBloqueio || 
+            `Sistema bloqueado fora do horário de funcionamento.\n\nHorário permitido: ${horarioInicioStr} às ${horarioFimStr}`
+        }
+      }
+      
+      return { permitido: true, mensagem: '' }
+    } catch (error) {
+      console.error('❌ Erro ao verificar bloqueio de horário:', error)
+      return { permitido: true, mensagem: '' }
+    }
+  }
+
   // Função de login simplificada
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -237,10 +392,23 @@ function AppContent() {
     setError('')
 
     try {
-      // Simular autenticação
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // PRIMEIRO: Verificar horário permitido
+      const { permitido, mensagem } = verificarHorarioPermitido()
       
-      if (email === 'admin@cartorio.com' && password === 'admin123') {
+      if (!permitido) {
+        console.warn('🔒 Login bloqueado por horário!')
+        setError(mensagem)
+        setIsLoading(false)
+        return
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      const emailLimpo = String(email || '').trim()
+      const senhaLimpa = String(password || '').trim()
+      
+      // Verificar admin padrão
+      if (emailLimpo === 'admin@cartorio.com' && senhaLimpa === 'admin123') {
         setUser({
           id: '1',
           email: 'admin@cartorio.com',
@@ -248,17 +416,48 @@ function AppContent() {
           role: 'admin'
         })
         setIsLoggedIn(true)
-      } else if (email === 'funcionario@cartorio.com' && password === 'func123') {
-        setUser({
-          id: '2',
-          email: 'funcionario@cartorio.com',
-          name: 'Funcionário',
-          role: 'employee'
-        })
-        setIsLoggedIn(true)
-      } else {
-        setError('Credenciais inválidas')
+        return
       }
+      
+      // Verificar funcionários cadastrados
+      const dadosFuncionarios = localStorage.getItem('funcionarios-cadastrados')
+      
+      if (dadosFuncionarios) {
+        const funcionarios = JSON.parse(dadosFuncionarios)
+        
+        // Buscar funcionário por login ou email
+        const funcionario = funcionarios.find((f: any) => 
+          String(f.login || '').trim().toLowerCase() === emailLimpo.toLowerCase() ||
+          String(f.email || '').trim().toLowerCase() === emailLimpo.toLowerCase()
+        )
+        
+        if (funcionario) {
+          const senhaCadastrada = String(funcionario.senha || '').trim()
+          
+          if (senhaCadastrada === senhaLimpa) {
+            // Login válido!
+            const userData = {
+              id: funcionario.codigo || funcionario.id,
+              email: funcionario.email || emailLimpo,
+              name: funcionario.nome,
+              login: funcionario.login,
+              role: 'employee',
+              funcionario: funcionario
+            }
+            
+            localStorage.setItem('token', 'funcionario-token-' + Date.now())
+            localStorage.setItem('user', JSON.stringify(userData))
+            
+            setUser(userData)
+            setIsLoggedIn(true)
+            return
+          }
+        }
+      }
+      
+      // Se chegou aqui, credenciais inválidas
+      setError('Credenciais inválidas')
+      
     } catch (error) {
       setError('Erro ao fazer login')
     } finally {
@@ -275,11 +474,98 @@ function AppContent() {
   }
 
   // Auto-logout por inatividade (DEPOIS da declaração de handleLogout)
+  // Estado para warningMinutes (tempo de aviso antes do logout)
+  const [autoLogoutWarningMinutes, setAutoLogoutWarningMinutes] = useState(() => {
+    const saved = localStorage.getItem('config-gerais-sistema')
+    if (saved) {
+      try {
+        const config = JSON.parse(saved)
+        // Converter segundos para minutos se necessário
+        if (config.autoLogoutWarningUnit === 'segundos') {
+          return config.autoLogoutWarningSeconds / 60 // Converte segundos para minutos decimal
+        }
+        return config.autoLogoutWarningMinutes || 2
+      } catch {
+        return 2
+      }
+    }
+    return 2
+  })
+  
+  // Listener para atualizar warningMinutes quando configuração mudar
+  useEffect(() => {
+    const handleConfigUpdate = () => {
+      const saved = localStorage.getItem('config-gerais-sistema')
+      if (saved) {
+        try {
+          const config = JSON.parse(saved)
+          // Converter para minutos (decimal)
+          if (config.autoLogoutWarningUnit === 'segundos') {
+            const minutosDecimal = config.autoLogoutWarningSeconds / 60
+            setAutoLogoutWarningMinutes(minutosDecimal)
+            console.log('⚠️ Tempo de aviso atualizado:', config.autoLogoutWarningSeconds, 's (', minutosDecimal.toFixed(2), 'min )')
+          } else {
+            setAutoLogoutWarningMinutes(config.autoLogoutWarningMinutes || 2)
+            console.log('⚠️ Tempo de aviso atualizado:', config.autoLogoutWarningMinutes, 'min')
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar warningMinutes:', error)
+        }
+      }
+    }
+    
+    window.addEventListener('config-gerais-updated', handleConfigUpdate)
+    return () => window.removeEventListener('config-gerais-updated', handleConfigUpdate)
+  }, [])
+  
   const autoLogout = useAutoLogout({
     enabled: accessibility.settings.autoLogoutEnabled,
     timeoutMinutes: accessibility.settings.autoLogoutMinutes,
+    warningMinutes: autoLogoutWarningMinutes,
     onLogout: handleLogout
   })
+  
+  // Verificação de bloqueio por horário
+  useEffect(() => {
+    const verificarBloqueioHorario = () => {
+      const configBloqueioStr = localStorage.getItem('config-bloqueio-horario')
+      if (!configBloqueioStr) return
+      
+      try {
+        const configBloqueio = JSON.parse(configBloqueioStr)
+        
+        if (!configBloqueio.habilitado || !isLoggedIn) return
+        
+        const agora = new Date()
+        const [horaInicio, minInicio] = configBloqueio.horarioInicio.split(':').map(Number)
+        const [horaFim, minFim] = configBloqueio.horarioFim.split(':').map(Number)
+        
+        const inicioComExtra = new Date()
+        inicioComExtra.setHours(horaInicio, minInicio - configBloqueio.tempoExtraPermitido, 0, 0)
+        
+        const fimComExtra = new Date()
+        fimComExtra.setHours(horaFim, minFim + configBloqueio.tempoExtraPermitido, 0, 0)
+        
+        const dentroDoHorario = agora >= inicioComExtra && agora <= fimComExtra
+        
+        if (!dentroDoHorario) {
+          console.warn('🔒 Sistema bloqueado por horário!')
+          alert(configBloqueio.mensagemBloqueio || 'Sistema bloqueado fora do horário de funcionamento.')
+          handleLogout()
+        }
+      } catch (error) {
+        console.error('❌ Erro ao verificar bloqueio de horário:', error)
+      }
+    }
+    
+    // Verificar a cada minuto
+    const timer = setInterval(verificarBloqueioHorario, 60000)
+    
+    // Verificar imediatamente ao montar
+    verificarBloqueioHorario()
+    
+    return () => clearInterval(timer)
+  }, [isLoggedIn, handleLogout])
 
   // Funções para MovableTabs
 
@@ -374,6 +660,18 @@ function AppContent() {
 
 
   // Se está logado, mostrar o sistema
+  // Rotas públicas para sistema de senhas (não requerem login)
+  const rotaAtual = window.location.pathname
+  if (rotaAtual === '/senha-publica') {
+    return <TelaSenhaPublicaPage />
+  }
+  if (rotaAtual === '/painel-publico') {
+    return <PainelPublicoPage />
+  }
+  if (rotaAtual === '/senha-terminal') {
+    return <TerminalSenhaPage />
+  }
+
   if (isLoggedIn && user) {
   return (
       <FeedbackSystem>
@@ -399,8 +697,72 @@ function AppContent() {
       )
     }
 
+    // Função para filtrar menus baseado nas configurações E permissões
+    const filterMenusByConfig = (items: any[]) => {
+      try {
+        const savedConfig = localStorage.getItem('menu-config')
+        const isAdmin = user?.role === 'admin'
+        const visibilityMap = new Map<string, boolean>()
+        
+        if (savedConfig) {
+          const config = JSON.parse(savedConfig)
+          
+          const buildVisibilityMap = (configItems: any[]) => {
+            configItems.forEach((item: any) => {
+              visibilityMap.set(item.id, item.visible)
+              if (item.submenu) {
+                buildVisibilityMap(item.submenu)
+              }
+            })
+          }
+          
+          buildVisibilityMap(config)
+        }
+        
+        // Filtrar itens recursivamente
+        const filterItems = (items: any[], level = 0): any[] => {
+          return items.filter((item: any) => {
+            // Verificar permissão de admin PRIMEIRO
+            if (item.adminOnly && !isAdmin) {
+              return false
+            }
+            
+            const isVisible = visibilityMap.get(item.id) !== false
+            
+            if (!isVisible) {
+              return false
+            }
+            
+            // Se tem submenu, filtrar também
+            if (item.submenu) {
+              const filteredSubmenu = filterItems(item.submenu, level + 1)
+              // Se todos os submenus foram removidos, remove o item pai também
+              if (filteredSubmenu.length === 0) {
+                return false
+              }
+            }
+            
+            return true
+          }).map((item: any) => {
+            // Aplicar filtro no submenu se existir
+            if (item.submenu) {
+              return { ...item, submenu: filterItems(item.submenu, level + 1) }
+            }
+            return item
+          })
+        }
+        
+        const result = filterItems(items)
+        console.log('✅ Menus filtrados:', result.length, 'itens no nível raiz')
+        return result
+      } catch (error) {
+        console.error('❌ Erro ao filtrar menus:', error)
+        return items // Em caso de erro, mostra tudo
+      }
+    }
+
     // Configuração do Menu Textual (Menu 1) - TODOS OS SUBMENUS ORIGINAIS RESTAURADOS
-    const textualMenuItems = [
+    const rawTextualMenuItems = [
       {
         id: 'cadastros',
         label: 'Cadastros',
@@ -418,7 +780,12 @@ function AppContent() {
               })
               console.log('✅ Janela de Cliente aberta!')
             } },
-            { id: 'funcionario', label: 'Funcionário', icon: '', onClick: () => {
+            { 
+              id: 'funcionario', 
+              label: 'Funcionário', 
+              icon: '', 
+              adminOnly: true,
+              onClick: () => {
               console.log('✅ FUNCIONÁRIO CLICADO! Abrindo janela...')
               const windowId = 'funcionario-window'
               openWindow({
@@ -564,7 +931,8 @@ function AppContent() {
           { 
             id: 'configuracao-sistema', 
             label: 'Configurações do Sistema', 
-            icon: '', 
+            icon: '',
+            adminOnly: true,
             submenu: [
               { id: 'config-sistema-feriados', label: 'Feriados', icon: '', onClick: () => {
                 console.log('✅ Abrindo Cadastro de Feriados...')
@@ -615,6 +983,48 @@ function AppContent() {
                   props: { onClose: () => {} }
                 })
                 console.log('✅ Janela de Serviços de Cartório aberta!')
+              } },
+              { id: 'config-menus', label: 'Configuração de Menus', icon: '', onClick: () => {
+                console.log('✅ Abrindo Configuração de Menus...')
+                openWindow({
+                  id: 'config-menus-window',
+                  type: 'config-menus',
+                  title: 'Configuração de Menus',
+                  component: ConfiguracaoMenuPage,
+                  props: { onClose: () => {} },
+                  defaultSize: { width: 1000, height: 700 },
+                  defaultPosition: { x: 100, y: 100 }
+                })
+              } },
+              { id: 'config-sistema-gerais', label: 'Configurações Gerais', icon: '', onClick: () => {
+                console.log('✅ Abrindo Configurações Gerais do Sistema...')
+                openWindow({
+                  id: 'config-sistema-gerais-window',
+                  type: 'config-sistema-gerais',
+                  title: 'Configurações do Sistema',
+                  component: ConfiguracaoSistemaPage,
+                  props: { onClose: () => {} }
+                })
+              } },
+              { id: 'config-senhas', label: 'Configuração de Senhas', icon: '', onClick: () => {
+                console.log('✅ Abrindo Configuração de Senhas...')
+                openWindow({
+                  id: 'config-senhas-window',
+                  type: 'config-senhas',
+                  title: 'Configuração de Senhas',
+                  component: ConfiguracaoSenhaPage,
+                  props: { onClose: () => {} }
+                })
+              } },
+              { id: 'painel-senhas-admin', label: 'Painel de Senhas (Admin)', icon: '', onClick: () => {
+                console.log('✅ Abrindo Painel Administrativo de Senhas...')
+                openWindow({
+                  id: 'painel-senhas-window',
+                  type: 'painel-senhas',
+                  title: 'Painel de Senhas',
+                  component: PainelSenhasPage,
+                  props: { onClose: () => {} }
+                })
               } }
             ]
           }
@@ -759,10 +1169,28 @@ function AppContent() {
         label: 'Índice',
         icon: '',
         submenu: [
-          { id: 'indice-casamento', label: 'Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('indice-casamento') },
-          { id: 'indice-edital-proclamas', label: 'Edital de Proclamas', icon: '', onClick: () => (window as any).navigateToPage?.('indice-edital-proclamas') },
-          { id: 'indice-nascimento', label: 'Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('indice-nascimento') },
-          { id: 'indice-obito', label: 'Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('indice-obito') },
+          { id: 'indices-principais', label: 'Índices (Nascimento, Casamento, Óbito, Proclamas)', icon: '', onClick: () => {
+            console.log('✅ Abrindo Índices...')
+            openWindow({
+              id: `indices-${Date.now()}`,
+              type: 'indices',
+              title: 'Índices - Nascimento, Casamento, Óbito, Proclamas',
+              component: IndicesPage,
+              props: {}
+            })
+            console.log('✅ Janela de Índices aberta!')
+          }},
+          { id: 'indice-x', label: 'Índice X', icon: '', onClick: () => {
+            console.log('✅ Abrindo Índice X...')
+            openWindow({
+              id: `indice-x-${Date.now()}`,
+              type: 'indice-x',
+              title: 'Índice X',
+              component: IndiceXPage,
+              props: {}
+            })
+            console.log('✅ Janela de Índice X aberta!')
+          }},
           { id: 'indice-livro', label: 'Livro E', icon: '', onClick: () => (window as any).navigateToPage?.('indice-livro') },
           { id: 'indice-procuracao', label: 'Índice de Procuração', icon: '', onClick: () => (window as any).navigateToPage?.('indice-procuracao') }
         ]
@@ -966,8 +1394,11 @@ function AppContent() {
       },
     ]
 
+    // Aplicar filtro de configuração de menus e permissões
+    const textualMenuItems = filterMenusByConfig(rawTextualMenuItems)
+
     // Configuração do Menu de Ícones (Menu 2) - Ícones de acesso rápido
-    const iconMenuItems = [
+    const rawIconMenuItems = [
         { id: 'cadastro-cliente', label: 'Cadastro de Cliente', icon: '👤', onClick: () => {
           console.log('✅ ÍCONE CADASTRO CLIENTE CLICADO! Abrindo janela...')
           const windowId = 'cliente-window'
@@ -1005,9 +1436,85 @@ function AppContent() {
           props: { onClose: () => {} }
         })
       } },
+      { id: 'indices', label: 'Índices', icon: '📊', onClick: () => {
+        console.log('📊 Abrindo Índices...')
+        openWindow({
+          id: `indices-${Date.now()}`,
+          type: 'indices',
+          title: 'Índices - Nascimento, Casamento, Óbito, Proclamas',
+          component: IndicesPage,
+          props: {}
+        })
+      } },
       { id: 'login', label: 'Logoff', icon: '🔐', onClick: () => console.log('Logoff clicado') },
       { id: 'logout', label: 'Sair', icon: '🚪', onClick: handleLogout }
     ]
+
+    // Mapeamento entre IDs dos ícones da toolbar e IDs dos menus
+    const toolbarToMenuMapping: { [key: string]: string } = {
+      'cadastro-cliente': 'cliente',
+      'firmas': 'firmas',
+      'nascimento': 'lavratura-nascimento',
+      'casamento': 'lavratura-casamento',
+      'obito': 'lavratura-obito',
+      'livro': 'livro-e-menu',
+      'digitalizacao': 'digitalizacao-controle',
+      'indices': 'indices-principais',
+      'login': 'login', // Sempre visível
+      'logout': 'logout' // Sempre visível
+    }
+
+    // Filtrar ícones baseado na visibilidade dos menus correspondentes
+    const filterToolbarIcons = (icons: any[]) => {
+      try {
+        const savedConfig = localStorage.getItem('menu-config')
+        console.log('🔍 Filtrando ícones da toolbar... Config salva:', savedConfig ? 'SIM' : 'NÃO')
+        
+        if (!savedConfig) return icons // Se não há config, mostra tudo
+        
+        const config = JSON.parse(savedConfig)
+        
+        // Criar mapa de visibilidade
+        const visibilityMap = new Map<string, boolean>()
+        
+        const buildVisibilityMap = (configItems: any[]) => {
+          configItems.forEach((item: any) => {
+            visibilityMap.set(item.id, item.visible)
+            if (item.submenu) {
+              buildVisibilityMap(item.submenu)
+            }
+          })
+        }
+        
+        buildVisibilityMap(config)
+        
+        // Filtrar ícones
+        const filtered = icons.filter((icon: any) => {
+          const menuId = toolbarToMenuMapping[icon.id]
+          
+          // Se não há mapeamento ou é login/logout, sempre mostra
+          if (!menuId || icon.id === 'login' || icon.id === 'logout') {
+            console.log(`  ✅ Ícone ${icon.id}: SEMPRE VISÍVEL`)
+            return true
+          }
+          
+          const isVisible = visibilityMap.get(menuId) !== false
+          console.log(`  ${isVisible ? '✅' : '❌'} Ícone ${icon.id} (menu: ${menuId}): ${isVisible ? 'VISÍVEL' : 'OCULTO'}`)
+          
+          return isVisible
+        })
+        
+        console.log(`✅ Ícones filtrados: ${filtered.length}/${icons.length}`)
+        return filtered
+      } catch (error) {
+        console.error('❌ Erro ao filtrar ícones:', error)
+        return icons
+      }
+    }
+
+    // Aplicar filtro de configuração de menus aos ícones
+    console.log(`🔄 Recalculando menu de ícones (versão: ${menuConfigVersion})`)
+    const iconMenuItems = filterToolbarIcons(rawIconMenuItems)
 
     return (
       <div style={{
@@ -1091,6 +1598,42 @@ function AppContent() {
           onLogout={handleLogout}
           onOpenConfigurations={() => setShowConfiguracoes(true)}
           onOpenMaternidade={navigateToMaternidade}
+          onOpenControladorSenha={() => {
+            openWindow({
+              id: 'controlador-senha-window',
+              type: 'controlador-senha',
+              title: 'Controlador de Senhas',
+              component: ControladorSenhaPage,
+              props: { onClose: () => {} }
+            })
+          }}
+          onOpenConfiguracaoSenha={() => {
+            openWindow({
+              id: 'configuracao-senha-window',
+              type: 'configuracao-senha',
+              title: 'Configuração de Senhas',
+              component: ConfiguracaoSenhaPage,
+              props: { onClose: () => {} }
+            })
+          }}
+          onOpenPainelSenhas={() => {
+            openWindow({
+              id: 'painel-senhas-window',
+              type: 'painel-senhas',
+              title: 'Painel Administrativo de Senhas',
+              component: PainelSenhasPage,
+              props: { onClose: () => {} }
+            })
+          }}
+          onOpenGerenciamentoGuiches={() => {
+            openWindow({
+              id: 'gerenciamento-guiches-window',
+              type: 'gerenciamento-guiches',
+              title: 'Gerenciamento de Guichês',
+              component: GerenciamentoGuichesPage,
+              props: { onClose: () => {} }
+            })
+          }}
         />
 
         {/* Abas Móveis - Aparecem apenas na Tela 2 */}
@@ -1508,15 +2051,16 @@ function AppContent() {
             color: loginTheme.text
             }}
           >
-            Email
+            Email ou Login
           </label>
           <input 
             id="email-input"
-            type="email" 
+            type="text" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             aria-required="true"
             aria-invalid={error ? 'true' : 'false'}
+            placeholder="Digite seu email ou login"
             style={{
               width: '100%',
               padding: '12px 16px',
@@ -1633,6 +2177,8 @@ function App() {
           <AppContent />
           <SystemStatus showDetails={false} position="bottom-left" />
           <InstanceNotification position="top-left" />
+          {/* Badge de Navegação por Teclado - Aparece/Desaparece automaticamente */}
+          <KeyboardIndicator key="keyboard-indicator" />
         </FormDataProvider>
       </WindowProvider>
     </ThemeProtector>

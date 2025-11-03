@@ -56,5 +56,6 @@ export {
   XIcon,
   CalculatorIcon,
   TrashIcon,
-  MenuIcon
+  MenuIcon,
+  IndexIcon
 } from './CartorioIcons';

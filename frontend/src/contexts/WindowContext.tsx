@@ -30,7 +30,7 @@ const WindowContext = createContext<WindowContextType | undefined>(undefined)
 
 export function WindowProvider({ children }: { children: React.ReactNode }) {
   const [windows, setWindows] = useState<WindowInstance[]>([])
-  const [nextZIndex, setNextZIndex] = useState(70)
+  const [nextZIndex, setNextZIndex] = useState(2000) // 🔒 CRÍTICO: Maior que menus (zIndex: 1001)
   const [windowCounter, setWindowCounter] = useState(0)
 
   const openWindow = useCallback((windowData: Omit<WindowInstance, 'position' | 'zIndex' | 'isMinimized' | 'isMaximized'>) => {

@@ -145,7 +145,7 @@ export function AccessibilitySettingsPage({ onClose }: AccessibilitySettingsPage
     accentColor: theme.primary
   }
 
-  const arrowColor = currentTheme === 'dark' ? '%23FFFFFF' : '%23333333'
+  const arrowColor = accessibility.currentTheme === 'dark' ? '%23FFFFFF' : '%23333333'
   const selectStyles = {
     padding: '8px 12px',
     border: `1px solid ${theme.border}`,

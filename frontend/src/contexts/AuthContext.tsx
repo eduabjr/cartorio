@@ -50,47 +50,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ⚡ OTIMIZAÇÃO CRÍTICA: Memoizar ações (nunca mudam)
   const actions = useMemo(() => ({
     login: async (email: string, password: string, profile: 'admin' | 'employee' = 'employee') => {
-      try {
-        const response = await apiService.post<{ token: string; user: any }>(
-          '/auth/login',
-          { email, password, profile },
-          {
-            fallback: {
-              token: 'offline-token-' + Date.now(),
-              user: {
-                id: '1',
-                email,
-                name: email.split('@')[0],
-                profile,
-                permissions: PROFILE_PERMISSIONS[profile]
+      const emailLimpo = String(email || '').trim()
+      const senhaLimpa = String(password || '').trim()
+      
+      const funcionariosSalvos = localStorage.getItem('funcionarios-cadastrados')
+      
+      if (funcionariosSalvos) {
+        try {
+          const funcionarios = JSON.parse(funcionariosSalvos)
+          
+          if (funcionarios.length > 0) {
+            const funcionarioEncontrado = funcionarios.find((f: any) => {
+              const loginCadastrado = String(f.login || '').trim()
+              const emailCadastrado = String(f.email || '').trim()
+              
+              return loginCadastrado.toLowerCase() === emailLimpo.toLowerCase() ||
+                     emailCadastrado.toLowerCase() === emailLimpo.toLowerCase()
+            })
+            
+            if (funcionarioEncontrado) {
+              const senhaCadastrada = String(funcionarioEncontrado.senha || '').trim()
+              
+              if (senhaCadastrada === senhaLimpa) {
+                const userData = {
+                  id: funcionarioEncontrado.id || funcionarioEncontrado.codigo,
+                  codigo: funcionarioEncontrado.codigo || funcionarioEncontrado.id,
+                  email: funcionarioEncontrado.email || emailLimpo,
+                  name: funcionarioEncontrado.nome,
+                  nome: funcionarioEncontrado.nome,
+                  login: funcionarioEncontrado.login || emailLimpo,
+                  profile: 'employee',
+                  permissions: PROFILE_PERMISSIONS.employee,
+                  funcionario: funcionarioEncontrado
+                }
+                const token = 'funcionario-token-' + Date.now()
+                
+                localStorage.setItem('token', token)
+                localStorage.setItem('user', JSON.stringify(userData))
+                setUser(userData)
+                
+                return
+              } else {
+                throw new Error('Senha incorreta')
               }
+            } else {
+              throw new Error('Login não encontrado. Verifique o login e tente novamente.')
             }
           }
-        )
-
-        const { token, user: userData } = response
-
-        localStorage.setItem('token', token)
-        localStorage.setItem('user', JSON.stringify(userData))
-        setUser(userData)
-
-        console.log('✅ Login realizado com sucesso')
-      } catch (error) {
-        console.warn('⚠️ Usando autenticação de fallback')
-
-        // Fallback
-        const fallbackUser = {
-          id: '1',
-          email,
-          name: email.split('@')[0],
-          profile,
-          permissions: PROFILE_PERMISSIONS[profile]
+        } catch (error) {
+          if (error instanceof Error && (error.message.includes('incorreta') || error.message.includes('não encontrado'))) {
+            throw error
+          }
         }
-        const fallbackToken = 'fallback-token-' + Date.now()
+      }
+      
+      // Segundo: Tentar API (se não há funcionários cadastrados)
+      if (!funcionariosSalvos || (funcionariosSalvos && JSON.parse(funcionariosSalvos).length === 0)) {
+        try {
+          const response = await apiService.post<{ token: string; user: any }>(
+            '/auth/login',
+            { email, password, profile },
+            {
+              fallback: {
+                token: 'offline-token-' + Date.now(),
+                user: {
+                  id: '1',
+                  email,
+                  name: email.split('@')[0],
+                  profile,
+                  permissions: PROFILE_PERMISSIONS[profile]
+                }
+              }
+            }
+          )
 
-        localStorage.setItem('token', fallbackToken)
-        localStorage.setItem('user', JSON.stringify(fallbackUser))
-        setUser(fallbackUser)
+          const { token, user: userData } = response
+
+          localStorage.setItem('token', token)
+          localStorage.setItem('user', JSON.stringify(userData))
+          setUser(userData)
+
+          console.log('✅ Login realizado via API')
+          return
+        } catch (error) {
+          console.warn('⚠️ Usando autenticação de fallback')
+
+          // Fallback apenas se não há funcionários cadastrados
+          const fallbackUser = {
+            id: '1',
+            email,
+            name: email.split('@')[0],
+            profile,
+            permissions: PROFILE_PERMISSIONS[profile]
+          }
+          const fallbackToken = 'fallback-token-' + Date.now()
+
+          localStorage.setItem('token', fallbackToken)
+          localStorage.setItem('user', JSON.stringify(fallbackUser))
+          setUser(fallbackUser)
+        }
       }
     },
 

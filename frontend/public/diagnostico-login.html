@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico de Login - Sistema de Senhas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #008080;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-left: 4px solid #008080;
+            border-radius: 6px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 18px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th {
+            background: #008080;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background: #f0f0f0;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status.ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.erro {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .status.aviso {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        button {
+            background: #008080;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #006666;
+        }
+        button.danger {
+            background: #ef4444;
+        }
+        button.danger:hover {
+            background: #dc2626;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .alert.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 2px solid #3b82f6;
+        }
+        .alert.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico de Login - Sistema de Senhas</h1>
+        <p class="subtitle">Verifique se seus funcionários foram cadastrados corretamente</p>
+
+        <!-- Diagnóstico -->
+        <div class="section">
+            <h2>📊 Status do Sistema</h2>
+            <div id="status-sistema"></div>
+        </div>
+
+        <!-- Funcionários Cadastrados -->
+        <div class="section">
+            <h2>👥 Funcionários Cadastrados</h2>
+            <div id="lista-funcionarios"></div>
+        </div>
+
+        <!-- Instruções -->
+        <div class="section">
+            <h2>💡 Como Fazer Login</h2>
+            <div class="alert info">
+                <strong>Passos para logar:</strong>
+                <ol style="margin: 10px 0; padding-left: 20px;">
+                    <li>Certifique-se que o funcionário foi <strong>gravado</strong> no sistema</li>
+                    <li>Verifique se os campos <code>Login</code> e <code>Senha</code> foram preenchidos</li>
+                    <li>Na tela de login, use o <strong>Login</strong> ou <strong>Email</strong> cadastrado</li>
+                    <li>Digite a <strong>Senha</strong> exatamente como foi cadastrada</li>
+                    <li>Selecione o perfil correto (Funcionário)</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="section">
+            <h2>🔧 Ações</h2>
+            <button onclick="atualizarDiagnostico()">🔄 Atualizar Diagnóstico</button>
+            <button onclick="exportarDados()">📥 Exportar Dados</button>
+            <button class="danger" onclick="limparDados()">🗑️ Limpar Dados (Cuidado!)</button>
+        </div>
+    </div>
+
+    <script>
+        function verificarSistema() {
+            const funcionarios = localStorage.getItem('funcionarios-cadastrados')
+            
+            if (!funcionarios) {
+                return {
+                    status: 'erro',
+                    mensagem: '❌ Nenhum funcionário cadastrado no sistema',
+                    detalhes: 'Você precisa cadastrar pelo menos um funcionário na página "Funcionário"',
+                    total: 0,
+                    funcionarios: []
+                }
+            }
+
+            try {
+                const lista = JSON.parse(funcionarios)
+                
+                if (!Array.isArray(lista) || lista.length === 0) {
+                    return {
+                        status: 'aviso',
+                        mensagem: '⚠️ Lista de funcionários vazia',
+                        total: 0,
+                        funcionarios: []
+                    }
+                }
+
+                return {
+                    status: 'ok',
+                    mensagem: `✅ ${lista.length} funcionário(s) cadastrado(s)`,
+                    total: lista.length,
+                    funcionarios: lista
+                }
+            } catch (error) {
+                return {
+                    status: 'erro',
+                    mensagem: '❌ Erro ao ler dados do localStorage',
+                    detalhes: error.message,
+                    total: 0,
+                    funcionarios: []
+                }
+            }
+        }
+
+        function renderizarDiagnostico() {
+            const resultado = verificarSistema()
+            const statusDiv = document.getElementById('status-sistema')
+            const listaDiv = document.getElementById('lista-funcionarios')
+
+            // Status
+            statusDiv.innerHTML = `
+                <div class="alert ${resultado.status === 'ok' ? 'success' : (resultado.status === 'aviso' ? 'info' : 'error')}">
+                    <strong>${resultado.mensagem}</strong>
+                    ${resultado.detalhes ? '<br><br>' + resultado.detalhes : ''}
+                </div>
+            `
+
+            // Lista de funcionários
+            if (resultado.funcionarios && resultado.funcionarios.length > 0) {
+                let html = '<table><thead><tr>'
+                html += '<th>Código</th>'
+                html += '<th>Nome</th>'
+                html += '<th>Login</th>'
+                html += '<th>Email</th>'
+                html += '<th>Senha</th>'
+                html += '<th>Status</th>'
+                html += '</tr></thead><tbody>'
+
+                resultado.funcionarios.forEach(func => {
+                    const temLogin = func.login && func.login.trim() !== ''
+                    const temSenha = func.senha && func.senha.trim() !== ''
+                    const podeLogar = temLogin && temSenha
+
+                    html += '<tr>'
+                    html += `<td><strong>${func.codigo || '-'}</strong></td>`
+                    html += `<td>${func.nome || '-'}</td>`
+                    html += `<td><code>${func.login || '❌ NÃO DEFINIDO'}</code></td>`
+                    html += `<td>${func.email || '-'}</td>`
+                    html += `<td><code>${func.senha ? '***' + func.senha.slice(-2) : '❌ NÃO DEFINIDA'}</code></td>`
+                    html += `<td><span class="status ${podeLogar ? 'ok' : 'erro'}">${podeLogar ? '✅ Pode Logar' : '❌ Falta Login/Senha'}</span></td>`
+                    html += '</tr>'
+                })
+
+                html += '</tbody></table>'
+
+                html += '<div class="alert info" style="margin-top: 20px;">'
+                html += '<strong>💡 Como usar na tela de login:</strong><br><br>'
+                html += 'Use o valor da coluna <code>Login</code> ou <code>Email</code> + a <code>Senha</code> cadastrada'
+                html += '</div>'
+
+                listaDiv.innerHTML = html
+            } else {
+                listaDiv.innerHTML = `
+                    <div class="alert error">
+                        <strong>❌ Nenhum funcionário cadastrado</strong><br><br>
+                        <strong>Próximos passos:</strong>
+                        <ol style="margin: 10px 0; padding-left: 20px;">
+                            <li>Volte para o sistema principal</li>
+                            <li>Acesse: Menu → Funcionário</li>
+                            <li>Preencha todos os dados do funcionário</li>
+                            <li>Preencha <strong>Login</strong> e <strong>Senha</strong> (campos obrigatórios!)</li>
+                            <li>Clique em <strong>Gravar</strong></li>
+                            <li>Volte aqui e clique em "Atualizar Diagnóstico"</li>
+                        </ol>
+                    </div>
+                `
+            }
+        }
+
+        function atualizarDiagnostico() {
+            renderizarDiagnostico()
+        }
+
+        function exportarDados() {
+            const resultado = verificarSistema()
+            
+            if (resultado.funcionarios.length === 0) {
+                alert('❌ Nenhum funcionário para exportar!')
+                return
+            }
+
+            const csv = 'Codigo;Nome;Login;Email;Senha;CPF\n' + 
+                resultado.funcionarios.map(f => 
+                    `${f.codigo};${f.nome};${f.login};${f.email};${f.senha};${f.cpf}`
+                ).join('\n')
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+            const link = document.createElement('a')
+            link.href = URL.createObjectURL(blob)
+            link.download = `funcionarios_${new Date().toISOString().split('T')[0]}.csv`
+            link.click()
+
+            alert('✅ Dados exportados com sucesso!')
+        }
+
+        function limparDados() {
+            if (!confirm('⚠️ TEM CERTEZA?\n\nIsso vai apagar TODOS os funcionários cadastrados!\n\nEsta ação não pode ser desfeita!')) {
+                return
+            }
+
+            if (!confirm('⚠️⚠️⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nVocê tem ABSOLUTA CERTEZA que quer apagar tudo?')) {
+                return
+            }
+
+            localStorage.removeItem('funcionarios-cadastrados')
+            alert('✅ Dados limpos com sucesso!\n\nAtualize a página para ver o resultado.')
+            atualizarDiagnostico()
+        }
+
+        // Inicializar ao carregar página
+        window.onload = function() {
+            renderizarDiagnostico()
+        }
+    </script>
+</body>
+</html>
+

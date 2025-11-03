@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste de Comunicação - Sistema de Senhas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: rgba(255,255,255,0.15);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            margin-top: 0;
+            font-size: 24px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .btn-primary {
+            background: #10b981;
+            color: white;
+        }
+        .btn-secondary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        #log {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #10b981;
+            padding-left: 10px;
+        }
+        .log-error {
+            border-left-color: #ef4444;
+            color: #ef4444;
+        }
+        .log-success {
+            border-left-color: #10b981;
+            color: #10b981;
+        }
+        .log-info {
+            border-left-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .status-ok {
+            background: #10b981;
+            color: white;
+        }
+        .status-error {
+            background: #ef4444;
+            color: white;
+        }
+        .links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .link-card {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .link-card:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Comunicação</h1>
+        <div class="subtitle">Sistema de Senhas - Debug de Eventos em Tempo Real</div>
+
+        <!-- Status -->
+        <div class="section">
+            <h2>📊 Status do Sistema</h2>
+            <div id="status">
+                <span class="status status-ok">BroadcastChannel: ✅ Suportado</span>
+                <span class="status status-ok">localStorage: ✅ Disponível</span>
+                <span class="status" id="channel-status">Canal: Inicializando...</span>
+            </div>
+        </div>
+
+        <!-- Ações de Teste -->
+        <div class="section">
+            <h2>🎮 Testes Manuais</h2>
+            <button class="btn-primary" onclick="testarEmissaoSenha()">
+                🎫 Emitir Senha Teste (P001)
+            </button>
+            <button class="btn-secondary" onclick="testarChamadaSenha()">
+                📢 Chamar Senha Teste
+            </button>
+            <button class="btn-secondary" onclick="testarFinalizacao()">
+                ✅ Finalizar Senha Teste
+            </button>
+            <button class="btn-danger" onclick="limparLog()">
+                🗑️ Limpar Log
+            </button>
+        </div>
+
+        <!-- Links Rápidos -->
+        <div class="section">
+            <h2>🔗 Abrir Páginas do Sistema</h2>
+            <div class="links">
+                <a href="http://localhost:3000/senha-terminal" target="_blank" class="link-card">
+                    <div style="font-size: 32px; margin-bottom: 10px;">🖥️</div>
+                    <strong>Terminal de Senhas</strong><br>
+                    <small>/senha-terminal</small>
+                </a>
+                <a href="http://localhost:3000/senha-publica" target="_blank" class="link-card">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📺</div>
+                    <strong>Painel Público</strong><br>
+                    <small>/senha-publica</small>
+                </a>
+                <a href="http://localhost:3000" target="_blank" class="link-card">
+                    <div style="font-size: 32px; margin-bottom: 10px;">🎮</div>
+                    <strong>Sistema Principal</strong><br>
+                    <small>Controlador de Senhas</small>
+                </a>
+            </div>
+        </div>
+
+        <!-- Log de Eventos -->
+        <div class="section">
+            <h2>📝 Log de Eventos (Tempo Real)</h2>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let channel = null;
+        const logContainer = document.getElementById('log');
+
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            entry.innerHTML = `[${timestamp}] ${message}`;
+            logContainer.insertBefore(entry, logContainer.firstChild);
+        }
+
+        function limparLog() {
+            logContainer.innerHTML = '';
+            addLog('Log limpo', 'info');
+        }
+
+        // Inicializar BroadcastChannel
+        try {
+            channel = new BroadcastChannel('senha-system-channel');
+            document.getElementById('channel-status').textContent = 'Canal: ✅ Conectado';
+            document.getElementById('channel-status').className = 'status status-ok';
+            addLog('✅ BroadcastChannel inicializado com sucesso', 'success');
+
+            channel.onmessage = (event) => {
+                const data = event.data;
+                addLog(`📨 Evento recebido: ${data.type} de ${data.source}`, 'success');
+                console.log('Evento completo:', data);
+            };
+        } catch (error) {
+            document.getElementById('channel-status').textContent = 'Canal: ❌ Erro';
+            document.getElementById('channel-status').className = 'status status-error';
+            addLog('❌ Erro ao criar BroadcastChannel: ' + error.message, 'error');
+        }
+
+        // Escutar localStorage também
+        window.addEventListener('storage', (e) => {
+            if (e.key && e.key.startsWith('senha-event')) {
+                try {
+                    const event = JSON.parse(e.newValue);
+                    addLog(`📦 localStorage evento: ${event.type}`, 'info');
+                } catch (err) {
+                    // Ignorar
+                }
+            }
+        });
+
+        function testarEmissaoSenha() {
+            const evento = {
+                type: 'senha_emitida',
+                data: {
+                    id: 'teste-' + Date.now(),
+                    numeroCompleto: 'P001',
+                    servico: { nome: 'Teste', sigla: 'P', cor: '#3b82f6' },
+                    status: 'aguardando',
+                    prioridade: true
+                },
+                timestamp: Date.now(),
+                source: 'TesteManual'
+            };
+
+            if (channel) {
+                channel.postMessage(evento);
+                addLog('📤 Emitido via BroadcastChannel: senha_emitida', 'success');
+            }
+
+            localStorage.setItem('senha-event', JSON.stringify(evento));
+            addLog('📤 Emitido via localStorage: senha_emitida', 'success');
+        }
+
+        function testarChamadaSenha() {
+            const evento = {
+                type: 'senha_chamada',
+                data: {
+                    id: 'teste-' + Date.now(),
+                    numeroCompleto: 'P001',
+                    guicheNumero: 1,
+                    status: 'chamando'
+                },
+                timestamp: Date.now(),
+                source: 'TesteManual'
+            };
+
+            if (channel) {
+                channel.postMessage(evento);
+                addLog('📤 Emitido: senha_chamada', 'success');
+            }
+
+            localStorage.setItem('senha-event', JSON.stringify(evento));
+        }
+
+        function testarFinalizacao() {
+            const evento = {
+                type: 'senha_finalizada',
+                data: {
+                    id: 'teste-' + Date.now(),
+                    numeroCompleto: 'P001',
+                    status: 'finalizado'
+                },
+                timestamp: Date.now(),
+                source: 'TesteManual'
+            };
+
+            if (channel) {
+                channel.postMessage(evento);
+                addLog('📤 Emitido: senha_finalizada', 'success');
+            }
+
+            localStorage.setItem('senha-event', JSON.stringify(evento));
+        }
+
+        // Log inicial
+        addLog('🚀 Sistema de teste inicializado', 'success');
+        addLog('ℹ️ Abra outras abas (Terminal, Painel Público, Sistema) e teste a comunicação', 'info');
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>🔍 Verificar Dados do Funcionário</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 12px;
+            border: 3px solid #00ff00;
+        }
+        h1 {
+            color: #00ff00;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .box {
+            background: #1a1a1a;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border: 2px solid #444;
+        }
+        .box.ok { border-color: #00ff00; }
+        .box.erro { border-color: #ff0000; }
+        .box.aviso { border-color: #ffaa00; }
+        .titulo {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #00ff00;
+        }
+        .dados {
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            background: #000;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .destaque {
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .erro-txt { color: #ff6666; }
+        .ok-txt { color: #00ff00; }
+        .aviso-txt { color: #ffaa00; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            margin: 10px 5px;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #00cc00;
+            transform: scale(1.05);
+        }
+        button.perigo {
+            background: #ff0000;
+            color: #fff;
+        }
+        button.perigo:hover {
+            background: #cc0000;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            color: #00ff00;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            background: #000;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            font-size: 16px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 VERIFICADOR DE DADOS DO FUNCIONÁRIO</h1>
+        
+        <!-- Status -->
+        <div id="status-container"></div>
+
+        <!-- Dados do Funcionário Código 1 -->
+        <div id="dados-func-1"></div>
+
+        <!-- Corrigir Dados -->
+        <div class="box" style="border-color: #00ff00;">
+            <div class="titulo">🔧 CORRIGIR/CRIAR FUNCIONÁRIO CÓDIGO 1</div>
+            
+            <div class="input-group">
+                <label>Nome:</label>
+                <input type="text" id="nome" value="Funcionário Teste">
+            </div>
+
+            <div class="input-group">
+                <label>Login:</label>
+                <input type="text" id="login" value="0">
+            </div>
+
+            <div class="input-group">
+                <label>Senha:</label>
+                <input type="text" id="senha" value="0">
+            </div>
+
+            <div class="input-group">
+                <label>Email:</label>
+                <input type="text" id="email" value="teste@cartorio.com">
+            </div>
+
+            <div class="input-group">
+                <label>CPF:</label>
+                <input type="text" id="cpf" value="000.000.000-00">
+            </div>
+
+            <button onclick="corrigirOuCriar()" style="width: 100%;">
+                ✅ CORRIGIR/CRIAR AGORA
+            </button>
+
+            <div id="resultado-correcao"></div>
+        </div>
+
+        <!-- Ações -->
+        <div style="text-align: center; margin-top: 20px;">
+            <button onclick="verificar()">🔄 ATUALIZAR</button>
+            <button onclick="testarLogin()">🔐 TESTAR LOGIN</button>
+            <button onclick="exportar()">📥 EXPORTAR</button>
+        </div>
+    </div>
+
+    <script>
+        function verificar() {
+            const statusDiv = document.getElementById('status-container')
+            const dadosDiv = document.getElementById('dados-func-1')
+            
+            const funcionarios = localStorage.getItem('funcionarios-cadastrados')
+            
+            if (!funcionarios) {
+                statusDiv.innerHTML = `
+                    <div class="box erro">
+                        <div class="titulo erro-txt">❌ NENHUM FUNCIONÁRIO CADASTRADO!</div>
+                        <p style="margin-top: 10px;">O localStorage está vazio.</p>
+                        <p style="margin-top: 10px;">Use o formulário abaixo para criar o funcionário.</p>
+                    </div>
+                `
+                dadosDiv.innerHTML = ''
+                return
+            }
+
+            let lista = []
+            try {
+                lista = JSON.parse(funcionarios)
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="box erro">
+                        <div class="titulo erro-txt">❌ ERRO AO LER DADOS!</div>
+                        <p style="margin-top: 10px;">JSON inválido no localStorage.</p>
+                        <pre style="margin-top: 10px; color: #ff6666;">${error.message}</pre>
+                    </div>
+                `
+                return
+            }
+
+            statusDiv.innerHTML = `
+                <div class="box ok">
+                    <div class="titulo ok-txt">✅ ${lista.length} FUNCIONÁRIO(S) CADASTRADO(S)</div>
+                </div>
+            `
+
+            // Buscar funcionário código 1
+            const func1 = lista.find(f => f.codigo === '1' || f.codigo === 1)
+            
+            if (!func1) {
+                dadosDiv.innerHTML = `
+                    <div class="box aviso">
+                        <div class="titulo aviso-txt">⚠️ FUNCIONÁRIO CÓDIGO 1 NÃO ENCONTRADO</div>
+                        <p style="margin-top: 10px;">Funcionários cadastrados:</p>
+                        <div class="dados">
+${lista.map((f, i) => `${i+1}. Código: ${f.codigo} | Nome: ${f.nome}`).join('\n')}
+                        </div>
+                        <p style="margin-top: 10px;">Use o formulário abaixo para criar o código 1.</p>
+                    </div>
+                `
+                return
+            }
+
+            // Mostrar dados do funcionário código 1
+            const temLogin = func1.login !== undefined && func1.login !== null && String(func1.login).trim() !== ''
+            const temSenha = func1.senha !== undefined && func1.senha !== null && String(func1.senha).trim() !== ''
+            const podeLogar = temLogin && temSenha
+
+            dadosDiv.innerHTML = `
+                <div class="box ${podeLogar ? 'ok' : 'erro'}">
+                    <div class="titulo ${podeLogar ? 'ok-txt' : 'erro-txt'}">
+                        ${podeLogar ? '✅' : '❌'} FUNCIONÁRIO CÓDIGO 1
+                    </div>
+                    
+                    <div class="dados">
+Código: ${func1.codigo}
+Nome: ${func1.nome || 'NÃO DEFINIDO'}
+Login: "${func1.login}" ${temLogin ? '✅' : '❌ VAZIO'}
+Senha: "${func1.senha}" ${temSenha ? '✅' : '❌ VAZIO'}
+Email: ${func1.email || 'NÃO DEFINIDO'}
+CPF: ${func1.cpf || 'NÃO DEFINIDO'}
+
+<span class="destaque ${podeLogar ? 'ok-txt' : 'erro-txt'}">
+STATUS: ${podeLogar ? '✅✅ PODE LOGAR!' : '❌❌ NÃO PODE LOGAR!'}
+</span>
+
+${!podeLogar ? '<span class="erro-txt">⚠️ FALTA LOGIN E/OU SENHA!</span>' : ''}
+                    </div>
+
+                    ${podeLogar ? `
+                        <div style="margin-top: 15px; padding: 15px; background: #004400; border-radius: 6px;">
+                            <strong class="ok-txt">✅ PARA FAZER LOGIN USE:</strong><br><br>
+                            <div class="dados" style="background: #003300;">
+Login: <span class="destaque">${func1.login}</span>
+Senha: <span class="destaque">${func1.senha}</span>
+Perfil: <span class="destaque">Funcionário</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `
+        }
+
+        function corrigirOuCriar() {
+            const divResultado = document.getElementById('resultado-correcao')
+            
+            const nome = document.getElementById('nome').value
+            const login = document.getElementById('login').value
+            const senha = document.getElementById('senha').value
+            const email = document.getElementById('email').value
+            const cpf = document.getElementById('cpf').value
+
+            if (!nome || !login || !senha) {
+                divResultado.innerHTML = '<div class="dados erro-txt" style="margin-top: 15px;">❌ Preencha pelo menos Nome, Login e Senha!</div>'
+                return
+            }
+
+            const funcionarios = localStorage.getItem('funcionarios-cadastrados')
+            let lista = funcionarios ? JSON.parse(funcionarios) : []
+
+            // Buscar funcionário código 1
+            const index = lista.findIndex(f => f.codigo === '1' || f.codigo === 1)
+
+            const funcionario = {
+                codigo: '1',
+                nome: nome,
+                login: login,
+                senha: senha,
+                email: email,
+                cpf: cpf,
+                emAtividade: true,
+                id: Date.now().toString(),
+                // Campos padrão
+                ordemSinalPublico: '',
+                nomeMin: '',
+                prenome: '',
+                endereco: '',
+                bairro: '',
+                cidade: '',
+                cep: '',
+                telefone: '',
+                uf: '',
+                celular: '',
+                nascimento: '',
+                rg: '',
+                mae: '',
+                pai: '',
+                cargo: '',
+                assinante: false,
+                cargoMin: '',
+                cargoCivil: '',
+                cargoMin2: '',
+                salario: '',
+                comissao: '',
+                admissao: '',
+                demissao: '',
+                observacao: ''
+            }
+
+            if (index >= 0) {
+                // ATUALIZAR
+                lista[index] = { ...lista[index], ...funcionario }
+                divResultado.innerHTML = '<div class="dados ok-txt" style="margin-top: 15px;">✅ FUNCIONÁRIO CÓDIGO 1 ATUALIZADO!</div>'
+            } else {
+                // CRIAR
+                lista.push(funcionario)
+                divResultado.innerHTML = '<div class="dados ok-txt" style="margin-top: 15px;">✅ FUNCIONÁRIO CÓDIGO 1 CRIADO!</div>'
+            }
+
+            localStorage.setItem('funcionarios-cadastrados', JSON.stringify(lista))
+            
+            setTimeout(() => {
+                divResultado.innerHTML += '<div class="dados ok-txt">💾 Salvo no localStorage!</div>'
+                setTimeout(() => {
+                    verificar()
+                }, 500)
+            }, 500)
+        }
+
+        function testarLogin() {
+            const login = document.getElementById('login').value
+            const senha = document.getElementById('senha').value
+
+            const funcionarios = localStorage.getItem('funcionarios-cadastrados')
+            if (!funcionarios) {
+                alert('❌ Nenhum funcionário cadastrado!')
+                return
+            }
+
+            const lista = JSON.parse(funcionarios)
+            const encontrado = lista.find(f => 
+                String(f.login).toLowerCase() === String(login).toLowerCase() ||
+                (f.email && String(f.email).toLowerCase() === String(login).toLowerCase())
+            )
+
+            if (!encontrado) {
+                alert(`❌ FUNCIONÁRIO NÃO ENCONTRADO!\n\nLogin buscado: "${login}"\n\nLogins disponíveis:\n${lista.map(f => `- "${f.login}"`).join('\n')}`)
+                return
+            }
+
+            if (String(encontrado.senha) === String(senha)) {
+                alert(`✅✅✅ LOGIN VÁLIDO! ✅✅✅\n\nFuncionário: ${encontrado.nome}\nLogin: ${encontrado.login}\nSenha: ${encontrado.senha}\n\nVocê PODE fazer login no sistema!\n\nUse:\nLogin: ${encontrado.login}\nSenha: ${encontrado.senha}\nPerfil: Funcionário`)
+            } else {
+                alert(`❌ SENHA INCORRETA!\n\nSenha cadastrada: "${encontrado.senha}"\nSenha que você digitou: "${senha}"\n\nElas NÃO são iguais!`)
+            }
+        }
+
+        function exportar() {
+            const funcionarios = localStorage.getItem('funcionarios-cadastrados')
+            if (!funcionarios) {
+                alert('❌ Nenhum dado para exportar!')
+                return
+            }
+
+            const blob = new Blob([funcionarios], { type: 'application/json' })
+            const link = document.createElement('a')
+            link.href = URL.createObjectURL(blob)
+            link.download = 'funcionarios.json'
+            link.click()
+            
+            alert('✅ Dados exportados para Downloads!')
+        }
+
+        // Verificar ao carregar
+        window.onload = verificar
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 VERIFICADOR DE FUNCIONÁRIO</h1>
+        
+        <div id="status-container"></div>
+        <div id="dados-func-1"></div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <p style="font-size: 14px; color: #888;">Use os botões abaixo:</p>
+        </div>
+    </div>
+</body>
+</html>
+

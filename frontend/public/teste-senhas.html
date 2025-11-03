@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste de Senhas - Diagnóstico</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            color: #333;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button.danger {
+            background: linear-gradient(135deg, #f43f5e 0%, #dc2626 100%);
+        }
+        
+        button.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        #log {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        
+        .info-box {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .info-box h3 {
+            color: #1e40af;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #1e3a8a;
+            margin: 5px 0;
+        }
+        
+        .count {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Sistema de Senhas</h1>
+        
+        <div class="section">
+            <h2>📋 Informações do Sistema</h2>
+            <div id="info"></div>
+        </div>
+        
+        <div class="section">
+            <h2>🎬 Ações</h2>
+            <button onclick="verificarLocalStorage()">🔍 Verificar localStorage</button>
+            <button onclick="limparSenhas()" class="danger">🗑️ Limpar Senhas</button>
+            <button onclick="emitirSenhaTeste()" class="success">🎫 Emitir Senha Teste</button>
+            <button onclick="verificarData()">📅 Verificar Data</button>
+            <button onclick="limparLog()">🧹 Limpar Log</button>
+        </div>
+        
+        <div class="section">
+            <h2>📜 Log de Eventos</h2>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const icons = {
+                info: 'ℹ️',
+                success: '✅',
+                error: '❌',
+                warning: '⚠️'
+            };
+            logDiv.innerHTML += `[${timestamp}] ${icons[type]} ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function limparLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function verificarLocalStorage() {
+            log('Verificando localStorage...', 'info');
+            
+            const senhas = localStorage.getItem('senha-senhas');
+            const ultimaData = localStorage.getItem('senha-ultima-data');
+            const servicos = localStorage.getItem('senha-servicos');
+            
+            log(`📦 Chave "senha-senhas": ${senhas ? 'EXISTE' : 'NÃO EXISTE'}`, senhas ? 'success' : 'error');
+            
+            if (senhas) {
+                try {
+                    const senhasArray = JSON.parse(senhas);
+                    log(`   Total de senhas: ${senhasArray.length}`, 'info');
+                    senhasArray.forEach((s, i) => {
+                        log(`   ${i+1}. ${s.numeroCompleto} - Status: ${s.status}`, 'info');
+                    });
+                } catch (e) {
+                    log(`   ❌ Erro ao fazer parse: ${e.message}`, 'error');
+                }
+            }
+            
+            log(`📅 Última data: ${ultimaData || 'NÃO DEFINIDA'}`, ultimaData ? 'info' : 'warning');
+            log(`📅 Data de hoje: ${new Date().toDateString()}`, 'info');
+            log(`📅 Datas são iguais? ${ultimaData === new Date().toDateString() ? 'SIM' : 'NÃO'}`, ultimaData === new Date().toDateString() ? 'success' : 'warning');
+            
+            atualizarInfo();
+        }
+
+        function verificarData() {
+            log('Verificando configuração de data...', 'info');
+            
+            const ultimaData = localStorage.getItem('senha-ultima-data');
+            const hoje = new Date().toDateString();
+            
+            log(`📅 Última data salva: ${ultimaData || 'NÃO DEFINIDA'}`, 'info');
+            log(`📅 Data de hoje: ${hoje}`, 'info');
+            
+            if (ultimaData !== hoje) {
+                log(`⚠️ ATENÇÃO: As datas são diferentes!`, 'warning');
+                log(`   Isso significa que verificarReinicioDiario() vai limpar as senhas!`, 'warning');
+                log(`   Corrigindo a data...`, 'info');
+                localStorage.setItem('senha-ultima-data', hoje);
+                log(`✅ Data corrigida!`, 'success');
+            } else {
+                log(`✅ Data OK - senhas não serão limpas`, 'success');
+            }
+            
+            atualizarInfo();
+        }
+
+        function limparSenhas() {
+            if (confirm('Tem certeza que deseja limpar todas as senhas?')) {
+                localStorage.removeItem('senha-senhas');
+                log('🗑️ Senhas removidas do localStorage', 'warning');
+                atualizarInfo();
+            }
+        }
+
+        function emitirSenhaTeste() {
+            log('Emitindo senha de teste...', 'info');
+            
+            // Garantir que a data está correta
+            const hoje = new Date().toDateString();
+            localStorage.setItem('senha-ultima-data', hoje);
+            
+            // Criar senha teste
+            const senhas = JSON.parse(localStorage.getItem('senha-senhas') || '[]');
+            const novaSenha = {
+                id: `senha-${Date.now()}`,
+                numero: senhas.length + 1,
+                numeroCompleto: `P${String(senhas.length + 1).padStart(3, '0')}`,
+                servicoId: 'preferencial',
+                servico: {
+                    id: 'preferencial',
+                    nome: 'Atendimento Preferencial',
+                    sigla: 'P',
+                    cor: '#3b82f6',
+                    ativo: true,
+                    ordem: 1,
+                    tipoSenha: 'preferencial',
+                    tempoMedioAtendimento: 10
+                },
+                status: 'aguardando',
+                horaEmissao: new Date().toISOString(),
+                prioridade: true,
+                tempoEspera: 0
+            };
+            
+            senhas.push(novaSenha);
+            localStorage.setItem('senha-senhas', JSON.stringify(senhas));
+            
+            log(`✅ Senha ${novaSenha.numeroCompleto} emitida com sucesso!`, 'success');
+            log(`   Status: ${novaSenha.status}`, 'info');
+            log(`   Total de senhas: ${senhas.length}`, 'info');
+            
+            // Disparar evento
+            const event = {
+                type: 'senha_emitida',
+                data: novaSenha,
+                timestamp: Date.now(),
+                source: 'TestePage'
+            };
+            localStorage.setItem(`senha-event-${Date.now()}`, JSON.stringify(event));
+            
+            log(`📡 Evento senha_emitida disparado`, 'success');
+            
+            atualizarInfo();
+        }
+
+        function atualizarInfo() {
+            const infoDiv = document.getElementById('info');
+            
+            const senhas = JSON.parse(localStorage.getItem('senha-senhas') || '[]');
+            const ultimaData = localStorage.getItem('senha-ultima-data');
+            const hoje = new Date().toDateString();
+            
+            const aguardando = senhas.filter(s => s.status === 'aguardando').length;
+            const chamando = senhas.filter(s => s.status === 'chamando').length;
+            const atendendo = senhas.filter(s => s.status === 'atendendo').length;
+            const finalizadas = senhas.filter(s => s.status === 'finalizado').length;
+            
+            infoDiv.innerHTML = `
+                <div class="info-box">
+                    <h3>📊 Estatísticas</h3>
+                    <p>Total de senhas: <span class="count">${senhas.length}</span></p>
+                    <p>Aguardando: <span class="count">${aguardando}</span></p>
+                    <p>Chamando: <span class="count">${chamando}</span></p>
+                    <p>Atendendo: <span class="count">${atendendo}</span></p>
+                    <p>Finalizadas: <span class="count">${finalizadas}</span></p>
+                </div>
+                <div class="info-box" style="${ultimaData !== hoje ? 'background: #fef2f2; border-color: #ef4444;' : ''}">
+                    <h3>📅 Controle de Data</h3>
+                    <p>Última data salva: <strong>${ultimaData || 'NÃO DEFINIDA'}</strong></p>
+                    <p>Data de hoje: <strong>${hoje}</strong></p>
+                    <p>Status: ${ultimaData === hoje ? '✅ OK' : '⚠️ DIFERENTE - SENHAS SERÃO LIMPAS!'}</p>
+                </div>
+            `;
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Página de teste carregada', 'success');
+            verificarLocalStorage();
+        });
+    </script>
+</body>
+</html>
+

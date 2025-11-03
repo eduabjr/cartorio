@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Resolver Login Definitivo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #1a1a1a;
+            padding: 30px;
+            border: 3px solid #0f0;
+            border-radius: 10px;
+        }
+        h1 {
+            text-align: center;
+            color: #0f0;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+        .btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+            background: #0f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background: #0d0;
+            transform: scale(1.02);
+        }
+        .resultado {
+            margin: 20px 0;
+            padding: 20px;
+            background: #000;
+            border: 2px solid #0f0;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .ok { color: #0f0; }
+        .erro { color: #f00; }
+        .aviso { color: #ff0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 RESOLVER LOGIN - DEFINITIVO</h1>
+        
+        <button class="btn" onclick="etapa1()">
+            1️⃣ CRIAR FUNCIONÁRIO CÓDIGO 1
+        </button>
+        <div id="resultado1"></div>
+
+        <button class="btn" onclick="etapa2()">
+            2️⃣ VERIFICAR SE FOI SALVO
+        </button>
+        <div id="resultado2"></div>
+
+        <button class="btn" onclick="etapa3()">
+            3️⃣ INSTRUÇÕES DE LOGIN
+        </button>
+        <div id="resultado3"></div>
+    </div>
+
+    <script>
+        function etapa1() {
+            const div = document.getElementById('resultado1')
+            
+            // CRIAR/ATUALIZAR funcionário código 1
+            const funcionario = {
+                codigo: '1',
+                id: '1',
+                nome: 'EDUARDO ANTONIO BRAGA JUNIOR',
+                nomeMin: 'EDUARDO ANTONIO BRAGA JUNIOR',
+                prenome: 'EDUARDO',
+                login: '0000',
+                senha: '0000',
+                email: 'eduardo@cartorio.com',
+                cpf: '446.756.998-71',
+                emAtividade: true,
+                ordemSinalPublico: '1',
+                endereco: 'Rua Onze de Junho',
+                numero: '796',
+                bairro: 'Casa Branca',
+                cidade: 'Santo André',
+                uf: 'SP',
+                cep: '09015-520',
+                telefone: '',
+                celular: '',
+                nascimento: '',
+                rg: '',
+                mae: '',
+                pai: '',
+                cargo: 'Funcionário',
+                assinante: false,
+                cargoMin: '',
+                cargoCivil: '',
+                cargoMin2: '',
+                salario: '0,00',
+                comissao: '',
+                admissao: '2025-11-01',
+                demissao: '',
+                observacao: '',
+                complemento: '',
+                logradouro: ''
+            }
+
+            // Buscar lista existente
+            const dados = localStorage.getItem('funcionarios-cadastrados')
+            let lista = dados ? JSON.parse(dados) : []
+
+            // Remover código 1 se existir
+            lista = lista.filter(f => f.codigo !== '1' && f.codigo !== 1)
+
+            // Adicionar novo
+            lista.push(funcionario)
+
+            // Salvar
+            localStorage.setItem('funcionarios-cadastrados', JSON.stringify(lista))
+
+            div.innerHTML = `
+<div class="resultado ok">
+✅ FUNCIONÁRIO CRIADO/ATUALIZADO COM SUCESSO!
+
+Código: 1
+Nome: EDUARDO ANTONIO BRAGA JUNIOR
+Login: "0000" (4 zeros)
+Senha: "0000" (4 zeros)
+Email: eduardo@cartorio.com
+CPF: 446.756.998-71
+
+💾 Salvo no localStorage!
+
+➡️ PRÓXIMO: Clique no botão 2
+</div>
+            `
+        }
+
+        function etapa2() {
+            const div = document.getElementById('resultado2')
+            
+            const dados = localStorage.getItem('funcionarios-cadastrados')
+            if (!dados) {
+                div.innerHTML = '<div class="resultado erro">❌ NENHUM DADO NO LOCALSTORAGE!</div>'
+                return
+            }
+
+            const lista = JSON.parse(dados)
+            const func1 = lista.find(f => f.codigo == '1')
+
+            if (!func1) {
+                div.innerHTML = '<div class="resultado erro">❌ FUNCIONÁRIO CÓDIGO 1 NÃO ENCONTRADO!</div>'
+                return
+            }
+
+            const loginOK = func1.login && String(func1.login).trim() !== ''
+            const senhaOK = func1.senha && String(func1.senha).trim() !== ''
+
+            div.innerHTML = `
+<div class="resultado ${loginOK && senhaOK ? 'ok' : 'erro'}">
+${loginOK && senhaOK ? '✅' : '❌'} VERIFICAÇÃO DO FUNCIONÁRIO
+
+Código: ${func1.codigo}
+Nome: ${func1.nome}
+Login: "${func1.login}" (${func1.login?.length} caracteres) ${loginOK ? '✅' : '❌'}
+Senha: "${func1.senha}" (${func1.senha?.length} caracteres) ${senhaOK ? '✅' : '❌'}
+Email: ${func1.email}
+
+${loginOK && senhaOK ? `
+✅✅✅ TUDO CERTO! ✅✅✅
+
+PARA FAZER LOGIN USE:
+Login: ${func1.login}
+Senha: ${func1.senha}
+Perfil: Funcionário
+
+➡️ PRÓXIMO: Clique no botão 3
+` : '❌ FALTA LOGIN OU SENHA! Clique no botão 1 novamente.'}
+</div>
+            `
+        }
+
+        function etapa3() {
+            const div = document.getElementById('resultado3')
+            
+            const dados = localStorage.getItem('funcionarios-cadastrados')
+            const lista = JSON.parse(dados || '[]')
+            const func1 = lista.find(f => f.codigo == '1')
+
+            if (!func1) {
+                div.innerHTML = '<div class="resultado erro">❌ Funcionário não encontrado! Clique no botão 1 primeiro.</div>'
+                return
+            }
+
+            div.innerHTML = `
+<div class="resultado ok">
+📋 INSTRUÇÕES PARA FAZER LOGIN:
+
+1. FECHE ESTA ABA
+
+2. VOLTE PARA A TELA DE LOGIN
+   (http://localhost:3000)
+
+3. DIGITE EXATAMENTE:
+
+   Login: ${func1.login}
+   Senha: ${func1.senha}
+   
+4. SELECIONE: Funcionário (NÃO Admin!)
+
+5. CLIQUE EM: [ENTRAR]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ IMPORTANTE:
+- Login tem ${func1.login?.length} caracteres
+- Senha tem ${func1.senha?.length} caracteres
+- Use EXATAMENTE como está aqui
+- NÃO adicione espaços
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ AGORA VAI FUNCIONAR!
+</div>
+            `
+        }
+    </script>
+</body>
+</html>
+

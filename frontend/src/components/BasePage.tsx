@@ -32,7 +32,7 @@ export function BasePage({
   draggable = true,
   windowId,
   initialPosition = { x: 100, y: 150 },
-  initialZIndex = 50,
+  initialZIndex = 2000, // 🔒 CRÍTICO: Maior que menus (zIndex: 1001)
   isMinimized = false,
   isMaximized = false,
   resetToOriginalPosition = false,

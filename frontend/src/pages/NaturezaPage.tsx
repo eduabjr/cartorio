@@ -39,6 +39,7 @@ import React, { useState, useEffect } from 'react'
 import { BasePage } from '../components/BasePage'
 import { naturezaService, Natureza } from '../services/NaturezaService'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { useModal } from '../hooks/useModal'
 import { getRelativeFontSize } from '../utils/fontUtils'
 
 interface NaturezaPageProps {
@@ -48,6 +49,7 @@ interface NaturezaPageProps {
 export function NaturezaPage({ onClose }: NaturezaPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   // Cor do header: azul royal no light, roxo no dark
   const headerColor = currentTheme === 'dark' ? '#9370DB' : '#4169E1'
@@ -104,12 +106,12 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
     try {
       // Validação básica
       if (!formData.codigo || !formData.descricao) {
-        alert('⚠️ Código e Descrição são obrigatórios!')
+        await modal.alert('Código e Descrição são obrigatórios!', 'Campos Obrigatórios', '⚠️')
         return
       }
 
       if (formData.percentualIss < 0 || formData.percentualIss > 100) {
-        alert('⚠️ O percentual de ISS deve estar entre 0 e 100!')
+        await modal.alert('O percentual de ISS deve estar entre 0 e 100!', 'Valor Inválido', '⚠️')
         return
       }
 
@@ -117,12 +119,12 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
         // Atualizar natureza existente
         await naturezaService.atualizar(formData.id, formData)
         console.log('✅ Natureza atualizada com sucesso!')
-        alert('✅ Natureza atualizada com sucesso!')
+        await modal.alert('Natureza atualizada com sucesso!', 'Sucesso', '✅')
       } else {
         // Criar nova natureza
         await naturezaService.criar(formData)
         console.log('✅ Natureza cadastrada com sucesso!')
-        alert('✅ Natureza cadastrada com sucesso!')
+        await modal.alert('Natureza cadastrada com sucesso!', 'Sucesso', '✅')
       }
 
       // Recarregar lista
@@ -130,27 +132,28 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
       handleNovo()
     } catch (error) {
       console.error('❌ Erro ao gravar natureza:', error)
-      alert('❌ Erro ao gravar natureza. Verifique os dados e tente novamente.')
+      await modal.alert('Erro ao gravar natureza. Verifique os dados e tente novamente.', 'Erro', '❌')
     }
   }
 
   // Função para excluir
   const handleExcluir = async () => {
     if (!formData.id) {
-      alert('⚠️ Selecione uma natureza para excluir!')
+      await modal.alert('Selecione uma natureza para excluir!', 'Atenção', '⚠️')
       return
     }
 
-    if (confirm('⚠️ Tem certeza que deseja excluir esta natureza?')) {
+    const confirmado = await modal.confirm('Tem certeza que deseja excluir esta natureza?', 'Confirmar Exclusão', '⚠️')
+    if (confirmado) {
       try {
         await naturezaService.remover(formData.id)
         console.log('✅ Natureza excluída com sucesso!')
-        alert('✅ Natureza excluída com sucesso!')
+        await modal.alert('Natureza excluída com sucesso!', 'Sucesso', '✅')
         await carregarNaturezas()
         handleNovo()
       } catch (error) {
         console.error('❌ Erro ao excluir natureza:', error)
-        alert('❌ Erro ao excluir natureza.')
+        await modal.alert('Erro ao excluir natureza.', 'Erro', '❌')
       }
     }
   }
@@ -158,7 +161,7 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
   // Função para buscar natureza por código
   const handleBuscar = async () => {
     if (!searchTerm) {
-      alert('⚠️ Digite um código para buscar!')
+      await modal.alert('Digite um código para buscar!', 'Campo Obrigatório', '⚠️')
       return
     }
 
@@ -169,7 +172,7 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
       console.log('✅ Natureza encontrada:', natureza)
     } catch (error) {
       console.error('❌ Erro ao buscar natureza:', error)
-      alert('❌ Natureza não encontrada!')
+      await modal.alert('Natureza não encontrada!', 'Não Encontrado', '❌')
     }
   }
 
@@ -318,9 +321,10 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
 
   // Renderização
   return (
-    <div style={windowStyles}>
-      {/* Header */}
-      <div style={headerStyles}>
+    <>
+      <div style={windowStyles}>
+        {/* Header */}
+        <div style={headerStyles}>
         <h2 style={{ margin: 0, fontSize: getRelativeFontSize(16), fontWeight: '600' }}>
           Cadastro de Natureza de Serviços
         </h2>
@@ -539,6 +543,8 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
         </button>
       </div>
     </div>
+    <modal.ModalComponent />
+    </>
   )
 }
 

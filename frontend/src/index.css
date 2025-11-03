@@ -14,7 +14,7 @@ body {
   background: var(--background-color, #f8fafc);
   color: var(--text-color, #1e293b);
   transition: background-color var(--transition-duration, 0.3s) ease, color var(--transition-duration, 0.3s) ease;
-  font-size: var(--base-font-size, 16px);
+  font-size: var(--base-font-size, 16px) !important;
 }
 
 /* Garantir que o root da aplicação ocupe toda a tela no Electron */
@@ -46,12 +46,13 @@ body {
   }
 
   /* Aplicar movimento reduzido quando ativado */
-  body[style*="--animation-duration: 0.01s"] *,
-  body[style*="--animation-duration: 0.01s"] *::before,
-  body[style*="--animation-duration: 0.01s"] *::after {
+  body.reduced-motion *,
+  body.reduced-motion *::before,
+  body.reduced-motion *::after {
     animation-duration: 0.01s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 

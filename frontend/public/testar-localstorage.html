@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Teste de LocalStorage - Sistema Cartório</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        button {
+            padding: 12px 24px;
+            margin: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+        }
+        .btn-test { background-color: #3498db; }
+        .btn-view { background-color: #27ae60; }
+        .btn-clear { background-color: #e74c3c; }
+        .btn-test:hover { background-color: #2980b9; }
+        .btn-view:hover { background-color: #229954; }
+        .btn-clear:hover { background-color: #c0392b; }
+        #output {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .success { color: #27ae60; font-weight: bold; }
+        .error { color: #e74c3c; font-weight: bold; }
+        .info { color: #3498db; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Teste de LocalStorage - Sistema Cartório</h1>
+        
+        <p>Use esta página para testar se o localStorage está funcionando corretamente:</p>
+        
+        <div>
+            <button class="btn-test" onclick="testarGravacao()">
+                💾 Testar Gravação
+            </button>
+            <button class="btn-view" onclick="verTodosDados()">
+                📊 Ver Todos os Dados
+            </button>
+            <button class="btn-view" onclick="verClientes()">
+                👤 Ver Clientes
+            </button>
+            <button class="btn-view" onclick="verFuncionarios()">
+                👥 Ver Funcionários
+            </button>
+            <button class="btn-clear" onclick="limparTudo()">
+                🗑️ Limpar Tudo
+            </button>
+        </div>
+        
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output')
+            const span = document.createElement('span')
+            span.className = type
+            span.textContent = message + '\n'
+            output.appendChild(span)
+        }
+
+        function limparOutput() {
+            document.getElementById('output').innerHTML = ''
+        }
+
+        function testarGravacao() {
+            limparOutput()
+            log('🧪 TESTE DE GRAVAÇÃO INICIADO', 'info')
+            log('═'.repeat(60), 'info')
+            
+            try {
+                // Teste 1: Gravar cliente
+                log('\n1️⃣ Testando gravação de CLIENTE...', 'info')
+                const clientes = JSON.parse(localStorage.getItem('clientes-cadastrados') || '[]')
+                const novoCliente = {
+                    codigo: (clientes.length + 1).toString(),
+                    nome: 'TESTE DIAGNÓSTICO ' + Date.now(),
+                    cpf: '111.111.111-11',
+                    telefone: '11111111111'
+                }
+                clientes.push(novoCliente)
+                localStorage.setItem('clientes-cadastrados', JSON.stringify(clientes))
+                log('   ✅ Cliente gravado! Código: ' + novoCliente.codigo, 'success')
+                
+                // Verificar imediatamente
+                const verificacao = JSON.parse(localStorage.getItem('clientes-cadastrados') || '[]')
+                log('   ✅ Verificação: ' + verificacao.length + ' clientes no total', 'success')
+                
+                // Teste 2: Gravar funcionário
+                log('\n2️⃣ Testando gravação de FUNCIONÁRIO...', 'info')
+                const funcionarios = JSON.parse(localStorage.getItem('funcionarios-cadastrados') || '[]')
+                const novoFunc = {
+                    codigo: (funcionarios.length + 1).toString(),
+                    nome: 'FUNCIONARIO TESTE ' + Date.now(),
+                    cpf: '222.222.222-22'
+                }
+                funcionarios.push(novoFunc)
+                localStorage.setItem('funcionarios-cadastrados', JSON.stringify(funcionarios))
+                log('   ✅ Funcionário gravado! Código: ' + novoFunc.codigo, 'success')
+                
+                const verificacaoFunc = JSON.parse(localStorage.getItem('funcionarios-cadastrados') || '[]')
+                log('   ✅ Verificação: ' + verificacaoFunc.length + ' funcionários no total', 'success')
+                
+                log('\n✅ TESTE CONCLUÍDO COM SUCESSO!', 'success')
+                log('Os dados foram gravados e verificados.', 'success')
+                
+            } catch (error) {
+                log('\n❌ ERRO: ' + error.message, 'error')
+            }
+        }
+
+        function verTodosDados() {
+            limparOutput()
+            log('📊 TODOS OS DADOS NO LOCALSTORAGE', 'info')
+            log('═'.repeat(60), 'info')
+            
+            const keys = [
+                'clientes-cadastrados',
+                'funcionarios-cadastrados',
+                'cartorios-seade',
+                'dnvdo-bloqueadas',
+                'naturezas',
+                'feriados-cadastrados',
+                'ultimoCodigoCliente',
+                'ultimoCodigoFuncionario',
+                'ultimoCodigoCartorio'
+            ]
+            
+            keys.forEach(key => {
+                const data = localStorage.getItem(key)
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data)
+                        if (Array.isArray(parsed)) {
+                            log(`\n📁 ${key}: ${parsed.length} registros`, 'success')
+                            if (parsed.length > 0) {
+                                log('   Primeiro: ' + JSON.stringify(parsed[0]).substring(0, 100), 'info')
+                            }
+                        } else {
+                            log(`\n📁 ${key}: ${data}`, 'success')
+                        }
+                    } catch {
+                        log(`\n📁 ${key}: ${data}`, 'success')
+                    }
+                } else {
+                    log(`\n❌ ${key}: (vazio)`, 'error')
+                }
+            })
+            
+            log('\n📊 Total de chaves: ' + localStorage.length, 'info')
+        }
+
+        function verClientes() {
+            limparOutput()
+            log('👤 CLIENTES CADASTRADOS', 'info')
+            log('═'.repeat(60), 'info')
+            
+            const clientes = JSON.parse(localStorage.getItem('clientes-cadastrados') || '[]')
+            log(`\nTotal: ${clientes.length} clientes\n`, 'success')
+            
+            if (clientes.length === 0) {
+                log('❌ Nenhum cliente cadastrado', 'error')
+            } else {
+                clientes.forEach((c, i) => {
+                    log(`\n${i + 1}. Código: ${c.codigo}`, 'info')
+                    log(`   Nome: ${c.nome}`, 'info')
+                    log(`   CPF: ${c.cpf || '(não informado)'}`, 'info')
+                })
+            }
+        }
+
+        function verFuncionarios() {
+            limparOutput()
+            log('👥 FUNCIONÁRIOS CADASTRADOS', 'info')
+            log('═'.repeat(60), 'info')
+            
+            const funcionarios = JSON.parse(localStorage.getItem('funcionarios-cadastrados') || '[]')
+            log(`\nTotal: ${funcionarios.length} funcionários\n`, 'success')
+            
+            if (funcionarios.length === 0) {
+                log('❌ Nenhum funcionário cadastrado', 'error')
+            } else {
+                funcionarios.forEach((f, i) => {
+                    log(`\n${i + 1}. Código: ${f.codigo}`, 'info')
+                    log(`   Nome: ${f.nome}`, 'info')
+                    log(`   CPF: ${f.cpf || '(não informado)'}`, 'info')
+                })
+            }
+        }
+
+        function limparTudo() {
+            if (!confirm('⚠️ ATENÇÃO: Isso vai APAGAR TODOS OS DADOS!\n\nTem certeza?')) {
+                return
+            }
+            
+            if (!confirm('⚠️⚠️⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nIsso é IRREVERSÍVEL!')) {
+                return
+            }
+            
+            limparOutput()
+            localStorage.clear()
+            log('🗑️ Todos os dados foram apagados!', 'error')
+            log('Recarregue a página principal para recomeçar.', 'info')
+        }
+
+        // Mostrar dados ao carregar
+        window.onload = () => {
+            verTodosDados()
+        }
+    </script>
+</body>
+</html>
+

@@ -8,6 +8,7 @@ import { cartorioSeadeService } from '../services/CartorioSeadeService'
 import { cnpjService } from '../services/CNPJService'
 import { viaCepService } from '../services/ViaCepService'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
+import { useModal } from '../hooks/useModal'
 
 interface CartorioSeade {
   id: number
@@ -36,6 +37,7 @@ interface CartorioSeadePageProps {
 export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   // Cor do header: teal no light, laranja no dark
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
@@ -61,7 +63,10 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   })
   
   // Estado para os dados cadastrados
-  const [cartorios, setCartorios] = useState<CartorioSeade[]>([])
+  const [cartorios, setCartorios] = useState<CartorioSeade[]>(() => {
+    const saved = localStorage.getItem('cartorios-seade')
+    return saved ? JSON.parse(saved) : []
+  })
   
   // Estado para o item selecionado
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -93,15 +98,17 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   }
 
   // Função para gravar registro
-  const handleGravar = () => {
+  const handleGravar = async () => {
     if (selectedId !== null) {
       // Editar registro existente
-      setCartorios(cartorios.map(cart => 
+      const cartoriosAtualizados = cartorios.map(cart => 
         cart.id === selectedId 
           ? { ...cart, ...formData }
           : cart
-      ))
-      alert('✅ Cartório atualizado com sucesso!')
+      )
+      setCartorios(cartoriosAtualizados)
+      localStorage.setItem('cartorios-seade', JSON.stringify(cartoriosAtualizados))
+      await modal.alert('Cartório atualizado com sucesso!', 'Sucesso', '✅')
     } else {
       // Criar novo registro com código sequencial
       const ultimoCodigo = localStorage.getItem('ultimoCodigoCartorio')
@@ -114,18 +121,23 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
         ...formData,
         codigo: proximoCodigo.toString()
       }
-      setCartorios([...cartorios, novoCartorio])
+      const novosCartorios = [...cartorios, novoCartorio]
+      setCartorios(novosCartorios)
+      localStorage.setItem('cartorios-seade', JSON.stringify(novosCartorios))
       console.log('✅ Cartório cadastrado! Código:', proximoCodigo)
     }
   }
 
   // Função para excluir registro
-  const handleExcluir = () => {
+  const handleExcluir = async () => {
     if (selectedId !== null) {
-      if (confirm('Deseja realmente excluir este registro?')) {
-        setCartorios(cartorios.filter(cart => cart.id !== selectedId))
+      const confirmado = await modal.confirm('Deseja realmente excluir este registro?', 'Confirmar Exclusão', '⚠️')
+      if (confirmado) {
+        const cartoriosAtualizados = cartorios.filter(cart => cart.id !== selectedId)
+        setCartorios(cartoriosAtualizados)
+        localStorage.setItem('cartorios-seade', JSON.stringify(cartoriosAtualizados))
         handleNovo()
-        alert('✅ Cartório excluído com sucesso!')
+        await modal.alert('Cartório excluído com sucesso!', 'Sucesso', '✅')
       }
     }
   }
@@ -133,49 +145,94 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   // Função para atualizar cartórios interligados
   const handleAtualizarInterligados = async () => {
     try {
-      const confirmacao = confirm('🌐 Deseja atualizar a lista de cartórios interligados?\n\nEsta ação buscará todos os cartórios cadastrados no sistema SEADE.')
+      const confirmacao = await modal.confirm('Deseja atualizar a lista de cartórios interligados?\n\nEsta ação carregará os cartórios do arquivo JSON e gerará códigos sequenciais.', 'Atualizar Interligados', '🌐')
       
       if (!confirmacao) {
         return
       }
 
       console.log('🌐 Iniciando atualização de cartórios interligados...')
+      console.log('📁 Carregando de: extra/cartoriosInterligados.json')
       
-      // Mostrar loading
-      const loadingMessage = 'Carregando cartórios...'
-      console.log(loadingMessage)
+      // Buscar cartórios do JSON local
+      const response = await fetch('/extra/cartoriosInterligados.json')
+      if (!response.ok) {
+        throw new Error('Erro ao carregar arquivo JSON')
+      }
       
-      // Buscar cartórios interligados da API
-      const cartoriosInterligados = await cartorioSeadeService.atualizarCartoriosInterligados()
+      const cartoriosInterligados = await response.json()
       
       console.log('✅ Cartórios recebidos:', cartoriosInterligados.length)
       
+      // Obter último código usado
+      const ultimoCodigo = localStorage.getItem('ultimoCodigoCartorio')
+      let proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      
+      // Processar cartórios do JSON e gerar códigos sequenciais
+      const cartoriosComCodigo = cartoriosInterligados.map((cart: any, index: number) => {
+        const codigoAtual = proximoCodigo + index
+        const cartorioProcessado: CartorioSeade = {
+          id: Date.now() + index, // ID único baseado no timestamp
+          codigo: codigoAtual.toString(),
+          numeroSeade: '0',
+          numeroCnj: cart.numeroCNJ || '0',
+          tituloCartorio: cart.tituloCartorio || '',
+          cnpj: '',
+          cep: '',
+          endereco: cart.endereco || '',
+          numero: cart.numero || '',
+          bairro: cart.bairro || '',
+          cidade: '',
+          uf: '',
+          site: '',
+          email: cart.email || '',
+          responsavel: cart.responsavel || '',
+          telefone: cart.telefone || '',
+          cpf: ''
+        }
+        return cartorioProcessado
+      })
+      
+      // Atualizar proximoCodigo após processar todos os cartórios
+      proximoCodigo = proximoCodigo + cartoriosComCodigo.length
+      
+      // Atualizar último código no localStorage
+      localStorage.setItem('ultimoCodigoCartorio', (proximoCodigo - 1).toString())
+      
+      // Adicionar aos cartórios existentes
+      const novosCartorios = [...cartorios, ...cartoriosComCodigo]
+      console.log('📊 Total de cartórios antes:', cartorios.length)
+      console.log('📊 Total de cartórios importados:', cartoriosComCodigo.length)
+      console.log('📊 Total de cartórios depois:', novosCartorios.length)
+      
+      setCartorios(novosCartorios)
+      
+      // Salvar no localStorage
+      localStorage.setItem('cartorios-seade', JSON.stringify(novosCartorios))
+      console.log('💾 Cartórios salvos no localStorage')
+      console.log('💾 Último código salvo:', (proximoCodigo - 1))
+      
       // Mostrar resultado
       let mensagem = `✅ Atualização concluída com sucesso!\n\n`
-      mensagem += `📊 Total de cartórios interligados: ${cartoriosInterligados.length}\n\n`
+      mensagem += `📊 Total de cartórios importados: ${cartoriosInterligados.length}\n`
+      mensagem += `🔢 Códigos gerados: ${cartoriosComCodigo[0]?.codigo} a ${cartoriosComCodigo[cartoriosComCodigo.length - 1]?.codigo}\n\n`
       
-      if (cartoriosInterligados.length > 0) {
+      if (cartoriosComCodigo.length > 0) {
         mensagem += `📋 Primeiros cartórios:\n`
-        cartoriosInterligados.slice(0, 5).forEach((cart, index) => {
-          mensagem += `${index + 1}. ${cart.codigo} - ${cart.tituloCartorio}\n`
+        cartoriosComCodigo.slice(0, 5).forEach((cart: any) => {
+          mensagem += `Cód ${cart.codigo} - CNJ ${cart.numeroCnj} - ${cart.tituloCartorio.substring(0, 40)}...\n`
         })
         
-        if (cartoriosInterligados.length > 5) {
-          mensagem += `\n... e mais ${cartoriosInterligados.length - 5} cartórios.`
+        if (cartoriosComCodigo.length > 5) {
+          mensagem += `\n... e mais ${cartoriosComCodigo.length - 5} cartórios.`
         }
       }
       
-      alert(mensagem)
-      
-      // Opcional: atualizar a lista local de cartórios
-      // setCartorios(cartoriosInterligados.map((cart, index) => ({
-      //   id: index + 1,
-      //   ...cart
-      // })))
+      await modal.alert(mensagem, 'Importação Concluída', '✅')
       
     } catch (error) {
       console.error('❌ Erro ao atualizar cartórios interligados:', error)
-      alert('❌ Erro ao atualizar cartórios interligados.\n\nVerifique sua conexão e tente novamente.')
+      await modal.alert('Erro ao atualizar cartórios interligados.\n\nVerifique se o arquivo extra/cartoriosInterligados.json existe.', 'Erro', '❌')
     }
   }
 
@@ -205,19 +262,19 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           telefone: cartorio.telefone,
           cpf: cartorio.cpf
         })
-        alert('✅ Cartório encontrado!')
+        await modal.alert('Cartório encontrado!', 'Sucesso', '✅')
       } else {
-        alert('❌ Cartório não encontrado!')
+        await modal.alert('Cartório não encontrado!', 'Não Encontrado', '❌')
       }
     } catch (error) {
       console.error('Erro ao buscar cartório:', error)
-      alert('❌ Erro ao buscar cartório!')
+      await modal.alert('Erro ao buscar cartório!', 'Erro', '❌')
     }
   }*/
 
   // Função para buscar por número SEADE
   const handleBuscarSeade = async () => {
-    const numeroSeade = prompt('Digite o número SEADE:')
+    const numeroSeade = await modal.prompt('Digite o número SEADE:', '', 'Buscar por SEADE', '🔍')
     if (!numeroSeade) return
     
     try {
@@ -241,19 +298,19 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           telefone: cartorio.telefone,
           cpf: cartorio.cpf
         })
-        alert('✅ Cartório encontrado!')
+        await modal.alert('Cartório encontrado!', 'Sucesso', '✅')
       } else {
-        alert('❌ Cartório não encontrado!')
+        await modal.alert('Cartório não encontrado!', 'Não Encontrado', '❌')
       }
     } catch (error) {
       console.error('Erro ao buscar cartório:', error)
-      alert('❌ Erro ao buscar cartório!')
+      await modal.alert('Erro ao buscar cartório!', 'Erro', '❌')
     }
   }
 
   // Função para buscar por número CNJ
   const handleBuscarCnj = async () => {
-    const numeroCnj = prompt('Digite o número CNJ:')
+    const numeroCnj = await modal.prompt('Digite o número CNJ:', '', 'Buscar por CNJ', '🔍')
     if (!numeroCnj) return
     
     try {
@@ -277,13 +334,13 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           telefone: cartorio.telefone,
           cpf: cartorio.cpf
         })
-        alert('✅ Cartório encontrado!')
+        await modal.alert('Cartório encontrado!', 'Sucesso', '✅')
       } else {
-        alert('❌ Cartório não encontrado!')
+        await modal.alert('Cartório não encontrado!', 'Não Encontrado', '❌')
       }
     } catch (error) {
       console.error('Erro ao buscar cartório:', error)
-      alert('❌ Erro ao buscar cartório!')
+      await modal.alert('Erro ao buscar cartório!', 'Erro', '❌')
     }
   }
 
@@ -292,12 +349,12 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
     const cep = formData.cep
     
     if (!cep) {
-      alert('⚠️ Digite um CEP antes de buscar!')
+      await modal.alert('Digite um CEP antes de buscar!', 'Atenção', '⚠️')
       return
     }
 
     if (!viaCepService.validarCEP(cep)) {
-      alert('❌ CEP inválido! Deve conter 8 dígitos.')
+      await modal.alert('CEP inválido! Deve conter 8 dígitos.', 'CEP Inválido', '❌')
       return
     }
 
@@ -316,13 +373,13 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           uf: dados.uf
         })
         
-        alert(`✅ CEP encontrado!\n\n📍 Endereço: ${dados.logradouro}\n🏘️ Bairro: ${dados.bairro}\n🏙️ Cidade: ${dados.localidade}/${dados.uf}\n\nOs dados foram preenchidos automaticamente!`)
+        await modal.alert(`CEP encontrado!\n\n📍 Endereço: ${dados.logradouro}\n🏘️ Bairro: ${dados.bairro}\n🏙️ Cidade: ${dados.localidade}/${dados.uf}\n\nOs dados foram preenchidos automaticamente!`, 'CEP Encontrado', '✅')
       } else {
-        alert('❌ CEP não encontrado.\n\nVerifique se o número está correto.')
+        await modal.alert('CEP não encontrado.\n\nVerifique se o número está correto.', 'Não Encontrado', '❌')
       }
     } catch (error) {
       console.error('Erro ao buscar CEP:', error)
-      alert('❌ Erro ao buscar CEP.\n\nVerifique sua conexão e tente novamente.')
+      await modal.alert('Erro ao buscar CEP.\n\nVerifique sua conexão e tente novamente.', 'Erro', '❌')
     }
   }
 
@@ -331,13 +388,13 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
     const cnpj = formData.cnpj
     
     if (!cnpj) {
-      alert('⚠️ Digite um CNPJ antes de consultar!')
+      await modal.alert('Digite um CNPJ antes de consultar!', 'Atenção', '⚠️')
       return
     }
 
     // Validar formato
     if (!cnpjService.validarCNPJ(cnpj)) {
-      alert('❌ CNPJ inválido! Verifique o número digitado.')
+      await modal.alert('CNPJ inválido! Verifique o número digitado.', 'CNPJ Inválido', '❌')
       return
     }
 
@@ -363,13 +420,13 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           telefone: dados.telefone || formData.telefone
         })
         
-        alert(`✅ CNPJ encontrado!\n\n📋 Razão Social: ${dados.razaoSocial}\n🏢 Nome Fantasia: ${dados.nomeFantasia}\n📍 Endereço: ${dados.logradouro}, ${dados.numero} - ${dados.bairro}\n🏙️ Cidade: ${dados.municipio}/${dados.uf}\n📮 CEP: ${dados.cep}\n\nOs dados foram preenchidos automaticamente!`)
+        await modal.alert(`CNPJ encontrado!\n\n📋 Razão Social: ${dados.razaoSocial}\n🏢 Nome Fantasia: ${dados.nomeFantasia}\n📍 Endereço: ${dados.logradouro}, ${dados.numero} - ${dados.bairro}\n🏙️ Cidade: ${dados.municipio}/${dados.uf}\n📮 CEP: ${dados.cep}\n\nOs dados foram preenchidos automaticamente!`, 'CNPJ Encontrado', '✅')
       } else {
-        alert('❌ CNPJ não encontrado na base de dados da Receita Federal.\n\nVerifique se o número está correto.')
+        await modal.alert('CNPJ não encontrado na base de dados da Receita Federal.\n\nVerifique se o número está correto.', 'Não Encontrado', '❌')
       }
     } catch (error) {
       console.error('Erro ao consultar CNPJ:', error)
-      alert('❌ Erro ao consultar CNPJ.\n\nVerifique sua conexão e tente novamente.')
+      await modal.alert('Erro ao consultar CNPJ.\n\nVerifique sua conexão e tente novamente.', 'Erro', '❌')
     }
   }
 
@@ -458,6 +515,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   })
 
   return (
+    <>
     <BasePage
       title="Cadastro de Cartório (SEADE)"
       onClose={onClose}
@@ -842,7 +900,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
                   
                   // Valida se tem @ e formato básico
                   if (email && !email.includes('@')) {
-                    alert('❌ E-mail inválido!\n\nO e-mail deve conter o caractere @')
+                    modal.alert('E-mail inválido!\n\nO e-mail deve conter o caractere @', 'Erro de Validação', '❌')
                     return
                   }
                   
@@ -850,7 +908,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
                   if (email) {
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
                     if (!emailRegex.test(email)) {
-                      alert('❌ E-mail inválido!\n\nFormato esperado: exemplo@dominio.com.br')
+                      modal.alert('E-mail inválido!\n\nFormato esperado: exemplo@dominio.com.br', 'Erro de Validação', '❌')
                     }
                   }
                 }}
@@ -906,7 +964,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
                     // Valida CPF
                     const validacao = validarCPF(valor)
                     if (!validacao.isValid) {
-                      alert(`❌ CPF inválido!\n\n${validacao.error}`)
+                      modal.alert(`CPF inválido!\n\n${validacao.error}`, 'Erro de Validação', '❌')
                     }
                   }
                 }}
@@ -1039,6 +1097,8 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
         </div>
       </div>
     </BasePage>
+    <modal.ModalComponent />
+    </>
   )
 }
 

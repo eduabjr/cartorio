@@ -193,10 +193,26 @@ class AnnouncementService {
           speechSynthesis.onvoiceschanged = setVoice;
         }
 
-        // Configurar parâmetros
-        utterance.rate = options.rate || 0.9;
-        utterance.pitch = options.pitch || 1.0;
-        utterance.volume = options.volume || 0.8;
+        // Carregar configurações personalizadas do usuário
+        let userRate = 1.3 // Padrão: mais rápido
+        let userPitch = 1.1 // Padrão: tom mais natural
+        
+        try {
+          const savedSettings = localStorage.getItem('accessibility-settings')
+          if (savedSettings) {
+            const settings = JSON.parse(savedSettings)
+            userRate = settings.speechRate || 1.3
+            userPitch = settings.speechPitch || 1.1
+            console.log('🎙️ Configurações de voz carregadas:', { rate: userRate, pitch: userPitch })
+          }
+        } catch (error) {
+          console.error('❌ Erro ao carregar configurações de voz:', error)
+        }
+        
+        // Configurar parâmetros com preferências do usuário
+        utterance.rate = options.rate || userRate;
+        utterance.pitch = options.pitch || userPitch;
+        utterance.volume = options.volume || 0.9;
 
         // Eventos
         utterance.onstart = () => {

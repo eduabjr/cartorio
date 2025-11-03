@@ -153,7 +153,7 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
 
   // Hook para modais internos
-  const { modalState, showAlert, showConfirm, showPrompt, closeModal } = useModal()
+  const modal = useModal()
 
   // Estado para controlar aba ativa
   const [activeTab, setActiveTab] = useState<'cadastro' | 'servicos' | 'historico' | 'digitalizacao' | 'imagens'>('cadastro')
@@ -280,13 +280,13 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
   const handleGravarProtocolo = async () => {
     // Validação de campos obrigatórios
     if (!formData.numero || !formData.dataEntrada) {
-      await showAlert('⚠️ Preencha os campos obrigatórios: Protocolo e Data Entrada!')
+      await modal.alert('⚠️ Preencha os campos obrigatórios: Protocolo e Data Entrada!')
       return
     }
 
     // Salvar protocolo (implementação futura com backend)
     console.log('💾 Protocolo salvo:', formData)
-    await showAlert(`✅ Protocolo gravado com sucesso!\n\nNúmero: ${formData.numero}`)
+    await modal.alert(`✅ Protocolo gravado com sucesso!\n\nNúmero: ${formData.numero}`)
   }
 
   /**
@@ -336,7 +336,7 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
    */
   const handleGravarAto = async () => {
     if (!atoForm.natureza) {
-      await showAlert('⚠️ Selecione a natureza do ato!')
+      await modal.alert('⚠️ Selecione a natureza do ato!')
       return
     }
 
@@ -346,7 +346,7 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
     }
 
     setAtos([...atos, novoAto])
-    await showAlert('✅ Ato gravado com sucesso!')
+    await modal.alert('✅ Ato gravado com sucesso!')
     
     // Reset formulário
     setAtoForm({
@@ -368,15 +368,15 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
    */
   const handleExcluirAto = async () => {
     if (!selectedAtoId) {
-      await showAlert('⚠️ Selecione um ato para excluir!')
+      await modal.alert('⚠️ Selecione um ato para excluir!')
       return
     }
 
-    const confirmado = await showConfirm('Tem certeza que deseja excluir este ato?')
+    const confirmado = await modal.confirm('Tem certeza que deseja excluir este ato?')
     if (confirmado) {
       setAtos(atos.filter(a => a.id !== selectedAtoId))
       setSelectedAtoId(null)
-      await showAlert('✅ Ato excluído com sucesso!')
+      await modal.alert('✅ Ato excluído com sucesso!')
     }
   }
 
@@ -1186,9 +1186,9 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
                         }
                         setOutrosServicos([...outrosServicos, novoServico])
                         setServicoForm({ quantidade: '', descricao: '', valor: '' })
-                        await showAlert('✅ Serviço incluído com sucesso!')
+                        await modal.alert('✅ Serviço incluído com sucesso!')
                       } else {
-                        await showAlert('⚠️ Preencha descrição e quantidade!')
+                        await modal.alert('⚠️ Preencha descrição e quantidade!')
                       }
                     }}
                     style={{ ...buttonStyles, backgroundColor: '#10b981', color: 'white', marginTop: '18px' }}
@@ -1247,10 +1247,10 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
                         const servico = outrosServicos.find(s => s.id === selectedServicoId)
                         if (servico) {
                           setServicoForm(servico)
-                          await showAlert('✅ Serviço carregado para edição!')
+                          await modal.alert('✅ Serviço carregado para edição!')
                         }
                       } else {
-                        await showAlert('⚠️ Selecione um serviço para editar!')
+                        await modal.alert('⚠️ Selecione um serviço para editar!')
                       }
                     }}
                     style={{ ...buttonStyles, backgroundColor: '#f59e0b', color: 'white' }}
@@ -1262,14 +1262,14 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
                   <button
                     onClick={async () => {
                       if (selectedServicoId) {
-                        const confirmado = await showConfirm('Tem certeza que deseja excluir este serviço?')
+                        const confirmado = await modal.confirm('Tem certeza que deseja excluir este serviço?')
                         if (confirmado) {
                           setOutrosServicos(outrosServicos.filter(s => s.id !== selectedServicoId))
                           setSelectedServicoId(null)
-                          await showAlert('✅ Serviço excluído com sucesso!')
+                          await modal.alert('✅ Serviço excluído com sucesso!')
                         }
                       } else {
-                        await showAlert('⚠️ Selecione um serviço para excluir!')
+                        await modal.alert('⚠️ Selecione um serviço para excluir!')
                       }
                     }}
                     style={{ ...buttonStyles, backgroundColor: '#dc2626', color: 'white' }}
@@ -1417,20 +1417,8 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
         </div>
       </div>
 
-      {/* Modal interno */}
-      <Modal
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        type={modalState.type}
-        title={modalState.title}
-        message={modalState.message}
-        defaultValue={modalState.defaultValue}
-        onConfirm={modalState.onConfirm}
-        onCancel={modalState.onCancel}
-        confirmText={modalState.confirmText}
-        cancelText={modalState.cancelText}
-        icon={modalState.icon}
-      />
+      {/* Modal Component */}
+      <modal.ModalComponent />
     </BasePage>
   )
 }

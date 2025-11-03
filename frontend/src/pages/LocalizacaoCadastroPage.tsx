@@ -3,6 +3,7 @@ import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { cidadesData } from '../data/cidades'
 import { paisesData } from '../data/paises'
+import { useModal } from '../hooks/useModal'
 
 interface LocalizacaoCadastroPageProps {
   onClose: () => void
@@ -29,6 +30,7 @@ interface Pais {
 export function LocalizacaoCadastroPage({ onClose }: LocalizacaoCadastroPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   const [activeTab, setActiveTab] = useState<'cidade' | 'pais'>('cidade')
   
@@ -59,6 +61,7 @@ export function LocalizacaoCadastroPage({ onClose }: LocalizacaoCadastroPageProp
   })
 
   return (
+    <>
     <BasePage
       title="Cadastro de Localização"
       onClose={onClose}
@@ -158,6 +161,8 @@ export function LocalizacaoCadastroPage({ onClose }: LocalizacaoCadastroPageProp
         </div>
       </div>
     </BasePage>
+    <modal.ModalComponent />
+    </>
   )
 }
 
@@ -165,6 +170,7 @@ export function LocalizacaoCadastroPage({ onClose }: LocalizacaoCadastroPageProp
 function CidadeContent({ onClose }: { onClose: () => void }) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
 
   // Carregar dados do localStorage na inicialização
   const [cidades, setCidades] = useState<Cidade[]>(() => {
@@ -272,7 +278,7 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
   }
 
   const handleImportar = async () => {
-    const opcao = confirm(
+    const opcao = await modal.confirm(
       `ESCOLHA O TIPO DE IMPORTAÇÃO:\n\n` +
       `✅ OK = Importar TODAS as 5.570 cidades do Brasil (demora ~10 segundos)\n` +
       `❌ CANCELAR = Importar apenas ${cidadesData.length} principais cidades (instantâneo)`
@@ -280,9 +286,10 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
 
     if (opcao === true) {
       // Importação COMPLETA via API do IBGE
-      if (confirm('⚠️ IMPORTAÇÃO COMPLETA\n\nSerão buscados TODOS os 5.570 municípios brasileiros da base oficial do IBGE.\n\nIsso pode demorar alguns segundos. Deseja continuar?')) {
+      const confirmadoIBGE = await modal.confirm('IMPORTAÇÃO COMPLETA\n\nSerão buscados TODOS os 5.570 municípios brasileiros da base oficial do IBGE.\n\nIsso pode demorar alguns segundos. Deseja continuar?', 'Importar do IBGE', '⚠️')
+      if (confirmadoIBGE) {
         try {
-          alert('🔄 Buscando dados do IBGE... Aguarde alguns segundos.')
+          await modal.alert('Buscando dados do IBGE... Aguarde alguns segundos.', 'Processando', '🔄')
           const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
           
           if (!response.ok) {
@@ -311,10 +318,10 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
             return [...prev, ...novasCidades]
           })
           
-          alert(`✅ IMPORTAÇÃO COMPLETA CONCLUÍDA!\n\n${municipios.length} municípios foram cadastrados com sucesso!`)
+          await modal.alert(`IMPORTAÇÃO COMPLETA CONCLUÍDA!\n\n${municipios.length} municípios foram cadastrados com sucesso!`, 'Sucesso', '✅')
         } catch (error) {
           console.error('❌ Erro na importação:', error)
-          alert(`❌ Erro ao importar dados do IBGE.\n\nVerifique sua conexão com a internet e tente novamente.\n\nErro: ${error}`)
+          await modal.alert(`Erro ao importar dados do IBGE.\n\nVerifique sua conexão com a internet e tente novamente.\n\nErro: ${error}`, 'Erro', '❌')
         }
       }
     } else if (opcao === false) {
@@ -338,7 +345,7 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
         return [...prev, ...novasCidades]
       })
       
-      alert(`✅ Importação concluída!\n\n${cidadesData.length} cidades foram cadastradas com sucesso!`)
+      await modal.alert(`Importação concluída!\n\n${cidadesData.length} cidades foram cadastradas com sucesso!`, 'Sucesso', '✅')
     }
   }
 
@@ -727,6 +734,7 @@ function CidadeContent({ onClose }: { onClose: () => void }) {
 function PaisContent({ onClose }: { onClose: () => void }) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
 
   // Carregar dados do localStorage na inicialização
   const [paises, setPaises] = useState<Pais[]>(() => {
@@ -841,8 +849,9 @@ function PaisContent({ onClose }: { onClose: () => void }) {
     setNacionalidadeFeminino(pais.nacionalidadeFeminino)
   }
 
-  const handleImportar = () => {
-    if (confirm(`Deseja importar ${paisesData.length} países pré-cadastrados?\n\nIsso irá adicionar todos os 197 países reconhecidos pela ONU com suas siglas oficiais e nacionalidades.`)) {
+  const handleImportar = async () => {
+    const confirmadoPaises = await modal.confirm(`Deseja importar ${paisesData.length} países pré-cadastrados?\n\nIsso irá adicionar todos os 197 países reconhecidos pela ONU com suas siglas oficiais e nacionalidades.`, 'Importar Países', '🌍')
+    if (confirmadoPaises) {
       const paisesImportados: Pais[] = paisesData.map(pais => ({
         id: Date.now().toString() + Math.random().toString(),
         codigo: pais.codigo,
@@ -860,7 +869,7 @@ function PaisContent({ onClose }: { onClose: () => void }) {
         return [...prev, ...novosPaises]
       })
       
-      alert(`✅ Importação concluída!\n\n${paisesData.length} países foram cadastrados com sucesso!`)
+      await modal.alert(`Importação concluída!\n\n${paisesData.length} países foram cadastrados com sucesso!`, 'Sucesso', '✅')
     }
   }
 

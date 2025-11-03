@@ -40,12 +40,13 @@
 import React, { useState, useEffect } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
-import { FuncionarioLookup } from '../components/FuncionarioLookup'
 import { funcionarioService, Funcionario } from '../services/FuncionarioService'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
 import { getRelativeFontSize } from '../utils/fontUtils'
 import { useFieldValidation } from '../hooks/useFieldValidation'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
+import { useModal } from '../hooks/useModal'
 
 interface FuncionarioPageProps {
   onClose: () => void
@@ -54,14 +55,48 @@ interface FuncionarioPageProps {
 export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   // Cor do header: teal no light, laranja no dark
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
+  
+  // Atalhos de teclado específicos para Funcionário
+  useKeyboardNavigation([
+    {
+      key: 's',
+      ctrl: true,
+      action: async () => {
+        console.log('⌨️ Ctrl+S - Salvando funcionário...')
+        await handleGravar()
+      },
+      description: 'Salvar funcionário'
+    },
+    {
+      key: 'n',
+      ctrl: true,
+      action: () => {
+        console.log('⌨️ Ctrl+N - Novo funcionário')
+        handleNovo()
+      },
+      description: 'Novo funcionário'
+    },
+    {
+      key: 'Escape',
+      action: () => {
+        if (showResultados) {
+          setShowResultados(false)
+        } else {
+          onClose()
+        }
+      },
+      description: 'Fechar'
+    }
+  ])
 
   // Estados para os dados do funcionário
   const [formData, setFormData] = useState({
     codigo: '',
-    ordemSinalPublico: '99',
+    ordemSinalPublico: '',
     emAtividade: true,
     nome: '',
     nomeMin: '',
@@ -99,9 +134,11 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   })
 
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
-  const [showLookup, setShowLookup] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [showResultados, setShowResultados] = useState(false)
+  const [resultadosBusca, setResultadosBusca] = useState<any[]>([])
+  const [termoBusca, setTermoBusca] = useState('')
 
   // 🎨 Adicionar estilos CSS dinâmicos para foco (mais robusto que inline)
   useEffect(() => {
@@ -223,7 +260,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
       }
     } catch (error) {
       console.error('Erro ao buscar CEP:', error)
-      alert('Erro ao buscar informações do CEP. Verifique se o CEP está correto.')
+      await modal.alert('Erro ao buscar informações do CEP. Verifique se o CEP está correto.', 'Erro', '❌')
     } finally {
       setIsLoadingCep(false)
     }
@@ -253,16 +290,16 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
       const scanners = await (window.electronAPI as any).detectScanners()
       
       if (!scanners || scanners.length === 0) {
-        alert('❌ Nenhum scanner detectado!\n\nVerifique se:\n• O scanner está conectado\n• Os drivers TWAIN/SANE estão instalados\n• O dispositivo está ligado')
+        await modal.alert('Nenhum scanner detectado!\n\nVerifique se:\n• O scanner está conectado\n• Os drivers TWAIN/SANE estão instalados\n• O dispositivo está ligado', 'Scanner Não Detectado', '❌')
         return
       }
 
       console.log('📷 Scanners detectados:', scanners)
-      alert('Scanner detectado com sucesso!')
+      await modal.alert('Scanner detectado com sucesso!', 'Sucesso', '✅')
     } catch (error) {
       console.error('❌ Erro ao acessar scanner:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-      alert(`❌ Erro ao acessar scanner:\n${errorMessage}`)
+      await modal.alert(`Erro ao acessar scanner:\n${errorMessage}`, 'Erro', '❌')
     }
   }
 
@@ -271,13 +308,13 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
     try {
       // Verificar se Image Capture API está disponível
       if ('ImageCapture' in window) {
-        alert('📷 Funcionalidade de câmera disponível. Utilize seu dispositivo para capturar imagens.')
+        await modal.alert('Funcionalidade de câmera disponível. Utilize seu dispositivo para capturar imagens.', 'Câmera', '📷')
       } else {
-        alert('⚠️ Camera/Scanner não disponível neste navegador.\n\nUtilize um navegador moderno como Chrome, Firefox ou Edge.')
+        await modal.alert('Camera/Scanner não disponível neste navegador.\n\nUtilize um navegador moderno como Chrome, Firefox ou Edge.', 'Não Disponível', '⚠️')
       }
     } catch (error) {
       console.error('❌ Erro ao acessar câmera:', error)
-      alert('❌ Erro ao acessar câmera/scanner')
+      await modal.alert('Erro ao acessar câmera/scanner', 'Erro', '❌')
     }
   }
 
@@ -287,23 +324,58 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
     try {
       // Validar dados obrigatórios
       if (!formData.nome.trim()) {
-        console.log('❌ Nome é obrigatório!')
+        await modal.alert('Nome é obrigatório!', 'Campo Obrigatório', '❌')
+        setIsLoading(false)
         return
       }
 
       if (!formData.cpf.trim()) {
-        console.log('❌ CPF é obrigatório!')
+        await modal.alert('CPF é obrigatório!', 'Campo Obrigatório', '❌')
+        setIsLoading(false)
         return
       }
 
       if (!funcionarioService.validateCPF(formData.cpf)) {
-        console.log('❌ CPF inválido!')
+        await modal.alert('CPF inválido!', 'Erro de Validação', '❌')
+        setIsLoading(false)
+        return
+      }
+
+      if (!formData.login.trim()) {
+        await modal.alert('Login é obrigatório!', 'Campo Obrigatório', '❌')
+        setIsLoading(false)
+        return
+      }
+
+      if (!formData.senha.trim()) {
+        await modal.alert('Senha é obrigatória!', 'Campo Obrigatório', '❌')
+        setIsLoading(false)
         return
       }
 
       if (formData.email && !funcionarioService.validateEmail(formData.email)) {
-        console.log('❌ Email inválido!')
+        await modal.alert('Email inválido!', 'Erro de Validação', '❌')
+        setIsLoading(false)
         return
+      }
+
+      // Verificar se CPF já existe no sistema
+      const funcionariosSalvosTemp = localStorage.getItem('funcionarios-cadastrados')
+      if (funcionariosSalvosTemp) {
+        const funcionariosTemp = JSON.parse(funcionariosSalvosTemp)
+        const cpfJaExiste = funcionariosTemp.find((f: any) => 
+          f.cpf === formData.cpf && f.codigo !== formData.codigo
+        )
+        
+        if (cpfJaExiste) {
+          await modal.alert(
+            `CPF ${formData.cpf} já cadastrado!\n\nFuncionário: ${cpfJaExiste.nome}\nCódigo: ${cpfJaExiste.codigo}`,
+            'CPF Duplicado',
+            '❌'
+          )
+          setIsLoading(false)
+          return
+        }
       }
 
       // Gerar código sequencial se novo registro (código vazio)
@@ -319,18 +391,45 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
         console.log('🆔 Código gerado:', codigoFinal)
       }
 
-      // Salvar funcionário (remover campos extras de UI antes de enviar)
-      const { orgaoRg, logradouro, numero, complemento, ...funcionarioData } = formData
-      const response = await funcionarioService.createFuncionario({...funcionarioData, codigo: codigoFinal})
-      
-      if (response.success) {
-        console.log(response.message || 'Funcionário salvo com sucesso!')
-        handleClear() // Limpar formulário após salvar
-      } else {
-        console.log(response.error || 'Erro ao salvar funcionário!')
+      // Gerar Ordem Sinal Público sequencial
+      let ordemSinalPublico = formData.ordemSinalPublico
+      if (!formData.ordemSinalPublico || formData.ordemSinalPublico === '0' || formData.ordemSinalPublico === '') {
+        const ultimaOrdem = localStorage.getItem('ultimaOrdemSinalPublico')
+        const proximaOrdem = ultimaOrdem ? parseInt(ultimaOrdem) + 1 : 1
+        
+        ordemSinalPublico = proximaOrdem.toString()
+        localStorage.setItem('ultimaOrdemSinalPublico', ordemSinalPublico)
+        
+        setFormData(prev => ({ ...prev, ordemSinalPublico: ordemSinalPublico }))
+        console.log('🔢 Ordem Sinal Público gerada:', ordemSinalPublico)
       }
+
+      // Salvar funcionário no localStorage
+      const funcionariosSalvos = localStorage.getItem('funcionarios-cadastrados')
+      let funcionarios = funcionariosSalvos ? JSON.parse(funcionariosSalvos) : []
+      
+      const funcionarioParaSalvar = { ...formData, codigo: codigoFinal, ordemSinalPublico: ordemSinalPublico, id: Date.now().toString() }
+      
+      // Verificar se já existe (atualizar) ou criar novo
+      const indexExistente = funcionarios.findIndex((f: any) => f.codigo === codigoFinal)
+      if (indexExistente >= 0) {
+        funcionarios[indexExistente] = funcionarioParaSalvar
+        console.log('✏️ Funcionário atualizado:', codigoFinal)
+        await modal.alert('Funcionário atualizado com sucesso!', 'Sucesso', '✅')
+      } else {
+        funcionarios.push(funcionarioParaSalvar)
+        console.log('➕ Novo funcionário adicionado:', codigoFinal)
+        await modal.alert(`Funcionário gravado com sucesso!\n\nCódigo: ${codigoFinal}\nNome: ${formData.nome}`, 'Sucesso', '✅')
+      }
+      
+      localStorage.setItem('funcionarios-cadastrados', JSON.stringify(funcionarios))
+      console.log('💾 Funcionário gravado no localStorage!')
+      
+      handleClear() // Limpar formulário após salvar
+      
     } catch (error) {
       console.error('Erro ao salvar funcionário:', error)
+      await modal.alert('Erro ao salvar funcionário!', 'Erro', '❌')
     } finally {
       setIsLoading(false)
     }
@@ -340,6 +439,49 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   const handleNew = () => {
     handleClear()
     console.log('✅ Formulário limpo para novo cadastro')
+  }
+
+  // Função para buscar funcionário por nome
+  const handleBuscarPorNome = async () => {
+    const nomeBusca = formData.nome.trim()
+    
+    const funcionariosSalvos = localStorage.getItem('funcionarios-cadastrados')
+    if (!funcionariosSalvos) {
+      await modal.alert('Nenhum funcionário cadastrado', 'Informação', 'ℹ️')
+      return
+    }
+    
+    const funcionarios = JSON.parse(funcionariosSalvos)
+    
+    // Se não digitou nada, mostra TODOS
+    if (!nomeBusca) {
+      setTermoBusca('Todos os Funcionários')
+      setResultadosBusca(funcionarios)
+      setShowResultados(true)
+      return
+    }
+    
+    // Se digitou algo, filtra por nome
+    const encontrados = funcionarios.filter((f: any) => 
+      f.nome.toUpperCase().includes(nomeBusca.toUpperCase())
+    )
+    
+    if (encontrados.length === 0) {
+      await modal.alert('Nenhum funcionário encontrado', 'Não Encontrado', '❌')
+      return
+    }
+    
+    // SEMPRE mostra tela intermediária, mesmo com 1 resultado
+    setTermoBusca(nomeBusca ? `Nome: ${nomeBusca}` : 'Todos os Funcionários')
+    setResultadosBusca(encontrados)
+    setShowResultados(true)
+  }
+  
+  // Função para selecionar funcionário da lista
+  const handleSelecionarDaLista = (funcionario: any) => {
+    setFormData(funcionario)
+    setShowResultados(false)
+    setResultadosBusca([])
   }
 
   // Função para limpar formulário
@@ -384,7 +526,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   }
 
   // Função para imprimir
-  const handlePrint = () => {
+  const handlePrint = async () => {
     console.log('Imprimindo dados do funcionário:', formData)
     
     // Criar conteúdo HTML para impressão
@@ -620,49 +762,8 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
         printWindow.print()
       }
     } else {
-      alert('Não foi possível abrir a janela de impressão. Verifique se pop-ups estão bloqueados.')
+      await modal.alert('Não foi possível abrir a janela de impressão. Verifique se pop-ups estão bloqueados.', 'Erro de Impressão', '❌')
     }
-  }
-
-  // Função para selecionar funcionário do lookup
-  const handleSelectFuncionario = (funcionario: Funcionario) => {
-    setFormData({
-      ...formData,
-      codigo: funcionario.codigo,
-      nome: funcionario.nome,
-      nomeMin: funcionario.nomeMin,
-      prenome: funcionario.prenome,
-      endereco: funcionario.endereco,
-      bairro: funcionario.bairro,
-      cidade: funcionario.cidade,
-      cep: funcionario.cep,
-      telefone: funcionario.telefone,
-      uf: funcionario.uf,
-      email: funcionario.email,
-      celular: funcionario.celular,
-      nascimento: funcionario.nascimento,
-      rg: funcionario.rg,
-      mae: funcionario.mae,
-      cpf: funcionario.cpf,
-      pai: funcionario.pai,
-      cargo: funcionario.cargo,
-      assinante: funcionario.assinante,
-      cargoMin: funcionario.cargoMin,
-      cargoCivil: funcionario.cargoCivil,
-      cargoMin2: funcionario.cargoMin2,
-      salario: funcionario.salario,
-      comissao: funcionario.comissao,
-      admissao: funcionario.admissao,
-      demissao: funcionario.demissao,
-      login: funcionario.login,
-      senha: funcionario.senha,
-      observacao: funcionario.observacao,
-      // Campos extras de UI não vindos do backend
-      orgaoRg: '',
-      logradouro: '',
-      numero: '',
-      complemento: ''
-    })
   }
 
   // ⚠️ SEÇÃO DE ESTILOS - NÃO MODIFICAR - LAYOUT PERFEITO ⚠️
@@ -974,6 +1075,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   // 🔒 Margens e espaçamentos: NÃO ALTERAR
   // Qualquer modificação quebrará o layout aprovado
   return (
+    <>
     <BasePage
       title="Funcionário"
       onClose={onClose}
@@ -985,61 +1087,165 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
       resizable={false}  // 🔒 BLOQUEIO: Desabilita redimensionamento
     >
       <div style={containerStyles}>
+        {/* Tela de Resultados da Busca */}
+        {showResultados && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            backgroundColor: theme.surface,
+            padding: '20px',
+            borderRadius: '8px',
+            border: `1px solid ${theme.border}`
+          }}>
+            {/* Cabeçalho */}
+            <div style={{
+              marginBottom: '20px',
+              paddingBottom: '15px',
+              borderBottom: `2px solid ${theme.border}`
+            }}>
+              <h2 style={{ margin: 0, fontSize: '18px', color: theme.text }}>
+                📋 Resultados da Busca
+              </h2>
+              <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: theme.textSecondary }}>
+                Busca por: {termoBusca} - Encontrados: {resultadosBusca.length} funcionário(s)
+              </p>
+            </div>
+
+            {/* Lista de Resultados */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              marginBottom: '15px'
+            }}>
+              {resultadosBusca.map((func, index) => (
+                <div
+                  key={func.id || index}
+                  onClick={() => handleSelecionarDaLista(func)}
+                  style={{
+                    padding: '12px',
+                    marginBottom: '8px',
+                    backgroundColor: theme.background,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#4CAF50'
+                    e.currentTarget.style.color = '#fff'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.background
+                    e.currentTarget.style.color = theme.text
+                  }}
+                >
+                  <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
+                    {func.nome}
+                  </div>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                    Código: {func.codigo} | CPF: {func.cpf || 'Não informado'} | Cargo: {func.cargo || 'Não informado'}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Botão Voltar */}
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={() => {
+                  setShowResultados(false)
+                  setResultadosBusca([])
+                }}
+                style={{
+                  padding: '10px 30px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  backgroundColor: '#6c757d',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#495057'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c757d'}
+              >
+                ← Voltar ao Formulário
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Formulário */}
+        {!showResultados && (
         <div style={formContainerStyles}>
             <div style={formGridStyles}>
               {/* Linha 1 - Código, Ordem Sinal Público, Em atividade, Assinante */}
               <div style={row1Styles}>
                 <div style={row1FieldStyles}>
                 <label style={labelStyles}>Código</label>
-                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '24px' }}>
-                    <button
-                      type="button"
-                      onClick={handleScanner}
-                      style={{
-                        padding: '0',
-                        border: 'none',
-                        borderRadius: '0',
-                        backgroundColor: 'transparent',
-                        cursor: 'pointer',
-                        fontSize: getRelativeFontSize(14),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '20px',
-                        width: '24px',
-                        minWidth: '24px',
-                        boxSizing: 'border-box',
-                        flexShrink: 0,
-                        transition: 'opacity 0.2s ease',
-                        lineHeight: '1'
-                      }}
-                      title="Escanear documento com scanner/câmera"
-                      onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                      onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                    >
-                      📷
-                    </button>
+                  <div style={{ display: 'flex', gap: '0', alignItems: 'center', height: '24px', position: 'relative' }}>
                   <input
                     type="text"
                     value={formData.codigo}
                     readOnly
-                    disabled
-                    onKeyDown={(e) => e.preventDefault()}
-                    onPaste={(e) => e.preventDefault()}
-                    onCut={(e) => e.preventDefault()}
-                    onDrop={(e) => e.preventDefault()}
+                    placeholder="0"
                     style={{
                       ...inputStyles, 
                       flex: 1, 
                       minWidth: '50px',
+                      paddingRight: '28px',
                       backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
                       color: currentTheme === 'dark' ? '#666' : '#999',
-                      cursor: 'not-allowed',
-                      opacity: 0.7
+                      cursor: 'default'
                     }}
-                    placeholder="0"
                   />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const funcionariosSalvos = localStorage.getItem('funcionarios-cadastrados')
+                      if (!funcionariosSalvos) {
+                        modal.alert('Nenhum funcionário cadastrado', 'Informação', 'ℹ️')
+                        return
+                      }
+                      
+                      const funcionarios = JSON.parse(funcionariosSalvos)
+                      if (funcionarios.length === 0) {
+                        modal.alert('Nenhum funcionário cadastrado', 'Informação', 'ℹ️')
+                        return
+                      }
+                      
+                      // Mostrar TODOS os funcionários na tela intermediária
+                      setTermoBusca('Todos os Funcionários')
+                      setResultadosBusca(funcionarios)
+                      setShowResultados(true)
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '2px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      padding: '0',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '20px',
+                      width: '24px',
+                      minWidth: '24px',
+                      borderRadius: '0',
+                      color: '#4CAF50',
+                      transition: 'opacity 0.2s ease'
+                    }}
+                    title="Buscar funcionário por código"
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                  >
+                    🔍
+                  </button>
                 </div>
               </div>
 
@@ -1048,12 +1254,16 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
                   <input
                     type="text"
                     value={formData.ordemSinalPublico}
-                    onChange={(e) => handleInputChange('ordemSinalPublico', e.target.value)}
-                    onFocus={() => setFocusedField('ordemSinalPublico')}
-                    onBlur={() => setFocusedField(null)}
+                    readOnly
+                    placeholder="0"
                     className="funcionario-input"
-                    style={{...getInputStyles('ordemSinalPublico'), minWidth: '60px'}}
-                    placeholder="99"
+                    style={{
+                      ...getInputStyles('ordemSinalPublico'), 
+                      minWidth: '60px',
+                      backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                      color: currentTheme === 'dark' ? '#666' : '#999',
+                      cursor: 'default'
+                    }}
                   />
               </div>
 
@@ -1087,7 +1297,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
               {/* Linha 2 - Nome, RG, Órgão RG, CPF */}
               <div style={row2Styles}>
                 <div style={{...fieldStyles, width: '35%'}}>
-                  <label style={labelStyles}>Nome</label>
+                  <label style={labelStyles}>Nome <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span></label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="text"
@@ -1099,9 +1309,9 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
                       style={getInputWithIconStyles('nome')}
                     />
                     <button
-                      onClick={() => setShowLookup(true)}
+                      onClick={handleBuscarPorNome}
                       style={iconButtonStyles}
-                      title="Buscar funcionário"
+                      title="Buscar funcionário por nome"
                       onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                       onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                     >🔍</button>
@@ -1135,7 +1345,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
                 </div>
 
                 <div style={{...fieldStyles, width: '25%'}}>
-                  <label style={labelStyles}>CPF</label>
+                  <label style={labelStyles}>CPF <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span></label>
                   <input
                     type="text"
                     value={formData.cpf}
@@ -1156,7 +1366,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
                         // Valida CPF
                         const validacao = validarCPF(valor)
                         if (!validacao.isValid) {
-                          alert(`❌ CPF inválido!\n\n${validacao.error}`)
+                          modal.alert(`CPF inválido!\n\n${validacao.error}`, 'Erro de Validação', '❌')
                         }
                       }
                     }}
@@ -1464,7 +1674,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
                 {/* Coluna esquerda - Login e Senha */}
                 <div style={{ display: 'flex', flexDirection: 'column', width: '40%', gap: '6px' }}>
               <div style={fieldStyles}>
-                <label style={labelStyles}>Login</label>
+                <label style={labelStyles}>Login <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span></label>
                 <input
                   type="text"
                   value={formData.login}
@@ -1476,7 +1686,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
                 />
               </div>
               <div style={fieldStyles}>
-                <label style={labelStyles}>Senha</label>
+                <label style={labelStyles}>Senha <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span></label>
                 <input
                   type="password"
                   value={formData.senha}
@@ -1570,15 +1780,11 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
               </button>
             </div>
           </div>
+        )}
       </div>
 
-      {/* Modal de Lookup de Funcionário */}
-      {showLookup && (
-        <FuncionarioLookup
-          onSelect={handleSelectFuncionario}
-          onClose={() => setShowLookup(false)}
-        />
-      )}
     </BasePage>
+    <modal.ModalComponent />
+    </>
   )
 }

@@ -1,41 +1,33 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { ArrowRight, Shield, User } from 'lucide-react'
-import { useAccessibility } from '../hooks/useAccessibility'
 
 export function LoginPage() {
-  const [email, setEmail] = useState('admin@cartorio.com')
-  const [password, setPassword] = useState('admin123')
-  const [profile, setProfile] = useState<'admin' | 'employee'>('admin')
+  const [login, setLogin] = useState('')
+  const [senha, setSenha] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [forceUpdate, setForceUpdate] = useState(0)
-  const { login } = useAuth()
+  const [infoFuncionarios, setInfoFuncionarios] = useState('')
+  const { login: fazerLogin } = useAuth()
   const navigate = useNavigate()
-  const { currentTheme, isThemeLoaded } = useAccessibility()
 
-  // Forçar re-renderização quando o tema mudar
+  // Verificar funcionários ao carregar
   useEffect(() => {
-    console.log('🔄 Tema mudou para:', currentTheme)
-    setForceUpdate(prev => prev + 1)
-  }, [currentTheme])
-
-  // Forçar tema para teste
-  const forceTheme = (theme: 'light' | 'dark') => {
-    localStorage.setItem('theme', theme)
-    window.location.reload()
-  }
-
-  // Determinar qual logo usar baseado no tema
-  const logoSrc = currentTheme === 'dark' ? '/logo-dark.png' : '/logo-light.png'
-  const logoTextColor = currentTheme === 'dark' ? '#ffffff' : '#2D5A5A'
-
-  // Log quando o tema mudar
-  console.log('🎨 LoginPage - Tema atual:', currentTheme)
-  console.log('📸 LoginPage - Logo a ser usado:', logoSrc)
-  console.log('🎨 LoginPage - Cor do texto:', logoTextColor)
-  console.log('🔢 Render count:', forceUpdate)
+    const dados = localStorage.getItem('funcionarios-cadastrados')
+    if (dados) {
+      const lista = JSON.parse(dados)
+      if (lista.length > 0) {
+        let info = `✅ ${lista.length} funcionário(s) cadastrado(s)\n\n`
+        lista.forEach((f: any, i: number) => {
+          info += `${i + 1}. ${f.nome} (Código ${f.codigo})\n`
+          info += `   Login: "${f.login}"\n`
+          info += `   Senha: "${f.senha}"\n\n`
+        })
+        info += '👆 Use estes dados para fazer login'
+        setInfoFuncionarios(info)
+      }
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,195 +35,300 @@ export function LoginPage() {
     setError('')
     
     try {
-      await login(email, password, profile)
-      navigate('/')
+      const loginLimpo = login.trim()
+      const senhaLimpa = senha.trim()
+
+      // Verificar funcionários cadastrados
+      const dados = localStorage.getItem('funcionarios-cadastrados')
+      
+      if (!dados) {
+        setError('Nenhum funcionário cadastrado. Entre em contato com o administrador.')
+        setIsLoading(false)
+        return
+      }
+
+      const funcionarios = JSON.parse(dados)
+      
+      // Buscar funcionário
+      const funcionario = funcionarios.find((f: any) => 
+        String(f.login || '').trim().toLowerCase() === loginLimpo.toLowerCase() ||
+        String(f.email || '').trim().toLowerCase() === loginLimpo.toLowerCase()
+      )
+
+      if (!funcionario) {
+        setError('Login não encontrado. Verifique o login e tente novamente.')
+        setIsLoading(false)
+        return
+      }
+
+      // Validar senha
+      const senhaCadastrada = String(funcionario.senha || '').trim()
+      
+      if (senhaCadastrada !== senhaLimpa) {
+        setError(`Senha incorreta!\n\nSenha cadastrada: "${senhaCadastrada}"\nVocê digitou: "${senhaLimpa}"\n\nDigite exatamente a senha cadastrada.`)
+        setIsLoading(false)
+        return
+      }
+
+      // ✅ Login e senha estão CORRETOS!
+      // Criar dados do usuário e salvar
+      const userData = {
+        id: funcionario.codigo || funcionario.id || '1',
+        email: funcionario.email || loginLimpo,
+        name: funcionario.nome || 'Funcionário',
+        login: funcionario.login || loginLimpo,
+        profile: 'employee',
+        permissions: ['read', 'write', 'create', 'update', 'delete'],
+        funcionario: funcionario
+      }
+
+      const token = 'funcionario-token-' + Date.now()
+      
+      // Salvar no localStorage
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(userData))
+      
+      // Redirecionar para o sistema
+      window.location.href = '/'
+      
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro ao fazer login')
-    } finally {
+      const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido'
+      setError(`Erro inesperado:\n${errorMsg}`)
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div key={`login-${currentTheme}-${forceUpdate}`} className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    }}>
+      <div style={{
+        background: '#ffffff',
+        padding: '40px',
+        borderRadius: '16px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        width: '100%',
+        maxWidth: '420px'
+      }}>
         {/* Logo e Título */}
-        <div className="flex flex-col items-center justify-center mb-6">
-          {/* Debug Info */}
-          <div className="text-xs text-gray-500 mb-4 p-2 bg-gray-100 rounded w-full">
-            <div><strong>Tema:</strong> <span style={{ color: currentTheme === 'dark' ? 'red' : 'green' }}>{currentTheme}</span></div>
-            <div><strong>Logo:</strong> {logoSrc}</div>
-            <div><strong>Cor do texto:</strong> <span style={{ color: logoTextColor }}>{logoTextColor}</span></div>
-            <div><strong>Carregado:</strong> {isThemeLoaded ? 'Sim ✅' : 'Não ❌'}</div>
-            <div><strong>Body class:</strong> {document.body.className}</div>
-          </div>
-
-          {/* Logo e Nome */}
-          <div className="flex items-center space-x-3" style={{ 
-            padding: '10px', 
-            border: '2px solid ' + (currentTheme === 'dark' ? 'red' : 'green'),
-            borderRadius: '8px'
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            fontSize: '48px',
+            fontWeight: '700',
+            color: '#667eea',
+            marginBottom: '8px',
+            fontFamily: 'Arial, sans-serif',
+            letterSpacing: '2px'
           }}>
-            <img 
-              src={logoSrc}
-              alt="Logo CIVITAS"
-              width={48}
-              height={48}
-              style={{
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-                border: '1px solid #ccc'
-              }}
-              onLoad={() => console.log('✅ Logo carregado:', logoSrc)}
-              onError={() => console.error('❌ Erro ao carregar logo:', logoSrc)}
-            />
-            <span 
-              style={{
-                color: logoTextColor,
-                fontSize: '29px',
-                fontWeight: 'bold',
-                fontFamily: 'Arial, sans-serif',
-                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                letterSpacing: '1px'
-              }}
-            >
-              CIVITAS
-            </span>
+            CIVITAS
+          </div>
+          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+            Sistema de Cartório
           </div>
         </div>
 
+        {/* Erro */}
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div style={{
+            padding: '16px',
+            marginBottom: '24px',
+            backgroundColor: '#fee2e2',
+            border: '2px solid #ef4444',
+            borderRadius: '8px',
+            color: '#991b1b',
+            fontSize: '14px',
+            whiteSpace: 'pre-wrap'
+          }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Login
+        {/* Info Funcionários */}
+        {infoFuncionarios && !error && (
+          <div style={{
+            padding: '16px',
+            marginBottom: '24px',
+            backgroundColor: '#dbeafe',
+            border: '2px solid #3b82f6',
+            borderRadius: '8px',
+            color: '#1e40af',
+            fontSize: '13px',
+            whiteSpace: 'pre-wrap',
+            fontFamily: 'monospace'
+          }}>
+            {infoFuncionarios}
+          </div>
+        )}
+
+        {/* Formulário */}
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#374151'
+            }}>
+              Login ou Email
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
+              type="text"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="Digite seu login"
               required
+              autoComplete="username"
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                outline: 'none',
+                transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#374151'
+            }}>
               Senha
             </label>
             <input
-              id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder="Digite sua senha"
               required
+              autoComplete="current-password"
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                outline: 'none',
+                transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Perfil de Acesso
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setProfile('employee')}
-                className={`p-3 border-2 rounded-lg flex items-center space-x-2 transition-colors ${
-                  profile === 'employee'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <User size={20} />
-                <div className="text-left">
-                  <div className="font-medium">Funcionário</div>
-                  <div className="text-xs text-gray-500">Acesso básico</div>
-                </div>
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setProfile('admin')}
-                className={`p-3 border-2 rounded-lg flex items-center space-x-2 transition-colors ${
-                  profile === 'admin'
-                    ? 'border-red-500 bg-red-50 text-red-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <Shield size={20} />
-                <div className="text-left">
-                  <div className="font-medium">Administrador</div>
-                  <div className="text-xs text-gray-500">Acesso completo</div>
-                </div>
-              </button>
-            </div>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full btn btn-primary flex items-center justify-center space-x-2"
+            style={{
+              width: '100%',
+              padding: '14px',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#ffffff',
+              background: isLoading ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(102, 126, 234, 0.5)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+            }}
           >
-            <span>Entrar</span>
-            <ArrowRight size={16} />
+            {isLoading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p>Rua Yara, 49 - São João</p>
-          <p>CEP: 17513-370 - Marília/SP</p>
-          <p>Tel: (14) 3216-2611</p>
-        </div>
+        {/* Botão de Diagnóstico */}
+        <button
+          type="button"
+          onClick={() => {
+            const dados = localStorage.getItem('funcionarios-cadastrados')
+            if (!dados) {
+              alert('❌ NENHUM funcionário cadastrado no sistema!')
+              return
+            }
 
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-          <p className="font-medium text-blue-800 mb-2">Credenciais de Demonstração:</p>
-          <div className="space-y-1 text-blue-700">
-            <p><strong>Admin:</strong> admin@cartorio.com / admin123</p>
-            <p><strong>Funcionário:</strong> funcionario@cartorio.com / func123</p>
-            <p><strong>Teste:</strong> teste@cartorio.com / teste123</p>
+            const lista = JSON.parse(dados)
+            let msg = `📋 FUNCIONÁRIOS CADASTRADOS: ${lista.length}\n\n`
+            
+            lista.forEach((f: any, i: number) => {
+              msg += `${i + 1}. Código ${f.codigo || 'N/A'}\n`
+              msg += `   Nome: ${f.nome || 'N/A'}\n`
+              msg += `   Login: "${f.login || 'N/A'}"\n`
+              msg += `   Senha: "${f.senha || 'N/A'}"\n`
+              msg += `   Email: ${f.email || 'N/A'}\n\n`
+            })
+
+            msg += '📌 COPIE O LOGIN E SENHA EXATOS ACIMA!'
+            alert(msg)
+          }}
+          style={{
+            width: '100%',
+            padding: '12px',
+            marginTop: '16px',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#ffffff',
+            background: '#ef4444',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+        >
+          🔍 VER FUNCIONÁRIOS CADASTRADOS
+        </button>
+
+        {/* Informações */}
+        <div style={{
+          marginTop: '16px',
+          padding: '16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: '#6b7280',
+          textAlign: 'center'
+        }}>
+          <div style={{ marginBottom: '8px', fontWeight: '600', color: '#374151' }}>
+            💡 Use o login e senha cadastrados
+          </div>
+          <div>
+            Cadastre funcionários em: Menu → Funcionário
           </div>
         </div>
 
-        {/* Botões de teste para tema */}
-        <div className="mt-4 text-center space-y-2">
-          <div className="flex justify-center space-x-2">
-            <button
-              type="button"
-              onClick={() => forceTheme('light')}
-              className="px-3 py-1 bg-green-200 text-green-700 rounded hover:bg-green-300 transition-colors text-xs"
-            >
-              Forçar Light
-            </button>
-            <button
-              type="button"
-              onClick={() => forceTheme('dark')}
-              className="px-3 py-1 bg-blue-200 text-blue-700 rounded hover:bg-blue-300 transition-colors text-xs"
-            >
-              Forçar Dark
-            </button>
-          </div>
-          
-          <button
-            type="button"
-            onClick={() => {
-              localStorage.removeItem('theme')
-              localStorage.removeItem('accessibility-settings')
-              window.location.reload()
-            }}
-            className="px-4 py-2 bg-red-200 text-red-700 rounded hover:bg-red-300 transition-colors text-sm"
-          >
-            Limpar Tema (Reset)
-          </button>
+        {/* Rodapé */}
+        <div style={{
+          marginTop: '24px',
+          textAlign: 'center',
+          fontSize: '12px',
+          color: '#9ca3af'
+        }}>
+          <div>Rua Yara, 49 - São João</div>
+          <div>CEP: 17513-370 - Marília/SP</div>
+          <div>Tel: (14) 3216-2611</div>
         </div>
       </div>
     </div>
   )
 }
-

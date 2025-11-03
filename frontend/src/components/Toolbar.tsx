@@ -8,9 +8,12 @@ import {
   SearchIcon, 
   PrintIcon, 
   UploadIcon,
-  SettingsIcon
+  SettingsIcon,
+  IndexIcon
 } from './icons'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { useWindowManager } from '../contexts/WindowContext'
+import { IndicesPage } from '../pages/IndicesPage'
 
 /**
  * TOOLBAR
@@ -22,6 +25,7 @@ export function Toolbar() {
   // Buscar tema - SEMPRE chamar getTheme() diretamente
   const { getTheme, currentTheme, isThemeLoaded } = useAccessibility()
   const theme = getTheme()
+  const { openWindow } = useWindowManager()
 
   // 🔥 FORÇA BRUTA: Escutar mudanças de tema
   useEffect(() => {
@@ -37,11 +41,22 @@ export function Toolbar() {
     return null // Não renderizar até o tema estar pronto
   }
 
+  const handleOpenIndices = () => {
+    openWindow({
+      id: `indices-${Date.now()}`,
+      type: 'indices',
+      title: 'Índices - Nascimento, Casamento, Óbito, Proclamas',
+      component: IndicesPage,
+      props: {}
+    })
+  }
+
   const toolbarItems = [
     { icon: UserIcon, label: 'Clientes', shortcut: 'F2' },
     { icon: DocumentIcon, label: 'Documentos', shortcut: 'F3' },
     { icon: RegistryIcon, label: 'Registros', shortcut: 'F4' },
     { icon: CertificateIcon, label: 'Certidões', shortcut: 'F5' },
+    { icon: IndexIcon, label: 'Índices', shortcut: 'F8', onClick: handleOpenIndices },
     { icon: BuildingIcon, label: 'Imóveis', shortcut: 'F6' },
     { icon: SearchIcon, label: 'Consulta', shortcut: 'F7' },
     { icon: PrintIcon, label: 'Imprimir', shortcut: 'Ctrl+P' },
@@ -66,6 +81,7 @@ export function Toolbar() {
               label={item.label}
               shortcut={item.shortcut}
               theme={theme}
+              onClick={item.onClick}
             />
           ))}
         </div>
@@ -75,7 +91,7 @@ export function Toolbar() {
 })
 
 // ⚡ Sub-componente memoizado
-const ToolbarButton = memo(({ Icon, label, shortcut, theme }: any) => {
+const ToolbarButton = memo(({ Icon, label, shortcut, theme, onClick }: any) => {
   const [isHovered, setIsHovered] = useState(false)
 
   return (
@@ -87,6 +103,7 @@ const ToolbarButton = memo(({ Icon, label, shortcut, theme }: any) => {
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={onClick}
       title={`${label} (${shortcut})`}
     >
       <Icon className="w-5 h-5 mb-1" />

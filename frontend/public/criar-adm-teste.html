@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👤 Criar Funcionário ADM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        h1 {
+            color: #1e3a8a;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+        
+        .info {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .info h3 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+        }
+        
+        .info p {
+            color: #1e40af;
+            margin: 8px 0;
+            font-size: 16px;
+        }
+        
+        .info strong {
+            color: #1e3a8a;
+            font-weight: 700;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .success {
+            background: #d1fae5;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #065f46;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .link-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%);
+            display: inline-block;
+            text-decoration: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👤 Criar Funcionário ADM de Teste</h1>
+        
+        <div class="info">
+            <h3>📋 Dados do Funcionário ADM</h3>
+            <p><strong>Código:</strong> 999</p>
+            <p><strong>Nome:</strong> ADM (Teste)</p>
+            <p><strong>Login:</strong> adm</p>
+            <p><strong>Senha:</strong> adm</p>
+            <p><strong>Perfil:</strong> Funcionário (para usar o Controlador)</p>
+        </div>
+        
+        <button onclick="criarADM()">🚀 Criar Funcionário ADM</button>
+        
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        function criarADM() {
+            // Criar funcionário ADM
+            const funcionarioADM = {
+                id: 'func-adm-999',
+                codigo: 999,
+                nome: 'ADM (Teste)',
+                login: 'adm',
+                senha: 'adm',
+                email: 'adm@sistema.com',
+                cpf: '000.000.000-00',
+                telefone: '(00) 0000-0000',
+                cargo: 'Administrador',
+                setor: 'Teste',
+                dataAdmissao: new Date().toISOString(),
+                emAtividade: true,
+                observacoes: 'Funcionário de teste para desenvolvimento',
+                ordemSinalPublico: '99'
+            };
+            
+            // Adicionar aos funcionários cadastrados
+            let funcionarios = JSON.parse(localStorage.getItem('funcionarios-cadastrados') || '[]');
+            
+            // Remover ADM existente
+            funcionarios = funcionarios.filter(f => f.codigo !== 999 && f.login !== 'adm');
+            
+            // Adicionar novo ADM
+            funcionarios.push(funcionarioADM);
+            localStorage.setItem('funcionarios-cadastrados', JSON.stringify(funcionarios));
+            
+            // Fazer login automático
+            const userData = {
+                id: funcionarioADM.id,
+                codigo: funcionarioADM.codigo,
+                email: funcionarioADM.email,
+                name: funcionarioADM.nome,
+                nome: funcionarioADM.nome,
+                login: funcionarioADM.login,
+                profile: 'employee',
+                permissions: ['read', 'create', 'update', 'delete'],
+                funcionario: funcionarioADM
+            };
+            
+            const token = 'adm-token-' + Date.now();
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(userData));
+            
+            // Criar guichê automático
+            let guiches = JSON.parse(localStorage.getItem('senha-guiches') || '[]');
+            
+            // Remover guichê ADM existente
+            guiches = guiches.filter(g => String(g.funcionarioId) !== '999');
+            
+            // Criar novo guichê
+            const novoNumero = guiches.length > 0 ? Math.max(...guiches.map(g => g.numero)) + 1 : 1;
+            const guicheADM = {
+                id: 'guiche-adm-' + Date.now(),
+                numero: novoNumero,
+                nome: 'Guichê ADM',
+                ativo: true,
+                funcionarioId: 999,
+                funcionarioNome: 'ADM (Teste)',
+                servicosAtendidos: ['preferencial', 'comum'],
+                statusGuiche: 'livre'
+            };
+            
+            guiches.push(guicheADM);
+            localStorage.setItem('senha-guiches', JSON.stringify(guiches));
+            
+            // Corrigir data
+            const hoje = new Date().toDateString();
+            localStorage.setItem('senha-ultima-data', hoje);
+            
+            // Mostrar sucesso
+            const resultado = document.getElementById('resultado');
+            resultado.innerHTML = `
+                <div class="success">
+                    ✅ Funcionário ADM criado com sucesso!
+                    <br><br>
+                    🏢 Guichê ${novoNumero} criado automaticamente
+                    <br><br>
+                    👤 Você já está logado como ADM
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <a href="/" class="link-button">🏠 Ir para o Sistema</a>
+                    <a href="/diagnostico-completo.html" class="link-button">🔍 Ver Diagnóstico</a>
+                </div>
+            `;
+            
+            // Redirecionar após 2 segundos
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 3000);
+        }
+        
+        // Verificar se já existe ADM
+        window.addEventListener('DOMContentLoaded', () => {
+            const funcionarios = JSON.parse(localStorage.getItem('funcionarios-cadastrados') || '[]');
+            const admExiste = funcionarios.find(f => f.codigo === 999 || f.login === 'adm');
+            
+            if (admExiste) {
+                const resultado = document.getElementById('resultado');
+                resultado.innerHTML = `
+                    <div class="info" style="background: #fef3c7; border-color: #f59e0b;">
+                        <h3 style="color: #92400e;">⚠️ ADM já existe</h3>
+                        <p style="color: #78350f;">Um funcionário ADM já está cadastrado.</p>
+                        <p style="color: #78350f;">Clique no botão acima para recriá-lo.</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
+

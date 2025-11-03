@@ -254,7 +254,14 @@ export function SystemStatus({
           🔄 Recarregar
         </button>
         <button
-          onClick={() => {
+          onClick={async () => {
+            const confirmacao = confirm('⚠️ ATENÇÃO: Isso vai APAGAR TODOS OS DADOS do sistema!\n\nTodos os clientes, funcionários, e configurações serão PERDIDOS!\n\nTem CERTEZA que deseja continuar?')
+            if (!confirmacao) return
+            
+            const confirmacao2 = confirm('⚠️⚠️⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nEsta ação é IRREVERSÍVEL!\n\nCLIQUE EM OK APENAS SE TIVER CERTEZA ABSOLUTA!')
+            if (!confirmacao2) return
+            
+            console.error('🗑️🗑️🗑️ LIMPANDO TODO O LOCALSTORAGE!')
             localStorage.clear()
             window.location.reload()
           }}

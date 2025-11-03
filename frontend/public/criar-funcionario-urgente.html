@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>🚨 CRIAR FUNCIONÁRIO URGENTE</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitulo {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .campo {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .resultado {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .sucesso {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+        .erro {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+        .destaque {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #f59e0b;
+        }
+        .codigo {
+            font-family: monospace;
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 CRIAR FUNCIONÁRIO</h1>
+        <p class="subtitulo">Preencha os dados e clique em criar</p>
+
+        <div class="campo">
+            <label>Nome Completo:</label>
+            <input type="text" id="nome" value="EDUARDO ANTONIO BRAGA JUNIOR" placeholder="Nome do funcionário">
+        </div>
+
+        <div class="campo">
+            <label>Código:</label>
+            <input type="text" id="codigo" value="1" placeholder="Código do funcionário">
+        </div>
+
+        <div class="campo">
+            <label>Login:</label>
+            <input type="text" id="login" value="0" placeholder="Login para acessar">
+        </div>
+
+        <div class="campo">
+            <label>Senha:</label>
+            <input type="text" id="senha" value="0" placeholder="Senha para acessar">
+        </div>
+
+        <div class="campo">
+            <label>Email:</label>
+            <input type="email" id="email" value="eduardo@cartorio.com" placeholder="Email do funcionário">
+        </div>
+
+        <div class="campo">
+            <label>CPF:</label>
+            <input type="text" id="cpf" value="000.000.000-00" placeholder="CPF">
+        </div>
+
+        <button onclick="criarFuncionario()">
+            ✅ CRIAR FUNCIONÁRIO AGORA
+        </button>
+
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        function criarFuncionario() {
+            const divResultado = document.getElementById('resultado')
+            
+            const nome = document.getElementById('nome').value.trim()
+            const codigo = document.getElementById('codigo').value.trim()
+            const login = document.getElementById('login').value
+            const senha = document.getElementById('senha').value
+            const email = document.getElementById('email').value.trim()
+            const cpf = document.getElementById('cpf').value.trim()
+
+            // Validar
+            if (!nome || !codigo || !login || !senha) {
+                divResultado.innerHTML = `
+                    <div class="resultado erro">
+                        ❌ Preencha pelo menos: Nome, Código, Login e Senha!
+                    </div>
+                `
+                return
+            }
+
+            // Criar funcionário completo
+            const funcionario = {
+                codigo: codigo,
+                nome: nome,
+                login: login,
+                senha: senha,
+                email: email,
+                cpf: cpf,
+                emAtividade: true,
+                id: Date.now().toString(),
+                // Campos obrigatórios
+                ordemSinalPublico: '',
+                nomeMin: nome.toUpperCase(),
+                prenome: nome.split(' ')[0],
+                endereco: '',
+                bairro: '',
+                cidade: '',
+                cep: '',
+                telefone: '',
+                uf: '',
+                celular: '',
+                nascimento: '',
+                rg: '',
+                mae: '',
+                pai: '',
+                cargo: 'Funcionário',
+                assinante: false,
+                cargoMin: '',
+                cargoCivil: '',
+                cargoMin2: '',
+                salario: '',
+                comissao: '',
+                admissao: new Date().toISOString().split('T')[0],
+                demissao: '',
+                observacao: 'Criado via ferramenta emergencial'
+            }
+
+            // Buscar lista existente
+            const funcionarios = localStorage.getItem('funcionarios-cadastrados')
+            let lista = funcionarios ? JSON.parse(funcionarios) : []
+
+            // Verificar se já existe
+            const indexExistente = lista.findIndex(f => f.codigo == codigo)
+
+            if (indexExistente >= 0) {
+                // ATUALIZAR
+                lista[indexExistente] = { ...lista[indexExistente], ...funcionario }
+                localStorage.setItem('funcionarios-cadastrados', JSON.stringify(lista))
+
+                divResultado.innerHTML = `
+                    <div class="resultado sucesso">
+                        ✅ FUNCIONÁRIO ATUALIZADO COM SUCESSO!
+                        
+                        <div class="destaque" style="margin-top: 15px; text-align: left;">
+                            <strong>📋 DADOS PARA LOGIN:</strong><br><br>
+                            Login: <span class="codigo">${login}</span><br>
+                            Senha: <span class="codigo">${senha}</span><br>
+                            Perfil: <span class="codigo">Funcionário</span><br><br>
+                            
+                            <strong style="color: #059669;">✅ AGORA VOCÊ PODE FAZER LOGIN!</strong>
+                        </div>
+                    </div>
+                `
+            } else {
+                // CRIAR NOVO
+                lista.push(funcionario)
+                localStorage.setItem('funcionarios-cadastrados', JSON.stringify(lista))
+
+                divResultado.innerHTML = `
+                    <div class="resultado sucesso">
+                        ✅ FUNCIONÁRIO CRIADO COM SUCESSO!
+                        
+                        <div class="destaque" style="margin-top: 15px; text-align: left;">
+                            <strong>📋 DADOS PARA LOGIN:</strong><br><br>
+                            Código: <span class="codigo">${codigo}</span><br>
+                            Nome: <span class="codigo">${nome}</span><br>
+                            Login: <span class="codigo">${login}</span><br>
+                            Senha: <span class="codigo">${senha}</span><br>
+                            Email: <span class="codigo">${email}</span><br><br>
+                            
+                            <strong style="color: #059669;">✅ SALVO NO SISTEMA!</strong><br><br>
+                            
+                            <strong>🔐 PARA FAZER LOGIN USE:</strong><br>
+                            Login: <span class="codigo">${login}</span><br>
+                            Senha: <span class="codigo">${senha}</span><br>
+                            Perfil: <span class="codigo">Funcionário</span>
+                        </div>
+                    </div>
+                `
+            }
+
+            // Scroll para o resultado
+            setTimeout(() => {
+                divResultado.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }, 100)
+        }
+
+        // Verificar ao carregar se já existe
+        window.onload = function() {
+            const func = JSON.parse(localStorage.getItem('funcionarios-cadastrados') || '[]').find(f => f.codigo == '1')
+            
+            if (func) {
+                document.getElementById('resultado').innerHTML = `
+                    <div class="resultado" style="background: #fef3c7; color: #92400e; border: 2px solid #f59e0b;">
+                        ⚠️ JÁ EXISTE FUNCIONÁRIO CÓDIGO 1
+                        
+                        <div style="margin-top: 15px; text-align: left; font-size: 14px;">
+                            Nome: <span class="codigo">${func.nome}</span><br>
+                            Login: <span class="codigo">${func.login}</span><br>
+                            Senha: <span class="codigo">${func.senha}</span><br><br>
+                            
+                            <strong>Se os dados estiverem errados, altere acima e clique em criar para atualizar.</strong>
+                        </div>
+                    </div>
+                `
+            }
+        }
+    </script>
+</body>
+</html>
+
