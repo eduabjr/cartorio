@@ -14,36 +14,40 @@ import { ConfigOverlay } from './components/ConfigOverlay'
 import { PasswordPrompt } from './components/PasswordPrompt'
 import { MovableTabs } from './components/MovableTabs'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { ClientePage } from './pages/ClientePage'
-import { FuncionarioPage } from './pages/FuncionarioPage'
-import { FirmasPage } from './pages/FirmasPage'
-import { TiposCadastroPage } from './pages/TiposCadastroPage'
-import { LocalizacaoCadastroPage } from './pages/LocalizacaoCadastroPage'
-import { RecepcaoArquivoFunerariaPage } from './pages/RecepcaoArquivoFunerariaPage'
-import { RecepcaoArquivoMaternidadePage } from './pages/RecepcaoArquivoMaternidadePage'
-import { RecepcaoArquivosPage } from './pages/RecepcaoArquivosPage'
-import { FeriadosPage } from './pages/FeriadosPage'
-import { ControleDigitalizacaoPage } from './pages/ControleDigitalizacaoPage'
-import { ProtocoloCancelamentoPage } from './pages/ProtocoloCancelamentoPage'
-import { CartorioSeadePage } from './pages/CartorioSeadePage'
-import { DNVDOBloqueadasPage } from './pages/DNVDOBloqueadasPage'
-import { OficiosMandadosPage } from './pages/OficiosMandadosPage'
-import { HospitalCemiterioPage } from './pages/HospitalCemiterioPage'
-import { CadastroLivrosPage } from './pages/CadastroLivrosPage'
-import { ProtocoloLancamentoPage } from './pages/ProtocoloLancamentoPage'
-import { NaturezaPage } from './pages/NaturezaPage'
-import { ServicoCartorioPage } from './pages/ServicoCartorioPage'
-import { IndicesPage } from './pages/IndicesPage'
-import { IndiceXPage } from './pages/IndiceXPage'
-import { ConfiguracaoMenuPage } from './pages/ConfiguracaoMenuPage'
-import { ConfiguracaoSistemaPage } from './pages/ConfiguracaoSistemaPage'
-import { ConfiguracaoSenhaPage } from './pages/ConfiguracaoSenhaPage'
-import { ControladorSenhaPage } from './pages/ControladorSenhaPage'
-import { PainelSenhasPage } from './pages/PainelSenhasPage'
+// 🏗️ MICRO-FRONTENDS: Imports isolados com ErrorBoundary e Lazy Loading
+import { 
+  ClientePageIsolated,
+  FuncionarioPageIsolated,
+  FirmasPageIsolated,
+  TiposCadastroPageIsolated,
+  LocalizacaoCadastroPageIsolated,
+  RecepcaoArquivoFunerariaPageIsolated,
+  RecepcaoArquivoMaternidadePageIsolated,
+  RecepcaoArquivosPageIsolated,
+  FeriadosPageIsolated,
+  ControleDigitalizacaoPageIsolated,
+  ProtocoloCancelamentoPageIsolated,
+  CartorioSeadePageIsolated,
+  DNVDOBloqueadasPageIsolated,
+  OficiosMandadosPageIsolated,
+  HospitalCemiterioPageIsolated,
+  CadastroLivrosPageIsolated,
+  ProtocoloLancamentoPageIsolated,
+  NaturezaPageIsolated,
+  ServicoCartorioPageIsolated,
+  IndicesPageIsolated,
+  IndiceXPageIsolated,
+  ConfiguracaoMenuPageIsolated,
+  ConfiguracaoSistemaPageIsolated,
+  ConfiguracaoSenhaPageIsolated,
+  ControladorSenhaPageIsolated,
+  PainelSenhasPageIsolated,
+  GerenciamentoGuichesPageIsolated
+} from './modules'
+// Rotas públicas (não precisam de isolamento, carregadas diretamente)
 import { TelaSenhaPublicaPage } from './pages/TelaSenhaPublicaPage'
 import { TerminalSenhaPage } from './pages/TerminalSenhaPage'
 import { PainelPublicoPage } from './pages/PainelPublicoPage'
-import { GerenciamentoGuichesPage } from './pages/GerenciamentoGuichesPage'
 import { BasePage } from './components/BasePage'
 import { ScannerIcon } from './components/ScannerIcon'
 import { CivitasLogo } from './components/CivitasLogo'
@@ -630,8 +634,8 @@ function AppContent() {
           id: 'controle-digitalizacao-window',
           type: 'controle-digitalizacao',
           title: 'Controle de Digitalização de Imagens',
-          component: ControleDigitalizacaoPage,
-          props: { onClose: () => {} }
+          component: ControleDigitalizacaoPageIsolated,
+          props: {}
         })
         
         // Limpar o hash da URL
@@ -775,7 +779,7 @@ function AppContent() {
                 id: windowId,
                 type: 'cliente',
                 title: 'Cliente',
-                component: ClientePage,
+                component: ClientePageIsolated,
                 props: {}
               })
               console.log('✅ Janela de Cliente aberta!')
@@ -792,7 +796,7 @@ function AppContent() {
                 id: windowId,
                 type: 'funcionario',
                 title: 'Funcionário',
-                component: FuncionarioPage,
+                component: FuncionarioPageIsolated,
                 props: {}
               })
               console.log('✅ Janela de Funcionário aberta!')
@@ -803,8 +807,8 @@ function AppContent() {
                 id: 'cartorio-seade-window',
                 type: 'cartorio-seade',
                 title: 'Cadastro de Cartório (SEADE)',
-                component: CartorioSeadePage,
-                props: { onClose: () => {} }
+                component: CartorioSeadePageIsolated,
+                props: {}
               })
               console.log('✅ Janela de Cartório SEADE aberta!')
             } },
@@ -814,8 +818,8 @@ function AppContent() {
               id: 'dnv-do-bloqueadas-window',
               type: 'dnv-do-bloqueadas',
               title: 'Cadastro de Declaração Bloqueada',
-              component: DNVDOBloqueadasPage,
-              props: { onClose: () => {} }
+              component: DNVDOBloqueadasPageIsolated,
+              props: {}
             })
             console.log('✅ Janela de DNV e DO Bloqueadas aberta!')
           } },
@@ -825,8 +829,8 @@ function AppContent() {
               id: 'oficios-mandados-window',
               type: 'oficios-mandados',
               title: 'Controle de Ofícios e Mandados',
-              component: OficiosMandadosPage,
-              props: { onClose: () => {} }
+              component: OficiosMandadosPageIsolated,
+              props: {}
             })
             console.log('✅ Janela de Ofícios e Mandados aberta!')
           } },
@@ -836,8 +840,8 @@ function AppContent() {
               id: 'hospital-cemiterio-window',
               type: 'hospital-cemiterio',
               title: 'Cadastro de Hospitais, Cemitérios e Funerárias',
-              component: HospitalCemiterioPage,
-              props: { onClose: () => {} }
+              component: HospitalCemiterioPageIsolated,
+              props: {}
             })
             console.log('✅ Janela de Hospital, Cemitério e Funerária aberta!')
           }},
@@ -847,8 +851,8 @@ function AppContent() {
               id: 'cadastro-livros-window',
               type: 'cadastro-livros',
               title: 'Cadastro de Livros',
-              component: CadastroLivrosPage,
-              props: { onClose: () => {} }
+              component: CadastroLivrosPageIsolated,
+              props: {}
             })
             console.log('✅ Janela de Cadastro de Livros aberta!')
           }},
@@ -940,8 +944,8 @@ function AppContent() {
                   id: 'feriados-window',
                   type: 'feriados',
                   title: 'Cadastro de Feriado',
-                  component: FeriadosPage,
-                  props: { onClose: () => {} }
+                  component: FeriadosPageIsolated,
+                  props: {}
                 })
               }},
               { id: 'config-sistema-ibge', label: 'IBGE', icon: '', onClick: () => {
@@ -958,8 +962,8 @@ function AppContent() {
                   id: 'localizacao-cadastro-window',
                   type: 'localizacao-cadastro',
                   title: 'Cadastro de Localização',
-                  component: LocalizacaoCadastroPage,
-                  props: { onClose: () => {} }
+                  component: LocalizacaoCadastroPageIsolated,
+                  props: {}
                 })
               } },
               { id: 'cadastros-tipos', label: 'Digitalização (Ato e Documento)', icon: '', onClick: () => {
@@ -968,8 +972,8 @@ function AppContent() {
                   id: 'tipos-cadastro-window',
                   type: 'tipos-cadastro',
                   title: 'Cadastro de Digitalização',
-                  component: TiposCadastroPage,
-                  props: { onClose: () => {} }
+                  component: TiposCadastroPageIsolated,
+                  props: {}
                 })
               } },
               { id: 'servicos-cartorio', label: 'Serviços e Tabela de Custas', icon: '', onClick: () => {
@@ -979,8 +983,8 @@ function AppContent() {
                   id: windowId,
                   type: 'servicos-cartorio',
                   title: 'Serviços de Cartório',
-                  component: ServicoCartorioPage,
-                  props: { onClose: () => {} }
+                  component: ServicoCartorioPageIsolated,
+                  props: {}
                 })
                 console.log('✅ Janela de Serviços de Cartório aberta!')
               } },
@@ -990,8 +994,8 @@ function AppContent() {
                   id: 'config-menus-window',
                   type: 'config-menus',
                   title: 'Configuração de Menus',
-                  component: ConfiguracaoMenuPage,
-                  props: { onClose: () => {} },
+                  component: ConfiguracaoMenuPageIsolated,
+                  props: {},
                   defaultSize: { width: 1000, height: 700 },
                   defaultPosition: { x: 100, y: 100 }
                 })
@@ -1002,8 +1006,8 @@ function AppContent() {
                   id: 'config-sistema-gerais-window',
                   type: 'config-sistema-gerais',
                   title: 'Configurações do Sistema',
-                  component: ConfiguracaoSistemaPage,
-                  props: { onClose: () => {} }
+                  component: ConfiguracaoSistemaPageIsolated,
+                  props: {}
                 })
               } },
               { id: 'config-senhas', label: 'Configuração de Senhas', icon: '', onClick: () => {
@@ -1012,8 +1016,8 @@ function AppContent() {
                   id: 'config-senhas-window',
                   type: 'config-senhas',
                   title: 'Configuração de Senhas',
-                  component: ConfiguracaoSenhaPage,
-                  props: { onClose: () => {} }
+                  component: ConfiguracaoSenhaPageIsolated,
+                  props: {}
                 })
               } },
               { id: 'painel-senhas-admin', label: 'Painel de Senhas (Admin)', icon: '', onClick: () => {
@@ -1022,8 +1026,8 @@ function AppContent() {
                   id: 'painel-senhas-window',
                   type: 'painel-senhas',
                   title: 'Painel de Senhas',
-                  component: PainelSenhasPage,
-                  props: { onClose: () => {} }
+                  component: PainelSenhasPageIsolated,
+                  props: {}
                 })
               } }
             ]
@@ -1041,8 +1045,8 @@ function AppContent() {
               id: 'recepcao-arquivos-window',
               type: 'recepcao-arquivos',
               title: 'Recepção de Arquivos',
-              component: RecepcaoArquivosPage,
-              props: { onClose: () => {} }
+              component: RecepcaoArquivosPageIsolated,
+              props: {}
             })
           } }
         ]
@@ -1075,7 +1079,7 @@ function AppContent() {
             openWindow({
               id: 'protocolo-lancamento',
               title: 'Lançamento de Protocolos',
-              component: ProtocoloLancamentoPage,
+              component: ProtocoloLancamentoPageIsolated,
               position: { x: 100, y: 100 }
             })
             console.log('✅ Janela de Lançamento de Protocolos aberta!')
@@ -1087,8 +1091,8 @@ function AppContent() {
               id: 'protocolo-cancelamento-window',
               type: 'protocolo-cancelamento',
               title: 'Cancelamento de Protocolos',
-              component: ProtocoloCancelamentoPage,
-              props: { onClose: () => {} }
+              component: ProtocoloCancelamentoPageIsolated,
+              props: {}
             })
           } }
         ]
@@ -1175,7 +1179,7 @@ function AppContent() {
               id: `indices-${Date.now()}`,
               type: 'indices',
               title: 'Índices - Nascimento, Casamento, Óbito, Proclamas',
-              component: IndicesPage,
+              component: IndicesPageIsolated,
               props: {}
             })
             console.log('✅ Janela de Índices aberta!')
@@ -1186,7 +1190,7 @@ function AppContent() {
               id: `indice-x-${Date.now()}`,
               type: 'indice-x',
               title: 'Índice X',
-              component: IndiceXPage,
+              component: IndiceXPageIsolated,
               props: {}
             })
             console.log('✅ Janela de Índice X aberta!')
@@ -1239,8 +1243,8 @@ function AppContent() {
               id: 'controle-digitalizacao-window',
               type: 'controle-digitalizacao',
               title: 'Controle de Digitalização de Imagens',
-              component: ControleDigitalizacaoPage,
-              props: { onClose: () => {} }
+              component: ControleDigitalizacaoPageIsolated,
+              props: {}
             })
           } },
           { id: 'digitalizacao-exclusao', label: 'Exclusão de Registros e Imagens Digitalizadas', icon: '', onClick: () => (window as any).navigateToPage?.('digitalizacao-exclusao') }
@@ -1266,8 +1270,8 @@ function AppContent() {
               id: 'firmas-window',
               type: 'firmas',
               title: 'Firmas',
-              component: FirmasPage,
-              props: { onClose: () => {} }
+              component: FirmasPageIsolated,
+              props: {}
             })
             console.log('✅ Janela de Firmas aberta!')
           } },
@@ -1277,8 +1281,8 @@ function AppContent() {
               id: 'firmas-doc-window',
               type: 'firmas-documento-desentranhado',
               title: 'Documento Desentranhado',
-              component: FirmasPage,
-              props: { onClose: () => {} }
+              component: FirmasPageIsolated,
+              props: {}
             })
             console.log('✅ Janela de Documento Desentranhado aberta!')
           } },
@@ -1288,8 +1292,8 @@ function AppContent() {
               id: 'firmas-auth-window',
               type: 'firmas-autenticacao-item13',
               title: 'Autenticação Item 13',
-              component: FirmasPage,
-              props: { onClose: () => {} }
+              component: FirmasPageIsolated,
+              props: {}
             })
             console.log('✅ Janela de Autenticação Item 13 aberta!')
           } },
@@ -1303,8 +1307,8 @@ function AppContent() {
                     id: 'firmas-pf-window',
                     type: 'firmas-antecedentes-pf',
                     title: 'Antecedentes PF',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'antecedentes-ssp', label: 'Antecedentes SSP', icon: '', onClick: () => {
@@ -1312,8 +1316,8 @@ function AppContent() {
                     id: 'firmas-ssp-window',
                     type: 'firmas-antecedentes-ssp',
                     title: 'Antecedentes SSP',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'antecedente-epol', label: 'Antecedente Epol', icon: '', onClick: () => {
@@ -1321,8 +1325,8 @@ function AppContent() {
                     id: 'firmas-epol-window',
                     type: 'firmas-antecedente-epol',
                     title: 'Antecedente Epol',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'certificado-digital', label: 'Certificado Digital', icon: '', onClick: () => {
@@ -1330,8 +1334,8 @@ function AppContent() {
                     id: 'firmas-cert-window',
                     type: 'firmas-certificado-digital',
                     title: 'Certificado Digital',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'certidao-naturalizacao', label: 'Certidão de Naturalização', icon: '', onClick: () => {
@@ -1339,8 +1343,8 @@ function AppContent() {
                     id: 'firmas-nat-window',
                     type: 'firmas-certidao-naturalizacao',
                     title: 'Certidão de Naturalização',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'cnh-digital', label: 'CNH Digital', icon: '', onClick: () => {
@@ -1348,8 +1352,8 @@ function AppContent() {
                     id: 'firmas-cnh-window',
                     type: 'firmas-cnh-digital',
                     title: 'CNH Digital',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'qrcode', label: 'QRCODE', icon: '', onClick: () => {
@@ -1357,8 +1361,8 @@ function AppContent() {
                     id: 'firmas-qr-window',
                     type: 'firmas-qrcode',
                     title: 'QRCODE',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'rg-digital', label: 'RG Digital', icon: '', onClick: () => {
@@ -1366,8 +1370,8 @@ function AppContent() {
                     id: 'firmas-rg-window',
                     type: 'firmas-rg-digital',
                     title: 'RG Digital',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'tjsp', label: 'TJSP', icon: '', onClick: () => {
@@ -1375,8 +1379,8 @@ function AppContent() {
                     id: 'firmas-tjsp-window',
                     type: 'firmas-tjsp',
                     title: 'TJSP',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } },
                 { id: 'tse', label: 'TSE', icon: '', onClick: () => {
@@ -1384,8 +1388,8 @@ function AppContent() {
                     id: 'firmas-tse-window',
                     type: 'firmas-tse',
                     title: 'TSE',
-                    component: FirmasPage,
-                    props: { onClose: () => {} }
+                    component: FirmasPageIsolated,
+                    props: {}
                   })
                 } }
               ]
@@ -1406,7 +1410,7 @@ function AppContent() {
             id: windowId,
             type: 'cliente',
             title: 'Cliente',
-            component: ClientePage,
+            component: ClientePageIsolated,
             props: {}
           })
           console.log('✅ Janela de Cliente aberta!')
@@ -1417,8 +1421,8 @@ function AppContent() {
           id: 'firmas-window',
           type: 'firmas',
           title: 'Firmas',
-          component: FirmasPage,
-          props: { onClose: () => {} }
+          component: FirmasPageIsolated,
+          props: {}
         })
         console.log('✅ Janela de Firmas aberta!')
       } },
@@ -1432,8 +1436,8 @@ function AppContent() {
           id: 'controle-digitalizacao-window',
           type: 'controle-digitalizacao',
           title: 'Controle de Digitalização de Imagens',
-          component: ControleDigitalizacaoPage,
-          props: { onClose: () => {} }
+          component: ControleDigitalizacaoPageIsolated,
+          props: {}
         })
       } },
       { id: 'indices', label: 'Índices', icon: '📊', onClick: () => {
@@ -1442,7 +1446,7 @@ function AppContent() {
           id: `indices-${Date.now()}`,
           type: 'indices',
           title: 'Índices - Nascimento, Casamento, Óbito, Proclamas',
-          component: IndicesPage,
+          component: IndicesPageIsolated,
           props: {}
         })
       } },
@@ -1566,75 +1570,82 @@ function AppContent() {
           </div>
         </div>
 
-        {/* Menu Textual (Menu 1) - PROTEGIDO */}
-        <ProtectedMenu 
-          menuType="TEXTUAL_MENU"
-          style={{ marginTop: '10px' }}
-          data-responsive-menu
-        >
-          <TextualMenu 
-            items={textualMenuItems}
-            isExpanded={isTextualMenuExpanded}
-            onToggleExpanded={() => setIsTextualMenuExpanded(!isTextualMenuExpanded)}
-          />
-        </ProtectedMenu>
+        {/* Menu Textual (Menu 1) - PROTEGIDO COM MICRO-FRONTEND */}
+        <ErrorBoundary moduleName="Menu Textual">
+          <ProtectedMenu 
+            menuType="TEXTUAL_MENU"
+            style={{ marginTop: '10px' }}
+            data-responsive-menu
+          >
+            <TextualMenu 
+              items={textualMenuItems}
+              isExpanded={isTextualMenuExpanded}
+              onToggleExpanded={() => setIsTextualMenuExpanded(!isTextualMenuExpanded)}
+            />
+          </ProtectedMenu>
+        </ErrorBoundary>
 
-        {/* Menu de Ícones (Menu 2) - PROTEGIDO */}
-        <ProtectedMenu 
-          menuType="ICON_MENU"
-          data-responsive-menu
-        >
-          <IconMenu 
-            items={iconMenuItems}
-            onOpenSideMenu={() => setIsSideMenuOpen(true)}
-          />
-        </ProtectedMenu>
+        {/* Menu de Ícones (Menu 2) - PROTEGIDO COM MICRO-FRONTEND */}
+        <ErrorBoundary moduleName="Menu de Ícones / Toolbar">
+          <ProtectedMenu 
+            menuType="ICON_MENU"
+            data-responsive-menu
+          >
+            <IconMenu 
+              items={iconMenuItems}
+              onOpenSideMenu={() => setIsSideMenuOpen(true)}
+            />
+          </ProtectedMenu>
+        </ErrorBoundary>
 
-        {/* Menu lateral */}
-        <SideMenu 
-          isOpen={isSideMenuOpen}
-          onClose={() => setIsSideMenuOpen(false)}
-          user={user}
-          onLogout={handleLogout}
-          onOpenConfigurations={() => setShowConfiguracoes(true)}
-          onOpenMaternidade={navigateToMaternidade}
-          onOpenControladorSenha={() => {
+        {/* Menu lateral - PROTEGIDO COM MICRO-FRONTEND */}
+        <ErrorBoundary moduleName="Menu Lateral do Usuário">
+          <SideMenu 
+            isOpen={isSideMenuOpen}
+            onClose={() => setIsSideMenuOpen(false)}
+            user={user}
+            onLogout={handleLogout}
+            onOpenConfigurations={() => setShowConfiguracoes(true)}
+            onOpenMaternidade={navigateToMaternidade}
+            onOpenControladorSenha={() => {
             openWindow({
               id: 'controlador-senha-window',
               type: 'controlador-senha',
               title: 'Controlador de Senhas',
-              component: ControladorSenhaPage,
-              props: { onClose: () => {} }
+              component: ControladorSenhaPageIsolated,
+              props: {}
             })
-          }}
-          onOpenConfiguracaoSenha={() => {
+            }}
+            onOpenConfiguracaoSenha={() => {
             openWindow({
               id: 'configuracao-senha-window',
               type: 'configuracao-senha',
               title: 'Configuração de Senhas',
-              component: ConfiguracaoSenhaPage,
-              props: { onClose: () => {} }
+              component: ConfiguracaoSenhaPageIsolated,
+              props: {}
             })
-          }}
-          onOpenPainelSenhas={() => {
+            }}
+            onOpenPainelSenhas={() => {
             openWindow({
               id: 'painel-senhas-window',
               type: 'painel-senhas',
               title: 'Painel Administrativo de Senhas',
-              component: PainelSenhasPage,
-              props: { onClose: () => {} }
+              component: PainelSenhasPageIsolated,
+              props: {}
             })
-          }}
-          onOpenGerenciamentoGuiches={() => {
+            }}
+            onOpenGerenciamentoGuiches={() => {
+            // 🔄 Gerenciamento de Guichês agora é uma aba dentro de Funcionário
             openWindow({
-              id: 'gerenciamento-guiches-window',
-              type: 'gerenciamento-guiches',
-              title: 'Gerenciamento de Guichês',
-              component: GerenciamentoGuichesPage,
-              props: { onClose: () => {} }
+              id: 'funcionario-window',
+              type: 'funcionario',
+              title: 'Funcionário',
+              component: FuncionarioPageIsolated,
+              props: { abaInicial: 'guiches' }
             })
-          }}
-        />
+            }}
+          />
+        </ErrorBoundary>
 
         {/* Abas Móveis - Aparecem apenas na Tela 2 */}
         <MovableTabs

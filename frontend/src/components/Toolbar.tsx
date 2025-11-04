@@ -88,7 +88,7 @@ export function Toolbar() {
       </div>
     </div>
   )
-})
+}
 
 // ⚡ Sub-componente memoizado
 const ToolbarButton = memo(({ Icon, label, shortcut, theme, onClick }: any) => {

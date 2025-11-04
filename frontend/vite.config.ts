@@ -29,9 +29,12 @@ export default defineConfig({
       usePolling: true,
       interval: 1000,
     },
+    // 🔧 PROXY DESABILITADO - Sistema funcionando apenas com frontend (localStorage)
+    // Descomente as linhas abaixo quando o backend estiver rodando
+    /*
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:4000',
         changeOrigin: true,
         secure: false,
       },
@@ -46,6 +49,7 @@ export default defineConfig({
         secure: false,
       }
     }
+    */
   },
 
   build: {

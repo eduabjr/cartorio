@@ -686,7 +686,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
         title="Controle de Atendimento"
         onClose={onClose}
         width="400px"
-        height="550px"
+        height="580px"
         resizable={false}
         headerColor={headerColor}
       >

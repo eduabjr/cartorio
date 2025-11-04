@@ -35,7 +35,7 @@
 //
 // ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { CustomSelect } from '../components/CustomSelect'
 import { UF_OPTIONS, PAIS_OPTIONS } from '../constants/selectOptions'

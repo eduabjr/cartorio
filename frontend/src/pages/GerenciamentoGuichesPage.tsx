@@ -425,7 +425,7 @@ export function GerenciamentoGuichesPage({ onClose }: GerenciamentoGuichesPagePr
                     ) : (
                       funcionariosFiltrados.map((func) => {
                         const jaAtribuido = guiches.some(g => 
-                          g.id !== guiche.id && (g.funcionarioId === func.codigo || g.funcionarioId === func.id)
+                          (g.funcionarioId === func.codigo || g.funcionarioId === func.id)
                         )
                         
                         return (
@@ -617,8 +617,8 @@ export function GerenciamentoGuichesPage({ onClose }: GerenciamentoGuichesPagePr
 
 
           {/* Lista de Guichês */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px 20px', backgroundColor: theme.background }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px', backgroundColor: theme.background }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '0' }}>
               {guiches.sort((a, b) => a.numero - b.numero).map((guiche) => (
                 <div
                   key={guiche.id}

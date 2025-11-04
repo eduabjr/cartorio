@@ -48,12 +48,14 @@ import { useFieldValidation } from '../hooks/useFieldValidation'
 import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
 import { useModal } from '../hooks/useModal'
+import { GuichesContentIntegrado } from '../components/GuichesContentIntegrado'
 
 interface FuncionarioPageProps {
   onClose: () => void
+  abaInicial?: 'cadastro' | 'guiches' // Permite abrir diretamente em uma aba específica
 }
 
-export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
+export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: FuncionarioPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   const modal = useModal()
@@ -63,6 +65,9 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   
   // 🔒 Criar uma ref para armazenar a chave de persistência
   const persistKeyRef = useRef<string>('')
+  
+  // 📑 Estado para controlar a aba ativa (inicializa com abaInicial)
+  const [abaAtiva, setAbaAtiva] = useState<'cadastro' | 'guiches'>(abaInicial)
   
   // Atalhos de teclado específicos para Funcionário
   useKeyboardNavigation([
@@ -792,7 +797,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   const containerStyles: React.CSSProperties = {
     backgroundColor: theme.background,
     color: theme.text,
-    padding: '4px',  // Reduzido de 8px para 4px
+    padding: '4px 4px 0 4px',  // Padding inferior = 0 para reduzir espaço abaixo dos botões
     borderRadius: '8px',
     flex: 1,  // Ocupa todo espaço disponível
     overflowY: 'auto',  // ⚠️ CRÍTICO - NÃO ALTERAR - Scroll vertical
@@ -814,7 +819,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   // 🔒 BLOQUEIO: formContainerStyles - NÃO MODIFICAR padding ou flexShrink
   const formContainerStyles: React.CSSProperties = {
     backgroundColor: theme.surface,
-    padding: '4px',  // Reduzido de 8px para 4px
+    padding: '4px 4px 0 4px',  // Padding inferior = 0 para reduzir espaço
     borderRadius: '8px',
     border: `1px solid ${theme.border}`,
     overflow: 'visible',
@@ -832,7 +837,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
     flexDirection: 'column',
     gap: '4px',  // Reduzido de 6px para 4px
     marginBottom: '0px',  // Reduzido de 2px para 0px - remove margem inferior
-    padding: '2px',  // Reduzido de 4px para 2px
+    padding: '2px 2px 0 2px',  // Padding inferior = 0 para reduzir espaço
     overflow: 'visible',
     height: 'auto',
     minWidth: 0,
@@ -993,12 +998,13 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
     display: 'flex',
     justifyContent: 'center',
     gap: '12px',  // Reduzido de 14px para 12px
-    marginTop: '8px',  // Espaço entre formulário e botões
-    paddingTop: '8px',  // Padding superior
+    marginTop: '4px',  // Reduzido de 8px para 4px
+    paddingTop: '4px',  // Reduzido de 8px para 4px
+    paddingBottom: '2px',  // Padding inferior mínimo
     borderTop: `1px solid ${theme.border}`,
     flexWrap: 'nowrap' as const,  // 🔒 FIXO - NÃO quebra - botões ficam na mesma linha
     flexShrink: 0,  // 🔒 FIXO - Botões não encolhem
-    minHeight: '40px'  // Aumentado para acomodar botões maiores
+    minHeight: '36px'  // Reduzido de 40px para 36px
   }
 
   const buttonStyles: React.CSSProperties = {
@@ -1099,13 +1105,79 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
       title="Funcionário"
       onClose={handleClose}
       headerColor={headerColor}
-      height="540px"  // Reduzido de 600px para 540px
+      height="700px"  // Aumentado para acomodar as abas
       width="900px"
       minWidth="900px"  // 🔒 BLOQUEIO: Impede redução abaixo de 900px
-      minHeight="540px" // Reduzido de 600px para 540px
+      minHeight="700px" // Aumentado para acomodar as abas
       resizable={false}  // 🔒 BLOQUEIO: Desabilita redimensionamento
     >
+      {/* 📑 SISTEMA DE ABAS */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        padding: '12px 16px',
+        backgroundColor: theme.surface,
+        borderBottom: `2px solid ${theme.border}`
+      }}>
+        <button
+          onClick={() => setAbaAtiva('cadastro')}
+          style={{
+            padding: '10px 20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            backgroundColor: abaAtiva === 'cadastro' ? headerColor : theme.background,
+            color: abaAtiva === 'cadastro' ? '#fff' : theme.text,
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (abaAtiva !== 'cadastro') {
+              e.currentTarget.style.backgroundColor = theme.border
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (abaAtiva !== 'cadastro') {
+              e.currentTarget.style.backgroundColor = theme.background
+            }
+          }}
+        >
+          👤 Cadastro de Funcionário
+        </button>
+        
+        <button
+          onClick={() => setAbaAtiva('guiches')}
+          style={{
+            padding: '10px 20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            backgroundColor: abaAtiva === 'guiches' ? headerColor : theme.background,
+            color: abaAtiva === 'guiches' ? '#fff' : theme.text,
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (abaAtiva !== 'guiches') {
+              e.currentTarget.style.backgroundColor = theme.border
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (abaAtiva !== 'guiches') {
+              e.currentTarget.style.backgroundColor = theme.background
+            }
+          }}
+        >
+          🏢 Configuração de Guichês
+        </button>
+      </div>
+
       <div style={containerStyles}>
+        {/* 📋 ABA: CADASTRO DE FUNCIONÁRIO */}
+        {abaAtiva === 'cadastro' && (
+        <>
         {/* Tela de Resultados da Busca */}
         {showResultados && (
           <div style={{
@@ -1799,6 +1871,13 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
               </button>
             </div>
           </div>
+        )}
+        </>
+        )}
+        
+        {/* 🏢 ABA: CONFIGURAÇÃO DE GUICHÊS */}
+        {abaAtiva === 'guiches' && (
+          <GuichesContentIntegrado theme={theme} headerColor={headerColor} modal={modal} />
         )}
       </div>
       

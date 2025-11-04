@@ -100,7 +100,7 @@ export function MenuBar() {
       </div>
     </div>
   )
-})
+}
 
 // ⚡ Sub-componentes memoizados
 const MenuButton = memo(({ label, onClick, theme }: any) => (
