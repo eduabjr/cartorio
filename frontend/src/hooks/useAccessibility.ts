@@ -240,8 +240,25 @@ function applyContrastSettings(settings: AccessibilitySettings) {
   console.log('✅ applyContrastSettings concluído - reducedMotion não afetou filtros ou temas')
 }
 
+// Contador global de instâncias (para debug, mas sem poluir console)
+let instanceCount = 0
+let lastLogTime = 0
+let lastLoggedCount = 0
+
 export function useAccessibility() {
-  console.log('🏗️🏗️🏗️ useAccessibility INSTANCIADO!')
+  instanceCount++
+  const currentCount = instanceCount
+  
+  // Log MUITO reduzido - apenas a cada 100 instâncias OU se passou 10 segundos
+  const now = Date.now()
+  const countDiff = currentCount - lastLoggedCount
+  const timeDiff = now - lastLogTime
+  
+  if (currentCount <= 3 || (timeDiff > 10000 && countDiff >= 100)) {
+    console.log(`🏗️ useAccessibility #${currentCount} (+${countDiff} desde último log)`)
+    lastLogTime = now
+    lastLoggedCount = currentCount
+  }
   
   // 🔒 CORREÇÃO CRÍTICA: Inicializar settings do localStorage ANTES do primeiro render
   const [settings, setSettings] = useState<AccessibilitySettings>(() => {
@@ -364,10 +381,10 @@ export function useAccessibility() {
 
   // Carregar configurações salvas
   useEffect(() => {
-    console.log('\n🚀🚀🚀 ═══════════════════════════════════════════════')
-    console.log('🚀 INICIALIZAÇÃO DO SISTEMA - NÃO APLICAR TEMA AQUI!')
-    console.log('🚀 (Tema JÁ foi aplicado no useState initializer)')
-    console.log('🚀🚀🚀 ═══════════════════════════════════════════════')
+    // Log simplificado de inicialização
+    if (instanceCount <= 3) {
+      console.log('🚀 Inicialização do sistema - tema já aplicado')
+    }
     
     const savedSettings = localStorage.getItem('accessibility-settings')
     
@@ -389,8 +406,6 @@ export function useAccessibility() {
       }))
       console.log('✅ Evento de inicialização disparado')
     }, 50)
-    
-    console.log('🚀🚀🚀 ═══════════════════════════════════════════════\n')
   }, [])
 
   // 🔒 DESABILITADO: Não detectar preferências do sistema automaticamente
@@ -774,12 +789,11 @@ export function useAccessibility() {
 
   // Aplicar tema e configurações globalmente
   useEffect(() => {
-    console.log('\n🌈🌈🌈 ═══════════════════════════════════════════════')
-    console.log('🌈 useEffect [currentTheme, settings] EXECUTADO')
-    console.log('🌈🌈🌈 ═══════════════════════════════════════════════')
-    console.log('📊 currentTheme:', currentTheme)
-    console.log('📊 settings:', settings)
-    console.log('📊 Timestamp:', +new Date())
+    // Log simplificado - apenas primeiras vezes ou mudanças importantes
+    const shouldLog = currentCount <= 3
+    if (shouldLog) {
+      console.log('🌈 Aplicando tema e settings:', currentTheme)
+    }
     
     const theme = getTheme()
     const fontSize = getFontSize()

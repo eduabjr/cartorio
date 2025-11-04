@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { senhaService } from '../services/SenhaService'
 import { senhaEventService } from '../services/SenhaEventService'
 import { Senha } from '../types/senha'
@@ -6,17 +6,42 @@ import { Senha } from '../types/senha'
 export function TelaSenhaPublicaPage() {
   const [senhasChamadas, setSenhasChamadas] = useState<Senha[]>([])
   const [senhaDestaque, setSenhaDestaque] = useState<Senha | null>(null)
-  const [horaAtual, setHoraAtual] = useState(new Date())
   const [configuracao, setConfiguracao] = useState(senhaService.getConfiguracao())
   const [ultimaChamadaId, setUltimaChamadaId] = useState<string | null>(null)
+  const [forceRender, setForceRender] = useState(0)
+  const configRef = useRef(configuracao)
+
+  // Atualizar ref quando config mudar
+  useEffect(() => {
+    configRef.current = configuracao
+  }, [configuracao])
 
   useEffect(() => {
-    // Atualizar hora a cada segundo
-    const timer = setInterval(() => {
-      setHoraAtual(new Date())
-    }, 1000)
+    // 🔥 POLLING: Verificar configurações a cada 500ms para mudanças em tempo real
+    const timerConfig = setInterval(() => {
+      const configAtual = senhaService.getConfiguracao()
+      const configAnterior = configRef.current
+      
+      if (configAtual.painelPublicoTamanhoFonteSenha !== configAnterior.painelPublicoTamanhoFonteSenha ||
+          configAtual.painelPublicoTamanhoFonteHistorico !== configAnterior.painelPublicoTamanhoFonteHistorico ||
+          configAtual.painelPublicoTitulo !== configAnterior.painelPublicoTitulo ||
+          configAtual.painelPublicoMostrarTitulo !== configAnterior.painelPublicoMostrarTitulo ||
+          configAtual.painelPublicoSubtitulo !== configAnterior.painelPublicoSubtitulo ||
+          configAtual.painelPublicoMostrarSubtitulo !== configAnterior.painelPublicoMostrarSubtitulo ||
+          configAtual.painelPublicoCorFundo !== configAnterior.painelPublicoCorFundo ||
+          configAtual.painelPublicoCorHeader !== configAnterior.painelPublicoCorHeader ||
+          configAtual.painelPublicoCorSenhaDestaque !== configAnterior.painelPublicoCorSenhaDestaque ||
+          configAtual.painelPublicoCorTexto !== configAnterior.painelPublicoCorTexto ||
+          configAtual.painelPublicoCorHistorico !== configAnterior.painelPublicoCorHistorico) {
+        console.log('🎨 TELA PÚBLICA - Polling detectou mudança no painel!')
+        setConfiguracao(configAtual)
+        setForceRender(prev => prev + 1)
+      }
+    }, 500)
 
-    return () => clearInterval(timer)
+    return () => {
+      clearInterval(timerConfig)
+    }
   }, [])
 
   useEffect(() => {
@@ -118,18 +143,31 @@ export function TelaSenhaPublicaPage() {
       carregarSenhas()
     })
 
+    // 🎨 Escutar mudanças de configuração em tempo real
+    const unsubscribeConfig = senhaEventService.on('config_atualizada', () => {
+      const novaConfig = senhaService.getConfiguracao()
+      console.log('🎨 TELA PÚBLICA - Config atualizada!', {
+        tamanhoSenha: novaConfig.painelPublicoTamanhoFonteSenha,
+        tamanhoHistorico: novaConfig.painelPublicoTamanhoFonteHistorico
+      })
+      setConfiguracao(novaConfig)
+      setForceRender(prev => prev + 1)
+    })
+
     return () => {
       clearInterval(interval)
       senhaService.removeEventListener('senha-chamada', handleSenhaChamada)
       unsubscribeEmitida()
       unsubscribeChamada()
       unsubscribeFinalizada()
+      unsubscribeConfig()
     }
   }, [configuracao.tempoAtualizacaoTela, configuracao.emitirSom])
 
   const carregarSenhas = () => {
-    // Limitar conforme configuração (padrão: 3)
-    const quantidade = configuracao.quantidadeSenhasExibidas || 3
+    // Limitar conforme configuração (padrão: 3, máximo: 10)
+    const quantidadeBruta = configuracao.quantidadeSenhasExibidas || 3
+    const quantidade = Math.min(Math.max(quantidadeBruta, 1), 10) // Garantir entre 1 e 10
     const ultimasSenhas = senhaService.getUltimasSenhasChamadas(quantidade)
     setSenhasChamadas(ultimasSenhas)
     
@@ -151,25 +189,59 @@ export function TelaSenhaPublicaPage() {
       
       // Tocar BEEP (som)
       if (config.tipoAudio === 'som' || config.tipoAudio === 'ambos') {
+        const tipoSom = config.tipoSom || 'beep-simples'
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const oscillator = audioContext.createOscillator()
-        const gainNode = audioContext.createGain()
+        const volumeFinal = Math.max(0.3, (config.volumeSom || 90) / 100)
         
-        oscillator.connect(gainNode)
-        gainNode.connect(audioContext.destination)
+        console.log('🔔 Tela Pública - Tocando som:', tipoSom, '| Volume:', (volumeFinal * 100).toFixed(0) + '%')
         
-        oscillator.frequency.value = 880 // Frequência do beep (Lá 5 - mais agudo e audível)
-        oscillator.type = 'sine'
+        // Função auxiliar para criar um beep
+        const criarBeep = (frequencia: number, duracao: number, delay: number = 0) => {
+          const oscillator = audioContext.createOscillator()
+          const gainNode = audioContext.createGain()
+          
+          oscillator.connect(gainNode)
+          gainNode.connect(audioContext.destination)
+          
+          oscillator.frequency.value = frequencia
+          oscillator.type = 'sine'
+          
+          const startTime = audioContext.currentTime + delay
+          gainNode.gain.setValueAtTime(volumeFinal, startTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duracao)
+          
+          oscillator.start(startTime)
+          oscillator.stop(startTime + duracao)
+        }
         
-        // Aplicar volume de forma mais audível
-        const volumeFinal = Math.max(0.3, (config.volumeSom || 90) / 100) // Mínimo 30% para ser audível
-        gainNode.gain.setValueAtTime(volumeFinal, audioContext.currentTime)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
-        
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.5)
-        
-        console.log('🔔 BEEP tocado - Volume configurado:', config.volumeSom + '% | Volume aplicado:', (volumeFinal * 100).toFixed(0) + '%')
+        // Tocar conforme o tipo selecionado
+        switch (tipoSom) {
+          case 'beep-simples':
+            criarBeep(880, 0.15)
+            break
+          case 'beep-duplo':
+            criarBeep(880, 0.1, 0)
+            criarBeep(880, 0.1, 0.15)
+            break
+          case 'beep-triplo':
+            criarBeep(1046, 0.08, 0)
+            criarBeep(1046, 0.08, 0.12)
+            criarBeep(1046, 0.08, 0.24)
+            break
+          case 'sino':
+            criarBeep(523, 0.3, 0)
+            criarBeep(659, 0.25, 0.1)
+            break
+          case 'campainha':
+            criarBeep(1318, 0.12, 0)
+            criarBeep(1567, 0.12, 0.12)
+            break
+          case 'beep-longo':
+            criarBeep(880, 0.5, 0)
+            break
+          default:
+            criarBeep(880, 0.15)
+        }
       }
       
       // Tocar VOZ (TTS)
@@ -313,48 +385,76 @@ export function TelaSenhaPublicaPage() {
     }
   }
 
+  // Calcular quantidade limitada (máximo 10)
+  const quantidadeBruta = configuracao.quantidadeSenhasExibidas || 3
+  const quantidadeLimitada = Math.min(Math.max(quantidadeBruta, 1), 10)
+
+  // Debug: Log da cor de fundo atual
+  const corFundoAtual = configuracao.painelPublicoCorFundo || '#1a1a1a'
+  console.log('🎨 TELA PÚBLICA - Cor de fundo configurada:', configuracao.painelPublicoCorFundo)
+  console.log('🎨 TELA PÚBLICA - Cor de fundo aplicada:', corFundoAtual)
+
+  // 🔒 Aplicar cor de fundo diretamente no body para sobrescrever CSS global
+  useEffect(() => {
+    const originalBg = document.body.style.backgroundColor
+    const originalOverflow = document.body.style.overflow
+    
+    document.body.style.backgroundColor = corFundoAtual
+    document.body.style.overflow = 'hidden'
+    console.log('🎨 Body background aplicado:', corFundoAtual)
+    
+    return () => {
+      document.body.style.backgroundColor = originalBg
+      document.body.style.overflow = originalOverflow
+      console.log('🎨 Body background restaurado')
+    }
+  }, [corFundoAtual])
+
   return (
-    <div style={{
-      width: '100vw',
-      height: '100vh',
-      backgroundColor: '#0a0a0a',
-      color: '#ffffff',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '24px 48px',
-        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-        borderBottom: '4px solid #60a5fa',
+    <div 
+      style={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: corFundoAtual,
+        color: configuracao.painelPublicoCorTexto || '#ffffff',
+        overflow: 'hidden',
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-      }}>
-        <div>
-          <h1 style={{
-            margin: '0 0 4px 0',
-            fontSize: '42px',
-            fontWeight: '700',
-            textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-          }}>
-            Sistema de Atendimento
-          </h1>
-          <div style={{ fontSize: '18px', opacity: 0.9 }}>
-            {configuracao.mensagemBoasVindas}
+        flexDirection: 'column'
+      }}
+      data-cor-fundo={corFundoAtual}
+    >
+      {/* Header - Só exibe se pelo menos título ou subtítulo estiverem ativos */}
+      {(configuracao.painelPublicoMostrarTitulo !== false || configuracao.painelPublicoMostrarSubtitulo !== false) && (
+        <div style={{
+          padding: (configuracao.painelPublicoMostrarTitulo !== false && configuracao.painelPublicoMostrarSubtitulo !== false) ? '24px 48px' : 
+                   '16px 48px',
+          background: `linear-gradient(135deg, ${configuracao.painelPublicoCorHeader || '#1e3a8a'} 0%, ${configuracao.painelPublicoCorSenhaDestaque || '#3b82f6'} 100%)`,
+          borderBottom: `4px solid ${configuracao.painelPublicoCorSenhaDestaque || '#60a5fa'}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+          transition: 'padding 0.3s ease'
+        }}>
+          <div>
+            {configuracao.painelPublicoMostrarTitulo !== false && (
+              <h1 style={{
+                margin: configuracao.painelPublicoMostrarSubtitulo !== false ? '0 0 4px 0' : '0',
+                fontSize: '42px',
+                fontWeight: '700',
+                textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
+              }}>
+                {configuracao.painelPublicoTitulo || 'Sistema de Atendimento'}
+              </h1>
+            )}
+            {configuracao.painelPublicoMostrarSubtitulo !== false && (
+              <div style={{ fontSize: '18px', opacity: 0.9 }}>
+                {configuracao.painelPublicoSubtitulo || configuracao.mensagemBoasVindas}
+              </div>
+            )}
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '48px', fontWeight: '700', fontFamily: 'monospace' }}>
-            {horaAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-          </div>
-          <div style={{ fontSize: '16px', opacity: 0.9 }}>
-            {horaAtual.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Conteúdo Principal */}
       <div style={{ 
@@ -393,10 +493,10 @@ export function TelaSenhaPublicaPage() {
                 {senhaDestaque.servico.nome}
               </div>
               <div style={{
-                fontSize: '180px',
+                fontSize: `${configuracao.painelPublicoTamanhoFonteSenha || 180}px`,
                 fontWeight: '700',
                 fontFamily: 'monospace',
-                color: senhaDestaque.servico.cor,
+                color: configuracao.painelPublicoCorSenhaDestaque || senhaDestaque.servico.cor,
                 textShadow: '4px 4px 8px rgba(0,0,0,0.5)',
                 marginBottom: '32px',
                 lineHeight: '1'
@@ -404,7 +504,7 @@ export function TelaSenhaPublicaPage() {
                 {senhaDestaque ? senhaService.formatarSenha(senhaDestaque) : '--'}
               </div>
               <div style={{
-                fontSize: '72px',
+                fontSize: `${Math.floor((configuracao.painelPublicoTamanhoFonteSenha || 180) * 0.4)}px`,
                 fontWeight: '700',
                 color: '#fff',
                 backgroundColor: senhaDestaque.servico.cor,
@@ -439,7 +539,7 @@ export function TelaSenhaPublicaPage() {
         {/* Lista de Senhas Recentes */}
         <div style={{
           flex: configuracao.layoutPainelPublico === 'senha-cima' || configuracao.layoutPainelPublico === 'senha-baixo' ? 1 : 2.2,
-          backgroundColor: '#1a1a1a',
+          backgroundColor: configuracao.painelPublicoCorHistorico || '#1a1a1a',
           borderRadius: '24px',
           padding: '40px',
           border: '2px solid #2a2a2a',
@@ -467,7 +567,7 @@ export function TelaSenhaPublicaPage() {
             overflow: 'hidden',
             paddingRight: '10px'
           }}>
-            {Array.from({ length: configuracao.quantidadeSenhasExibidas || 3 }, (_, index) => {
+            {Array.from({ length: quantidadeLimitada }, (_, index) => {
               const senha = senhasChamadas[index] || null
               return (
               <div
@@ -486,9 +586,9 @@ export function TelaSenhaPublicaPage() {
                   boxShadow: senha && index === 0 ? `0 6px 20px ${senha.servico.cor}50` : '0 2px 8px rgba(0,0,0,0.2)',
                   height: configuracao.layoutPainelPublico === 'senha-cima' || configuracao.layoutPainelPublico === 'senha-baixo' 
                     ? 'auto' 
-                    : `calc((100% - ${((configuracao.quantidadeSenhasExibidas || 3) - 1) * 16}px) / ${configuracao.quantidadeSenhasExibidas || 3})`,
+                    : `calc((100% - ${(quantidadeLimitada - 1) * 16}px) / ${quantidadeLimitada})`,
                   width: configuracao.layoutPainelPublico === 'senha-cima' || configuracao.layoutPainelPublico === 'senha-baixo' 
-                    ? `calc((100% - ${((configuracao.quantidadeSenhasExibidas || 3) - 1) * 12}px) / ${configuracao.quantidadeSenhasExibidas || 3})` 
+                    ? `calc((100% - ${(quantidadeLimitada - 1) * 12}px) / ${quantidadeLimitada})` 
                     : 'auto',
                   flexShrink: 0,
                   minHeight: 0,
@@ -502,7 +602,7 @@ export function TelaSenhaPublicaPage() {
                       backgroundColor: senha.servico.cor,
                       color: '#fff',
                       borderRadius: '16px',
-                      fontSize: '48px',
+                      fontSize: `${configuracao.painelPublicoTamanhoFonteHistorico || 48}px`,
                       fontWeight: '700',
                       fontFamily: 'monospace',
                       minWidth: '160px',
@@ -522,7 +622,7 @@ export function TelaSenhaPublicaPage() {
                       backgroundColor: senha.servico.cor,
                       color: '#fff',
                       borderRadius: '16px',
-                      fontSize: '32px',
+                      fontSize: `${Math.floor((configuracao.painelPublicoTamanhoFonteHistorico || 48) * 0.67)}px`,
                       fontWeight: '700',
                       minWidth: '180px',
                       textAlign: 'center',

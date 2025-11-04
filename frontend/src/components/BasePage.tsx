@@ -47,25 +47,117 @@ export function BasePage({
   const theme = getTheme()
   const { bringToFront, updateWindowPosition } = useWindowManager()
   
-  const [position, setPosition] = useState(initialPosition)
-  const [zIndex, setZIndex] = useState(initialZIndex)
+  // 🔒 PROTEÇÃO: Armazenar posição inicial apenas uma vez, nunca mudar
+  const initialPositionRef = useRef(initialPosition)
+  const initialZIndexRef = useRef(initialZIndex)
+  
+  // 🔒 PROTEÇÃO: Flag para saber se já foi inicializado
+  const isInitializedRef = useRef(false)
+  
+  // 🔒 PROTEÇÃO: Guardar a última posição conhecida do usuário
+  const userPositionRef = useRef<{ x: number; y: number } | null>(null)
+  
+  // 🔒 PROTEÇÃO MÁXIMA: Criar chave única para localStorage baseada no windowId ou title
+  const storageKey = `window-position-${windowId || title}`
+  
+  // Inicializar posição e zIndex apenas na primeira montagem
+  const [position, setPosition] = useState(() => {
+    console.log(`🏗️ CRIANDO BasePage: "${title}"`)
+    console.log(`   windowId:`, windowId)
+    console.log(`   initialPosition recebida:`, initialPosition)
+    console.log(`   initialZIndex recebida:`, initialZIndex)
+    isInitializedRef.current = true
+    
+    // 🔒 NÍVEL 1: Tentar recuperar posição salva no localStorage
+    try {
+      const savedPosition = localStorage.getItem(storageKey)
+      if (savedPosition) {
+        const parsedPosition = JSON.parse(savedPosition)
+        console.log(`   ✅ Posição recuperada do localStorage:`, parsedPosition)
+        userPositionRef.current = parsedPosition
+        return parsedPosition
+      }
+    } catch (e) {
+      console.warn(`   ⚠️ Erro ao recuperar posição do localStorage:`, e)
+    }
+    
+    // 🔒 NÍVEL 2: Se já temos uma posição do usuário na ref, usar ela
+    if (userPositionRef.current) {
+      console.log(`   ✅ Usando posição da ref:`, userPositionRef.current)
+      return userPositionRef.current
+    }
+    
+    // 🔒 NÍVEL 3: Usar posição inicial pela primeira vez
+    console.log(`   🆕 Primeira vez - usando initialPosition:`, initialPositionRef.current)
+    return initialPositionRef.current
+  })
+  const [zIndex, setZIndex] = useState(() => initialZIndexRef.current)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const windowRef = useRef<HTMLDivElement>(null)
+  
+  // 🔒 LOG: Monitorar re-renders (DESABILITADO para reduzir poluição do console)
+  // useEffect(() => {
+  //   console.log(`🔄 BasePage "${title}" RE-RENDERIZOU`)
+  //   console.log(`   Posição atual (state):`, position)
+  //   console.log(`   initialPosition (prop):`, initialPosition)
+  //   console.log(`   Posição protegida (ref):`, initialPositionRef.current)
+  //   console.log(`   Posição do usuário (ref):`, userPositionRef.current)
+  // })
+  
+  // 🔒 PROTEÇÃO MÁXIMA: Bloquear mudanças em initialPosition
+  useEffect(() => {
+    // Se recebemos uma nova initialPosition diferente da atual
+    const positionChanged = 
+      initialPosition.x !== position.x || 
+      initialPosition.y !== position.y
+    
+    if (positionChanged) {
+      console.log(`⚠️ TENTATIVA DE RESET DETECTADA!`)
+      console.log(`   initialPosition (nova):`, initialPosition)
+      console.log(`   position (atual):`, position)
+      console.log(`   Posição do usuário (salva):`, userPositionRef.current)
+      
+      // Se temos uma posição do usuário salva, IGNORAR a mudança
+      if (userPositionRef.current) {
+        console.log(`   🛡️ BLOQUEADO! Mantendo posição do usuário:`, userPositionRef.current)
+        // NÃO fazer nada - manter posição atual
+        return
+      }
+      
+      console.log(`   ⚠️ Sem posição do usuário - permitindo mudança`)
+    }
+  }, [initialPosition.x, initialPosition.y])
 
-  // Reset para posição original quando solicitado
+  // 🔒 PROTEÇÃO: Somente resetar se explicitamente solicitado
   useEffect(() => {
     if (resetToOriginalPosition) {
-      console.log(`🔄 Resetando ${title} para posição original:`, initialPosition)
-      setPosition(initialPosition)
-      setZIndex(initialZIndex)
+      console.log(`🔄 RESET EXPLÍCITO: ${title} voltando para posição inicial`, initialPositionRef.current)
+      setPosition(initialPositionRef.current)
+      setZIndex(initialZIndexRef.current)
+      
+      // Limpar posição do usuário
+      userPositionRef.current = null
+      try {
+        localStorage.removeItem(storageKey)
+      } catch (e) {
+        console.warn(`⚠️ Erro ao limpar localStorage:`, e)
+      }
       
       // Atualizar posição no WindowManager se disponível
       if (windowId && updateWindowPosition) {
-        updateWindowPosition(windowId, initialPosition)
+        updateWindowPosition(windowId, initialPositionRef.current)
       }
     }
-  }, [resetToOriginalPosition, initialPosition, initialZIndex, windowId, updateWindowPosition, title])
+  }, [resetToOriginalPosition]) // 🔒 PROTEÇÃO: Apenas resetToOriginalPosition como dependência!
+
+  // 🔒 PROTEÇÃO: Sincronizar zIndex do WindowManager SEM resetar posição
+  useEffect(() => {
+    if (initialZIndex !== zIndex && !resetToOriginalPosition) {
+      console.log(`🎯 SINCRONIZAÇÃO: Atualizando zIndex de ${title} de ${zIndex} para ${initialZIndex}`)
+      setZIndex(initialZIndex)
+    }
+  }, [initialZIndex]) // Sincronizar apenas zIndex, não posição
 
   // Função para trazer janela para frente
   const handleBringToFront = () => {
@@ -110,6 +202,15 @@ export function BasePage({
       const newPosition = {
         x: Math.max(0, Math.min(newX, maxX)),
         y: Math.max(minY, Math.min(newY, maxY))
+      }
+      
+      // 🔒 PROTEÇÃO: Salvar posição do usuário na ref E no localStorage
+      userPositionRef.current = newPosition
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(newPosition))
+        console.log(`👆 USUÁRIO MOVEU "${title}" para:`, newPosition, '- SALVO!')
+      } catch (e) {
+        console.warn(`⚠️ Erro ao salvar posição no localStorage:`, e)
       }
       
       setPosition(newPosition)
@@ -193,7 +294,8 @@ export function BasePage({
     backgroundColor: theme.surface,
     color: theme.text,
     display: 'flex',
-    flexDirection: 'column' as const
+    flexDirection: 'column' as const,
+    position: 'relative' as const  // 🔒 IMPORTANTE: Permite modais ficarem contidos dentro da janela
   }
 
   const closeButtonStyles = {
@@ -257,3 +359,4 @@ export function BasePage({
     </div>
   )
 }
+

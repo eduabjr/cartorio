@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { useModal } from '../hooks/useModal'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 
 interface FirmasPageProps {
   onClose: () => void
@@ -9,8 +11,10 @@ interface FirmasPageProps {
 export function FirmasPage({ onClose }: FirmasPageProps) {
   console.log('📺 FirmasPage RENDERIZADO!')
   
-  const { getTheme } = useAccessibility()
+  const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
+  const persistKeyRef = useRef<string>('')
   
   const [formData, setFormData] = useState({
     codigo: '',
@@ -21,8 +25,43 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
     observacoes: ''
   })
 
+  // 💾 Persistir dados do formulário automaticamente
+  const persistKey = 'form-firmas-' + (formData.codigo || 'novo')
+  persistKeyRef.current = persistKey
+  useFormPersist(persistKey, formData, setFormData, true, 500)
+  
+  const handleClose = () => {
+    clearPersistedForm(persistKeyRef.current)
+    onClose()
+  }
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+  
+  const handleNovo = () => {
+    setFormData({
+      codigo: '',
+      nome: '',
+      cpf: '',
+      rg: '',
+      tipoDocumento: '',
+      observacoes: ''
+    })
+  }
+  
+  const handleGravar = async () => {
+    await modal.alert('✅ Firma salva com sucesso!')
+    clearPersistedForm('form-firmas-' + (formData.codigo || 'novo'))
+  }
+  
+  const handleExcluir = async () => {
+    const confirmado = await modal.confirm('⚠️ Deseja realmente excluir esta firma?')
+    if (confirmado) {
+      handleNovo()
+      await modal.alert('✅ Firma excluída com sucesso!')
+      clearPersistedForm('form-firmas-' + (formData.codigo || 'novo'))
+    }
   }
 
   const formStyles = {
@@ -113,7 +152,7 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
   }
 
   return (
-    <BasePage title="Firmas" onClose={onClose} width="800px" height="600px">
+    <BasePage title="Firmas" onClose={handleClose} width="800px" height="600px">
       <form style={formStyles}>
         <div style={fieldStyles}>
           <label style={labelStyles}>Código</label>
@@ -190,22 +229,27 @@ export function FirmasPage({ onClose }: FirmasPageProps) {
 
       {/* Botões de Ação */}
       <div style={buttonsContainerStyles}>
-        <button type="button" style={primaryButtonStyles}>
+        <button type="button" style={primaryButtonStyles} onClick={handleNovo}>
             📄 Novo
           </button>
-        <button type="button" style={primaryButtonStyles}>
+        <button type="button" style={primaryButtonStyles} onClick={handleGravar}>
             💾 Gravar
           </button>
-        <button type="button" style={secondaryButtonStyles}>
+        <button type="button" style={secondaryButtonStyles} onClick={handleNovo}>
             🧹 Limpar
           </button>
         <button type="button" style={secondaryButtonStyles}>
           🔍 Consultar
           </button>
+        <button type="button" style={dangerButtonStyles} onClick={handleExcluir}>
+            ❌ Excluir
+          </button>
         <button type="button" style={dangerButtonStyles} onClick={onClose}>
             🚪 Fechar
           </button>
         </div>
+      {/* Modal Component */}
+      <modal.ModalComponent />
     </BasePage>
   )
 }

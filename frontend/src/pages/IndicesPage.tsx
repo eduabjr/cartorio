@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useModal } from '../hooks/useModal'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 
 interface IndicesPageProps {
   onClose: () => void
@@ -14,6 +15,7 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   const modal = useModal()
+  const persistKeyRef = useRef<string>('')
   
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
@@ -38,6 +40,9 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
     nomePai: '',
     cpfPai: ''
   })
+  
+  // 💾 Persistir dados dos formulários automaticamente
+  useFormPersist('form-indice-nascimento-' + (nascimentoData.termo || 'novo'), nascimentoData, setNascimentoData, activeMainTab === 'nascimento', 500)
 
   // Estados para Casamento
   const [casamentoData, setCasamentoData] = useState({
@@ -59,6 +64,8 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
     sexoNoiva: 'F',
     novoNomeNoiva: ''
   })
+  
+  useFormPersist('form-indice-casamento-' + (casamentoData.termo || 'novo'), casamentoData, setCasamentoData, activeMainTab === 'casamento', 500)
 
   // Estados para Óbito
   const [obitoData, setObitoData] = useState({
@@ -848,8 +855,10 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
             {statusMessage}
           </div>
         </div>
+        
+        {/* Modal Component - DENTRO da janela */}
+        <modal.ModalComponent />
       </BasePage>
-      <modal.ModalComponent />
     </>
   )
 }

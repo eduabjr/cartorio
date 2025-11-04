@@ -37,7 +37,7 @@
 //
 // ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
 import { funcionarioService, Funcionario } from '../services/FuncionarioService'
@@ -45,6 +45,7 @@ import { useAccessibility } from '../hooks/useAccessibility'
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
 import { getRelativeFontSize } from '../utils/fontUtils'
 import { useFieldValidation } from '../hooks/useFieldValidation'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
 import { useModal } from '../hooks/useModal'
 
@@ -59,6 +60,9 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   
   // Cor do header: teal no light, laranja no dark
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
+  
+  // 🔒 Criar uma ref para armazenar a chave de persistência
+  const persistKeyRef = useRef<string>('')
   
   // Atalhos de teclado específicos para Funcionário
   useKeyboardNavigation([
@@ -139,6 +143,18 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
   const [showResultados, setShowResultados] = useState(false)
   const [resultadosBusca, setResultadosBusca] = useState<any[]>([])
   const [termoBusca, setTermoBusca] = useState('')
+
+  // 🔒 PROTEÇÃO: Auto-salvar dados do formulário
+  const persistKey = 'form-funcionario-' + (formData.codigo || 'novo')
+  persistKeyRef.current = persistKey
+  useFormPersist(persistKey, formData, setFormData, true, 500)
+  
+  // 🔒 Limpar dados persistidos ao fechar a janela (não só ao fechar navegador)
+  const handleClose = () => {
+    clearPersistedForm(persistKeyRef.current)
+    console.log(`🗑️ Janela fechada - Limpando dados temporários: "${persistKeyRef.current}"`)
+    onClose()
+  }
 
   // 🎨 Adicionar estilos CSS dinâmicos para foco (mais robusto que inline)
   useEffect(() => {
@@ -424,6 +440,9 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
       
       localStorage.setItem('funcionarios-cadastrados', JSON.stringify(funcionarios))
       console.log('💾 Funcionário gravado no localStorage!')
+      
+      // 🔒 Limpar dados persistidos após salvar com sucesso
+      clearPersistedForm('form-funcionario-' + (formData.codigo || 'novo'))
       
       handleClear() // Limpar formulário após salvar
       
@@ -1078,7 +1097,7 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
     <>
     <BasePage
       title="Funcionário"
-      onClose={onClose}
+      onClose={handleClose}
       headerColor={headerColor}
       height="540px"  // Reduzido de 600px para 540px
       width="900px"
@@ -1782,9 +1801,10 @@ export function FuncionarioPage({ onClose }: FuncionarioPageProps) {
           </div>
         )}
       </div>
-
+      
+      {/* Modal Component - DENTRO da janela */}
+      <modal.ModalComponent />
     </BasePage>
-    <modal.ModalComponent />
     </>
   )
 }

@@ -7,6 +7,9 @@ import { senhaService } from '../services/SenhaService'
 import { senhaEventService } from '../services/SenhaEventService'
 import { Senha, Guiche, ConfiguracaoSenha } from '../types/senha'
 
+// 🔧 Flag para habilitar logs verbosos (desabilitar em produção)
+const VERBOSE_LOGS = false
+
 interface ControladorSenhaPageProps {
   onClose: () => void
 }
@@ -17,8 +20,8 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
   const theme = getTheme()
   const modal = useModal()
   
-  // Cor do header: laranja no dark, verde no light
-  const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#14b8a6'
+  // Cor do header: laranja no dark, teal no light (mesma cor das outras janelas)
+  const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
   const [meuGuiche, setMeuGuiche] = useState<Guiche | null>(null)
   const [senhaAtual, setSenhaAtual] = useState<Senha | null>(null)
@@ -56,7 +59,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
   }, [senhasFiltradas.length, indiceVisualizacao])
 
   useEffect(() => {
-    console.log('🎬 CONTROLADOR - useEffect INICIADO')
+    if (VERBOSE_LOGS) console.log('🎬 CONTROLADOR - useEffect INICIADO')
     carregarDados()
     
     // Atualizar a cada 5 segundos (reduzido de 2s)
@@ -64,7 +67,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
     
     // Escutar eventos em tempo real
     const unsubscribeEmitida = senhaEventService.on('senha_emitida', (senha) => {
-      console.log('🎫 CONTROLADOR - EVENTO senha_emitida RECEBIDO:', senha)
+      if (VERBOSE_LOGS) console.log('🎫 CONTROLADOR - EVENTO senha_emitida RECEBIDO:', senha)
       carregarDados()
     })
     
@@ -79,7 +82,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
     })
     
     const unsubscribeGuiche = senhaEventService.on('guiche_atualizado', () => {
-      console.log('🏢 CONTROLADOR - EVENTO guiche_atualizado RECEBIDO')
+      if (VERBOSE_LOGS) console.log('🏢 CONTROLADOR - EVENTO guiche_atualizado RECEBIDO')
       carregarDados()
     })
     
@@ -149,24 +152,72 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
       
       // Tocar BEEP (som)
       if (config.tipoAudio === 'som' || config.tipoAudio === 'ambos') {
+        const tipoSom = config.tipoSom || 'beep-simples'
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const oscillator = audioContext.createOscillator()
-        const gainNode = audioContext.createGain()
-        
-        oscillator.connect(gainNode)
-        gainNode.connect(audioContext.destination)
-        
-        oscillator.frequency.value = 880 // Frequência mais aguda
-        oscillator.type = 'sine'
-        
         const volumeFinal = Math.max(0.3, (config.volumeSom || 90) / 100)
-        gainNode.gain.setValueAtTime(volumeFinal, audioContext.currentTime)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
         
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.5)
+        console.log('🔔 CONTROLADOR - Tocando som:', tipoSom)
         
-        console.log('🔔 CONTROLADOR - BEEP tocado')
+        // Função auxiliar para criar um beep
+        const criarBeep = (frequencia: number, duracao: number, delay: number = 0) => {
+          const oscillator = audioContext.createOscillator()
+          const gainNode = audioContext.createGain()
+          
+          oscillator.connect(gainNode)
+          gainNode.connect(audioContext.destination)
+          
+          oscillator.frequency.value = frequencia
+          oscillator.type = 'sine'
+          
+          const startTime = audioContext.currentTime + delay
+          gainNode.gain.setValueAtTime(volumeFinal, startTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duracao)
+          
+          oscillator.start(startTime)
+          oscillator.stop(startTime + duracao)
+        }
+        
+        // Tocar conforme o tipo selecionado
+        switch (tipoSom) {
+          case 'beep-simples':
+            // Beep único curto (padrão)
+            criarBeep(880, 0.15)
+            break
+            
+          case 'beep-duplo':
+            // Dois beeps rápidos (banco)
+            criarBeep(880, 0.1, 0)
+            criarBeep(880, 0.1, 0.15)
+            break
+            
+          case 'beep-triplo':
+            // Três beeps curtos (hospital)
+            criarBeep(1046, 0.08, 0)
+            criarBeep(1046, 0.08, 0.12)
+            criarBeep(1046, 0.08, 0.24)
+            break
+            
+          case 'sino':
+            // Som de sino suave (cartório)
+            criarBeep(523, 0.3, 0)    // Dó
+            criarBeep(659, 0.25, 0.1) // Mi
+            break
+            
+          case 'campainha':
+            // Campainha eletrônica (recepção)
+            criarBeep(1318, 0.12, 0)
+            criarBeep(1567, 0.12, 0.12)
+            break
+            
+          case 'beep-longo':
+            // Beep prolongado (atenção)
+            criarBeep(880, 0.5, 0)
+            break
+            
+          default:
+            // Fallback para beep simples
+            criarBeep(880, 0.15)
+        }
       }
       
       // Tocar VOZ (TTS)
@@ -297,22 +348,26 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
   }
 
   const carregarDados = () => {
-    console.log('📋 CONTROLADOR - carregarDados() chamado')
+    if (VERBOSE_LOGS) console.log('📋 CONTROLADOR - carregarDados() chamado')
     const guiches = senhaService.getGuiches()
     const funcionarioLogado = localStorage.getItem('user')
     
     // Carregar configuração
     setConfiguracao(senhaService.getConfiguracao())
     
-    console.log('👤 funcionarioLogado existe?', !!funcionarioLogado)
-    console.log('🏢 Total de guichês:', guiches.length)
+    if (VERBOSE_LOGS) {
+      console.log('👤 funcionarioLogado existe?', !!funcionarioLogado)
+      console.log('🏢 Total de guichês:', guiches.length)
+    }
     
     if (funcionarioLogado) {
       console.log('✅ Funcionário está logado, processando...')
       try {
         const user = JSON.parse(funcionarioLogado)
-        console.log('👤 User:', user.nome || user.name)
-        console.log('📝 User completo:', user)
+        if (VERBOSE_LOGS) {
+          console.log('👤 User:', user.nome || user.name)
+          console.log('📝 User completo:', user)
+        }
         
         // Buscar guichê por codigo OU id do funcionário (prioritário: codigo)
         const userCodigo = user.codigo || user.id
@@ -352,13 +407,14 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
         }
         
         setMeuGuiche(guiche)
-        console.log('🏢 Guichê definido:', guiche.numero)
+        if (VERBOSE_LOGS) console.log('🏢 Guichê definido:', guiche.numero)
         
         const senhas = senhaService.getSenhas()
         console.log('📦 getSenhas() retornou:', senhas.length, 'senhas')
         
+        // Usar guiche! para garantir que não é undefined
         const senhaDoGuiche = senhas.find(s => 
-          s.guicheId === guiche.id && (s.status === 'chamando' || s.status === 'atendendo')
+          s.guicheId === guiche!.id && (s.status === 'chamando' || s.status === 'atendendo')
         )
         setSenhaAtual(senhaDoGuiche || null)
         
@@ -367,8 +423,10 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
         const comum = senhas.filter(s => s.status === 'aguardando' && !s.prioridade)
         const todas = senhas.filter(s => s.status === 'aguardando')
         
-        console.log(`📊 CONTROLADOR - Total senhas: ${senhas.length}`)
-        console.log(`📊 CONTROLADOR - Aguardando: ${todas.length} (${pref.length}P + ${comum.length}C)`)
+        if (VERBOSE_LOGS) {
+          console.log(`📊 CONTROLADOR - Total senhas: ${senhas.length}`)
+          console.log(`📊 CONTROLADOR - Aguardando: ${todas.length} (${pref.length}P + ${comum.length}C)`)
+        }
         if (todas.length > 0) {
           console.log('📋 Lista de senhas:', todas.map(s => s.numeroCompleto).join(', '))
         }
@@ -385,7 +443,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
       console.warn('⚠️ Nenhum funcionário logado!')
       setMeuGuiche(null)
     }
-    console.log('🏁 carregarDados() finalizado')
+    if (VERBOSE_LOGS) console.log('🏁 carregarDados() finalizado')
   }
 
   const chamarSenhaManual = () => {
@@ -628,7 +686,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
         title="Controle de Atendimento"
         onClose={onClose}
         width="400px"
-        height="600px"
+        height="550px"
         resizable={false}
         headerColor={headerColor}
       >
@@ -1003,7 +1061,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '12px',
+              marginBottom: '8px',
               fontSize: '13px',
               color: '#374151',
               fontWeight: 'bold'
@@ -1018,9 +1076,9 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: '12px', 
-                marginBottom: '12px',
-                padding: '10px',
+                gap: '10px', 
+                marginBottom: '10px',
+                padding: '8px',
                 borderRadius: '10px',
                 backgroundColor: filtroAtivo === 'preferencial' 
                   ? (currentTheme === 'dark' ? 'rgba(59, 130, 246, 0.2)' : '#dbeafe')
@@ -1032,41 +1090,41 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               }}
             >
               <div style={{
-                width: '40px',
-                height: '40px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '50%',
                 backgroundColor: filtroAtivo === 'preferencial' ? '#3b82f6' : (currentTheme === 'dark' ? '#1e40af' : '#93c5fd'),
-                border: `3px solid ${filtroAtivo === 'preferencial' ? '#1d4ed8' : (currentTheme === 'dark' ? '#3b82f6' : '#60a5fa')}`,
+                border: `2px solid ${filtroAtivo === 'preferencial' ? '#1d4ed8' : (currentTheme === 'dark' ? '#3b82f6' : '#60a5fa')}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: filtroAtivo === 'preferencial' 
-                  ? '0 6px 12px rgba(59, 130, 246, 0.5)' 
-                  : '0 2px 6px rgba(59, 130, 246, 0.3)',
+                  ? '0 4px 8px rgba(59, 130, 246, 0.4)' 
+                  : '0 2px 4px rgba(59, 130, 246, 0.2)',
                 transition: 'all 0.3s ease',
                 flexShrink: 0
               }}>
                 {filtroAtivo === 'preferencial' ? (
-                  <div style={{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>✓</div>
+                  <div style={{ color: '#fff', fontSize: '16px', fontWeight: 'bold' }}>✓</div>
                 ) : (
                   <div style={{
-                    width: '14px',
-                    height: '14px',
+                    width: '12px',
+                    height: '12px',
                     borderRadius: '50%',
                     backgroundColor: currentTheme === 'dark' ? '#3b82f6' : '#1976d2'
                   }}></div>
                 )}
               </div>
               <span style={{ 
-                fontSize: '32px', 
+                fontSize: '24px', 
                 fontWeight: '800', 
                 color: currentTheme === 'dark' ? '#93c5fd' : theme.text,
-                width: '40px',
+                width: '32px',
                 textShadow: currentTheme === 'dark' ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
               }}>P</span>
               <div style={{ 
                 flex: 1, 
-                height: '40px', 
+                height: '32px', 
                 backgroundColor: currentTheme === 'dark' ? '#1e293b' : '#e0e0e0',
                 borderRadius: '8px', 
                 position: 'relative', 
@@ -1090,7 +1148,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
                   right: '12px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  fontSize: '16px',
+                  fontSize: '14px',
                   fontWeight: '700',
                   color: senhasPreferencial.length > 0 
                     ? '#fff' 
@@ -1108,8 +1166,8 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: '12px',
-                padding: '10px',
+                gap: '10px',
+                padding: '8px',
                 borderRadius: '10px',
                 backgroundColor: filtroAtivo === 'comum' 
                   ? (currentTheme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#d1fae5')
@@ -1121,41 +1179,41 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               }}
             >
               <div style={{
-                width: '40px',
-                height: '40px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '50%',
                 backgroundColor: filtroAtivo === 'comum' ? '#10b981' : (currentTheme === 'dark' ? '#047857' : '#6ee7b7'),
-                border: `3px solid ${filtroAtivo === 'comum' ? '#059669' : (currentTheme === 'dark' ? '#10b981' : '#34d399')}`,
+                border: `2px solid ${filtroAtivo === 'comum' ? '#059669' : (currentTheme === 'dark' ? '#10b981' : '#34d399')}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: filtroAtivo === 'comum' 
-                  ? '0 6px 12px rgba(16, 185, 129, 0.5)' 
-                  : '0 2px 6px rgba(16, 185, 129, 0.3)',
+                  ? '0 4px 8px rgba(16, 185, 129, 0.4)' 
+                  : '0 2px 4px rgba(16, 185, 129, 0.2)',
                 transition: 'all 0.3s ease',
                 flexShrink: 0
               }}>
                 {filtroAtivo === 'comum' ? (
-                  <div style={{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>✓</div>
+                  <div style={{ color: '#fff', fontSize: '16px', fontWeight: 'bold' }}>✓</div>
                 ) : (
                   <div style={{
-                    width: '14px',
-                    height: '14px',
+                    width: '12px',
+                    height: '12px',
                     borderRadius: '50%',
                     backgroundColor: currentTheme === 'dark' ? '#10b981' : '#059669'
                   }}></div>
                 )}
               </div>
               <span style={{ 
-                fontSize: '32px', 
+                fontSize: '24px', 
                 fontWeight: '800', 
                 color: currentTheme === 'dark' ? '#6ee7b7' : theme.text,
-                width: '40px',
+                width: '32px',
                 textShadow: currentTheme === 'dark' ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
               }}>C</span>
               <div style={{ 
                 flex: 1, 
-                height: '40px', 
+                height: '32px', 
                 backgroundColor: currentTheme === 'dark' ? '#1e293b' : '#e0e0e0',
                 borderRadius: '8px', 
                 position: 'relative', 
@@ -1179,7 +1237,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
                   right: '12px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  fontSize: '16px',
+                  fontSize: '14px',
                   fontWeight: '700',
                   color: senhasComum.length > 0 
                     ? '#fff' 
@@ -1206,8 +1264,10 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
             🏢 Guichê {meuGuiche?.numero || '--'}
           </div>
         </div>
+        
+        {/* Modal Component - DENTRO da janela */}
+        <modal.ModalComponent />
       </BasePage>
-      <modal.ModalComponent />
     </>
   )
 }

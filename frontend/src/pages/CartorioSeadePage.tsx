@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { CustomSelect } from '../components/CustomSelect'
 import { UF_OPTIONS } from '../constants/selectOptions'
@@ -9,6 +9,7 @@ import { cnpjService } from '../services/CNPJService'
 import { viaCepService } from '../services/ViaCepService'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
 import { useModal } from '../hooks/useModal'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 
 interface CartorioSeade {
   id: number
@@ -38,6 +39,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   const modal = useModal()
+  const persistKeyRef = useRef<string>('')
   
   // Cor do header: teal no light, laranja no dark
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
@@ -73,6 +75,16 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   
   // Estado para campo em foco
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  
+  // 💾 Persistir dados do formulário automaticamente
+  const persistKey = 'form-cartorio-seade-' + (formData.codigo || 'novo')
+  persistKeyRef.current = persistKey
+  useFormPersist(persistKey, formData, setFormData, true, 500)
+  
+  const handleClose = () => {
+    clearPersistedForm(persistKeyRef.current)
+    onClose()
+  }
 
   // Função para criar novo registro
   const handleNovo = () => {
@@ -109,6 +121,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
       setCartorios(cartoriosAtualizados)
       localStorage.setItem('cartorios-seade', JSON.stringify(cartoriosAtualizados))
       await modal.alert('Cartório atualizado com sucesso!', 'Sucesso', '✅')
+      clearPersistedForm('form-cartorio-seade-' + (formData.codigo || 'novo'))
     } else {
       // Criar novo registro com código sequencial
       const ultimoCodigo = localStorage.getItem('ultimoCodigoCartorio')
@@ -138,6 +151,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
         localStorage.setItem('cartorios-seade', JSON.stringify(cartoriosAtualizados))
         handleNovo()
         await modal.alert('Cartório excluído com sucesso!', 'Sucesso', '✅')
+        clearPersistedForm('form-cartorio-seade-' + (formData.codigo || 'novo'))
       }
     }
   }
@@ -145,7 +159,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
   // Função para atualizar cartórios interligados
   const handleAtualizarInterligados = async () => {
     try {
-      const confirmacao = await modal.confirm('Deseja atualizar a lista de cartórios interligados?\n\nEsta ação carregará os cartórios do arquivo JSON e gerará códigos sequenciais.', 'Atualizar Interligados', '🌐')
+      const confirmacao = await modal.confirm('Deseja atualizar a lista de cartórios interligados?\n\n⚠️ ATENÇÃO: Esta ação irá SUBSTITUIR todos os cartórios existentes pelos do arquivo JSON.', 'Atualizar Interligados', '🌐')
       
       if (!confirmacao) {
         return
@@ -164,9 +178,8 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
       
       console.log('✅ Cartórios recebidos:', cartoriosInterligados.length)
       
-      // Obter último código usado
-      const ultimoCodigo = localStorage.getItem('ultimoCodigoCartorio')
-      let proximoCodigo = ultimoCodigo ? parseInt(ultimoCodigo) + 1 : 1
+      // 🔥 REINICIAR códigos do zero (ao invés de continuar sequência)
+      let proximoCodigo = 1
       
       // Processar cartórios do JSON e gerar códigos sequenciais
       const cartoriosComCodigo = cartoriosInterligados.map((cart: any, index: number) => {
@@ -193,24 +206,23 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
         return cartorioProcessado
       })
       
-      // Atualizar proximoCodigo após processar todos os cartórios
-      proximoCodigo = proximoCodigo + cartoriosComCodigo.length
+      // Calcular último código gerado
+      const ultimoCodigoGerado = cartoriosComCodigo.length
       
       // Atualizar último código no localStorage
-      localStorage.setItem('ultimoCodigoCartorio', (proximoCodigo - 1).toString())
+      localStorage.setItem('ultimoCodigoCartorio', ultimoCodigoGerado.toString())
       
-      // Adicionar aos cartórios existentes
-      const novosCartorios = [...cartorios, ...cartoriosComCodigo]
-      console.log('📊 Total de cartórios antes:', cartorios.length)
-      console.log('📊 Total de cartórios importados:', cartoriosComCodigo.length)
-      console.log('📊 Total de cartórios depois:', novosCartorios.length)
+      // 🔥 SUBSTITUIR completamente (eliminar antigos e adicionar novos)
+      console.log('🗑️ Removendo cartórios antigos:', cartorios.length)
+      console.log('➕ Adicionando cartórios novos:', cartoriosComCodigo.length)
+      console.log('🔢 Códigos gerados de 1 até:', ultimoCodigoGerado)
       
-      setCartorios(novosCartorios)
+      setCartorios(cartoriosComCodigo)
       
       // Salvar no localStorage
-      localStorage.setItem('cartorios-seade', JSON.stringify(novosCartorios))
+      localStorage.setItem('cartorios-seade', JSON.stringify(cartoriosComCodigo))
       console.log('💾 Cartórios salvos no localStorage')
-      console.log('💾 Último código salvo:', (proximoCodigo - 1))
+      console.log('💾 Último código salvo:', ultimoCodigoGerado)
       
       // Mostrar resultado
       let mensagem = `✅ Atualização concluída com sucesso!\n\n`
@@ -518,7 +530,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
     <>
     <BasePage
       title="Cadastro de Cartório (SEADE)"
-      onClose={onClose}
+      onClose={handleClose}
       width="900px"
       height="520px"
       minWidth="900px"
@@ -1096,8 +1108,10 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           </button>
         </div>
       </div>
+      
+      {/* Modal Component - DENTRO da janela */}
+      <modal.ModalComponent />
     </BasePage>
-    <modal.ModalComponent />
     </>
   )
 }

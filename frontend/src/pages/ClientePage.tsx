@@ -52,6 +52,7 @@ import QRCode from 'qrcode'
 import { useFieldValidation } from '../hooks/useFieldValidation'
 import { validarCPF, formatCPF } from '../utils/cpfValidator'
 import { useModal } from '../hooks/useModal'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 // import { useTJSPApi } from '../hooks/useTJSPApi'
 
 // CSS específico para dropdowns de países com scroll pequeno quando expandido
@@ -179,6 +180,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
   const [activeTab, setActiveTab] = useState('cadastro')
+  
+  // 🔒 Criar uma ref para armazenar a chave de persistência
+  const persistKeyRef = useRef<string>('')
   
   // Atalhos de teclado específicos para Cliente (definidos antes de serem usados)
   const atalhosTeclado = [
@@ -504,6 +508,18 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const handleInputChange = (field: string, value: string) => {
     // Usar o hook de validação para aplicar regras globais
     handleValidatedChange(field, value)
+  }
+
+  // 🔒 PROTEÇÃO: Auto-salvar dados do formulário
+  const persistKey = 'form-cliente-' + (formData.codigo || 'novo')
+  persistKeyRef.current = persistKey
+  useFormPersist(persistKey, formData, setFormData, true, 500)
+  
+  // 🔒 Limpar dados persistidos ao fechar a janela (não só ao fechar navegador)
+  const handleClose = () => {
+    clearPersistedForm(persistKeyRef.current)
+    console.log(`🗑️ Janela fechada - Limpando dados temporários: "${persistKeyRef.current}"`)
+    onClose()
   }
 
   // Função para formatar telefone
@@ -1052,6 +1068,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     }
     
     await modal.alert(mensagemSucesso, 'Sucesso', '✅')
+    
+    // 🔒 Limpar dados persistidos após salvar com sucesso
+    clearPersistedForm('form-cliente-' + (formData.codigo || 'novo'))
   }
 
   // Função para limpar os campos
@@ -2125,7 +2144,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
 
   return (
     <>
-    <BasePage title="Cliente" onClose={onClose} width="900px" height="580px" minWidth="900px" minHeight="580px" resetToOriginalPosition={resetToOriginalPosition} headerColor={headerColor} resizable={false}>
+    <BasePage title="Cliente" onClose={handleClose} width="900px" height="580px" minWidth="900px" minHeight="580px" resetToOriginalPosition={resetToOriginalPosition} headerColor={headerColor} resizable={false}>
       {/* 🔒 BLOQUEIO: Redimensionamento DESABILITADO - Dimensões fixas 900x580px */}
       {/* Wrapper para garantir tema correto */}
       <div 
@@ -3617,8 +3636,19 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         </div>
       )}
       </div>
+      
+      {/* Modal Component - DENTRO da janela */}
+      <modal.ModalComponent />
+      
+      {/* OCR Progress - DENTRO da janela */}
+      <OCRProgress 
+        isVisible={ocrProgress.isVisible}
+        progress={ocrProgress.progress}
+        status={ocrProgress.status}
+      />
     </BasePage>
     
+    {/* Scanner Config - Popup externo (tela cheia) */}
     {showScannerConfig && (
       isWebEnvironment ? (
         <WebScannerConfig
@@ -3638,13 +3668,6 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
         />
       )
     )}
-    
-    <OCRProgress 
-      isVisible={ocrProgress.isVisible}
-      progress={ocrProgress.progress}
-      status={ocrProgress.status}
-    />
-    <modal.ModalComponent />
   </>
   )
 }

@@ -1003,8 +1003,10 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
             </div>
           </div>
         </div>
+        
+        {/* Modal Component - DENTRO da janela */}
+        <modal.ModalComponent />
       </BasePage>
-      <modal.ModalComponent />
     </>
   )
 }

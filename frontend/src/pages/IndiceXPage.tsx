@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useModal } from '../hooks/useModal'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 
 interface IndiceXPageProps {
   onClose: () => void
@@ -13,6 +14,7 @@ export function IndiceXPage({ onClose }: IndiceXPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   const modal = useModal()
+  const persistKeyRef = useRef<string>('')
   
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
@@ -30,6 +32,16 @@ export function IndiceXPage({ onClose }: IndiceXPageProps) {
     descricao: '',
     observacoes: ''
   })
+  
+  // 💾 Persistir dados do formulário automaticamente
+  const persistKey = 'form-indice-x-' + (formData.termo || 'novo')
+  persistKeyRef.current = persistKey
+  useFormPersist(persistKey, formData, setFormData, true, 500)
+  
+  const handleClose = () => {
+    clearPersistedForm(persistKeyRef.current)
+    onClose()
+  }
 
   const subTabStyles = (isActive: boolean) => ({
     padding: '8px 16px',
@@ -253,7 +265,7 @@ export function IndiceXPage({ onClose }: IndiceXPageProps) {
     <>
       <BasePage
         title="Índice X"
-        onClose={onClose}
+        onClose={handleClose}
         width="1000px"
         height="650px"
         minWidth="1000px"
@@ -346,8 +358,10 @@ export function IndiceXPage({ onClose }: IndiceXPageProps) {
             {statusMessage}
           </div>
         </div>
+        
+        {/* Modal Component - DENTRO da janela */}
+        <modal.ModalComponent />
       </BasePage>
-      <modal.ModalComponent />
     </>
   )
 }

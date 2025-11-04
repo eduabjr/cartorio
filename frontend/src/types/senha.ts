@@ -79,12 +79,21 @@ export interface Guiche {
 export type FormatoSenha = 'padrao' | 'compacto' | 'extenso' | 'personalizado'
 export type LayoutPainelPublico = 'senha-esquerda' | 'senha-direita' | 'senha-cima' | 'senha-baixo'
 
+export type TipoSom = 
+  | 'beep-simples'      // Beep único curto (padrão)
+  | 'beep-duplo'        // Dois beeps rápidos (banco)
+  | 'beep-triplo'       // Três beeps curtos (hospital)
+  | 'sino'              // Som de sino suave (cartório)
+  | 'campainha'         // Campainha eletrônica (recepção)
+  | 'beep-longo'        // Beep prolongado (atenção)
+
 export interface ConfiguracaoSenha {
   reiniciarSenhasDiariamente: boolean
   horarioReinicio: string // HH:mm
   
   // Configuração de Áudio
   tipoAudio: TipoAudio // 'voz', 'som', 'ambos', 'nenhum'
+  tipoSom: TipoSom // Tipo de som a ser reproduzido
   emitirSom: boolean
   volumeSom: number // 0-100
   usarVoz: boolean
@@ -111,6 +120,52 @@ export interface ConfiguracaoSenha {
   
   // Layout do Painel Público
   layoutPainelPublico: LayoutPainelPublico
+  painelPublicoTamanhoFonteSenha: number // Tamanho da fonte da senha atual no painel
+  painelPublicoTamanhoFonteHistorico: number // Tamanho da fonte do histórico de senhas
+  
+  // Textos do Painel Público
+  painelPublicoTitulo: string // Título principal (ex: "Sistema de Atendimento")
+  painelPublicoMostrarTitulo: boolean // Se deve exibir o título
+  painelPublicoSubtitulo: string // Subtítulo (ex: "Bem-vindo ao Sistema de Atendimento")
+  painelPublicoMostrarSubtitulo: boolean // Se deve exibir o subtítulo
+  
+  // Cores do Painel Público
+  painelPublicoCorFundo: string // Cor de fundo da tela
+  painelPublicoCorHeader: string // Cor do cabeçalho
+  painelPublicoCorSenhaDestaque: string // Cor da senha em destaque
+  painelPublicoCorTexto: string // Cor do texto principal
+  painelPublicoCorHistorico: string // Cor de fundo do histórico
+  
+  // Cores das Categorias P e C
+  corCategoriaPreferencial: string // Cor da categoria P (padrão: azul #3b82f6)
+  corCategoriaComum: string // Cor da categoria C (padrão: verde #10b981)
+  
+  // Configuração de Impressão
+  impressaoTitulo: string // Ex: "SISTEMA DE ATENDIMENTO"
+  impressaoTituloAlinhamento: 'left' | 'center' | 'right'
+  impressaoTituloTamanhoFonte: number // Tamanho em pixels
+  impressaoMostrarData: boolean
+  impressaoDataAlinhamento: 'left' | 'center' | 'right'
+  impressaoDataTamanhoFonte: number
+  impressaoMostrarHora: boolean
+  impressaoHoraAlinhamento: 'left' | 'center' | 'right'
+  impressaoHoraTamanhoFonte: number
+  impressaoMostrarInstrucao: boolean
+  impressaoMensagemInstrucao: string // Ex: "Aguarde ser chamado no painel."
+  impressaoInstrucaoAlinhamento: 'left' | 'center' | 'right'
+  impressaoInstrucaoTamanhoFonte: number
+  impressaoMostrarRodape: boolean
+  impressaoMensagemRodape: string // Ex: "Obrigado pela preferência"
+  impressaoRodapeAlinhamento: 'left' | 'center' | 'right'
+  impressaoRodapeTamanhoFonte: number
+  impressaoMostrarServico: boolean
+  impressaoServicoAlinhamento: 'left' | 'center' | 'right'
+  impressaoServicoTamanhoFonte: number
+  impressaoMostrarCategoria: boolean // Se mostra "SENHA PREFERENCIAL" ou "SENHA COMUM"
+  impressaoCategoriaAlinhamento: 'left' | 'center' | 'right'
+  impressaoCategoriaTamanhoFonte: number
+  impressaoSenhaAlinhamento: 'left' | 'center' | 'right'
+  impressaoSenhaTamanhoFonte: number
 }
 
 export interface EstatisticasSenha {

@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
+import { useModal } from '../hooks/useModal'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 
 interface PaisPageProps {
   onClose: () => void
@@ -8,6 +10,8 @@ interface PaisPageProps {
 
 export const PaisPage: React.FC<PaisPageProps> = ({ onClose }) => {
   const { currentTheme, getTheme } = useAccessibility()
+  const persistKeyRef = useRef<string>('')
+  const modal = useModal()
   const [updateCount, setUpdateCount] = useState(0)
   
   // 🔒 GARANTIA 100%: Re-renderizar quando currentTheme muda
@@ -50,6 +54,16 @@ export const PaisPage: React.FC<PaisPageProps> = ({ onClose }) => {
 
   // Estado para campo em foco
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  
+  // 💾 Persistir dados do formulário automaticamente
+  const persistKey = 'form-pais-' + (formData.codigo || 'novo')
+  persistKeyRef.current = persistKey
+  useFormPersist(persistKey, formData, setFormData, true, 500)
+  
+  const handleClose = () => {
+    clearPersistedForm(persistKeyRef.current)
+    onClose()
+  }
 
   // Função para criar novo registro
   const handleNovo = () => {
@@ -64,16 +78,19 @@ export const PaisPage: React.FC<PaisPageProps> = ({ onClose }) => {
   }
 
   // Função para gravar registro
-  const handleGravar = () => {
+  const handleGravar = async () => {
     console.log('Salvando país:', formData)
-    alert('✅ País salvo com sucesso!')
+    await modal.alert('✅ País salvo com sucesso!')
+    clearPersistedForm('form-pais-' + (formData.codigo || 'novo'))
   }
 
   // Função para excluir registro
-  const handleExcluir = () => {
-    if (confirm('⚠️ Deseja realmente excluir este país?')) {
+  const handleExcluir = async () => {
+    const confirmado = await modal.confirm('⚠️ Deseja realmente excluir este país?')
+    if (confirmado) {
       handleNovo()
-      alert('✅ País excluído com sucesso!')
+      await modal.alert('✅ País excluído com sucesso!')
+      clearPersistedForm('form-pais-' + (formData.codigo || 'novo'))
     }
   }
 
@@ -153,7 +170,7 @@ export const PaisPage: React.FC<PaisPageProps> = ({ onClose }) => {
   return (
     <BasePage
       title="Cadastro de Pais"
-      onClose={onClose}
+      onClose={handleClose}
       width="700px"
       height="380px"
       minWidth="700px"
@@ -356,6 +373,8 @@ export const PaisPage: React.FC<PaisPageProps> = ({ onClose }) => {
           </button>
         </div>
       </div>
+      {/* Modal Component */}
+      <modal.ModalComponent />
     </BasePage>
   )
 }

@@ -35,12 +35,13 @@
 //
 // ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { BasePage } from '../components/BasePage'
 import { naturezaService, Natureza } from '../services/NaturezaService'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useModal } from '../hooks/useModal'
 import { getRelativeFontSize } from '../utils/fontUtils'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 
 interface NaturezaPageProps {
   onClose: () => void
@@ -50,6 +51,7 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   const modal = useModal()
+  const persistKeyRef = useRef<string>('')
   
   // Cor do header: azul royal no light, roxo no dark
   const headerColor = currentTheme === 'dark' ? '#9370DB' : '#4169E1'
@@ -68,6 +70,16 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
   const [naturezas, setNaturezas] = useState<Natureza[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [showLookup, setShowLookup] = useState(false)
+
+  // 💾 Persistir dados do formulário automaticamente
+  const persistKey = 'form-natureza-' + (formData.codigo || 'novo')
+  persistKeyRef.current = persistKey
+  useFormPersist(persistKey, formData, setFormData, true, 500)
+  
+  const handleClose = () => {
+    clearPersistedForm(persistKeyRef.current)
+    onClose()
+  }
 
   // Carregar lista de naturezas
   useEffect(() => {
@@ -130,6 +142,9 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
       // Recarregar lista
       await carregarNaturezas()
       handleNovo()
+      
+      // Limpar dados persistidos após salvar
+      clearPersistedForm('form-natureza-' + (formData.codigo || 'novo'))
     } catch (error) {
       console.error('❌ Erro ao gravar natureza:', error)
       await modal.alert('Erro ao gravar natureza. Verifique os dados e tente novamente.', 'Erro', '❌')
@@ -329,7 +344,7 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
           Cadastro de Natureza de Serviços
         </h2>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           style={{
             background: 'rgba(255, 255, 255, 0.2)',
             border: 'none',
@@ -542,8 +557,10 @@ export function NaturezaPage({ onClose }: NaturezaPageProps) {
           🚪 Sair
         </button>
       </div>
+      
+      {/* Modal Component - DENTRO da janela */}
+      <modal.ModalComponent />
     </div>
-    <modal.ModalComponent />
     </>
   )
 }

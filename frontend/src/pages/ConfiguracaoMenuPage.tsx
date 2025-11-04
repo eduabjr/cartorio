@@ -1041,9 +1041,10 @@ export function ConfiguracaoMenuPage({ onClose }: ConfiguracaoMenuPageProps) {
             </button>
           </div>
         </div>
+        
+        {/* Modal Component - DENTRO da janela */}
+        {isModalReady && <modal.ModalComponent />}
       </BasePage>
-      {/* Modal Component - Renderizado apenas quando pronto */}
-      {isModalReady && <modal.ModalComponent />}
     </>
   )
 }

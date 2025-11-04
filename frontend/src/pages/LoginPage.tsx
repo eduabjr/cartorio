@@ -121,10 +121,10 @@ export function LoginPage() {
             fontWeight: '700',
             color: '#667eea',
             marginBottom: '8px',
-            fontFamily: 'Arial, sans-serif',
+                fontFamily: 'Arial, sans-serif',
             letterSpacing: '2px'
           }}>
-            CIVITAS
+              CIVITAS
           </div>
           <div style={{ fontSize: '14px', color: '#6b7280' }}>
             Sistema de Cartório
@@ -168,11 +168,11 @@ export function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>
             <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#374151'
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151'
             }}>
               Login ou Email
             </label>
@@ -311,7 +311,7 @@ export function LoginPage() {
         }}>
           <div style={{ marginBottom: '8px', fontWeight: '600', color: '#374151' }}>
             💡 Use o login e senha cadastrados
-          </div>
+        </div>
           <div>
             Cadastre funcionários em: Menu → Funcionário
           </div>

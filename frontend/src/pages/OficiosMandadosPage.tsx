@@ -1494,8 +1494,10 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
           )}
         </div>
       </div>
+      
+      {/* Modal Component - DENTRO da janela */}
+      <modal.ModalComponent />
     </BasePage>
-    <modal.ModalComponent />
     </>
   )
 }

@@ -449,14 +449,14 @@ function AppContent() {
             localStorage.setItem('user', JSON.stringify(userData))
             
             setUser(userData)
-            setIsLoggedIn(true)
+        setIsLoggedIn(true)
             return
           }
         }
       }
       
       // Se chegou aqui, credenciais inválidas
-      setError('Credenciais inválidas')
+        setError('Credenciais inválidas')
       
     } catch (error) {
       setError('Erro ao fazer login')
@@ -705,18 +705,18 @@ function AppContent() {
         const visibilityMap = new Map<string, boolean>()
         
         if (savedConfig) {
-          const config = JSON.parse(savedConfig)
-          
-          const buildVisibilityMap = (configItems: any[]) => {
-            configItems.forEach((item: any) => {
-              visibilityMap.set(item.id, item.visible)
-              if (item.submenu) {
-                buildVisibilityMap(item.submenu)
-              }
-            })
-          }
-          
-          buildVisibilityMap(config)
+        const config = JSON.parse(savedConfig)
+        
+        const buildVisibilityMap = (configItems: any[]) => {
+          configItems.forEach((item: any) => {
+            visibilityMap.set(item.id, item.visible)
+            if (item.submenu) {
+              buildVisibilityMap(item.submenu)
+            }
+          })
+        }
+        
+        buildVisibilityMap(config)
         }
         
         // Filtrar itens recursivamente
@@ -931,7 +931,7 @@ function AppContent() {
           { 
             id: 'configuracao-sistema', 
             label: 'Configurações do Sistema', 
-            icon: '',
+            icon: '', 
             adminOnly: true,
             submenu: [
               { id: 'config-sistema-feriados', label: 'Feriados', icon: '', onClick: () => {

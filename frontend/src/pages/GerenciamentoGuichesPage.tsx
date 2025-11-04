@@ -1116,8 +1116,10 @@ export function GerenciamentoGuichesPage({ onClose }: GerenciamentoGuichesPagePr
             </button>
           </div>
         </div>
+        
+        {/* Modal Component - DENTRO da janela */}
+        <modal.ModalComponent />
       </BasePage>
-      <modal.ModalComponent />
     </>
   )
 }

@@ -182,9 +182,10 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
           )}
         </div>
       </div>
-    </BasePage>
-      {/* Modal Component */}
+      
+      {/* Modal Component - DENTRO da janela */}
       <modal.ModalComponent />
+    </BasePage>
     </>
   )
 }
@@ -193,6 +194,7 @@ export function TiposCadastroPage({ onClose }: TiposCadastroPageProps) {
 function TipoAtoContent({ onClose }: { onClose: () => void }) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
+  const modal = useModal()
   
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
 
@@ -385,7 +387,8 @@ function TipoAtoContent({ onClose }: { onClose: () => void }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      gap: '8px'
+      gap: '8px',
+      position: 'relative'  // Container para modais absolutos
     }}>
       {/* Formulário de Entrada */}
       <div style={{
@@ -939,7 +942,8 @@ function TipoDocumentoContent({ onClose }: { onClose: () => void }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      gap: '8px'
+      gap: '8px',
+      position: 'relative'  // Container para modais absolutos
     }}>
       {/* Formulário de Entrada */}
       <div style={{
@@ -1416,7 +1420,8 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      gap: '8px'
+      gap: '8px',
+      position: 'relative'  // Container para modais absolutos
     }}>
       {/* Cabeçalho com descrição */}
       <div style={{
@@ -1629,7 +1634,8 @@ function AcessoRapidoContent({ onClose }: { onClose: () => void }) {
           🚪 Retornar
         </button>
       </div>
-      {/* Modal Component */}
+      
+      {/* Modal Component - DENTRO do container */}
       <modal.ModalComponent />
     </div>
   )

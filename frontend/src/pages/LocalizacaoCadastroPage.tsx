@@ -160,8 +160,10 @@ export function LocalizacaoCadastroPage({ onClose }: LocalizacaoCadastroPageProp
           )}
         </div>
       </div>
+      
+      {/* Modal Component - DENTRO da janela */}
+      <modal.ModalComponent />
     </BasePage>
-    <modal.ModalComponent />
     </>
   )
 }

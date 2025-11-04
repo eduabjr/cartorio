@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
 
 export interface WindowInstance {
   id: string
@@ -30,8 +30,10 @@ const WindowContext = createContext<WindowContextType | undefined>(undefined)
 
 export function WindowProvider({ children }: { children: React.ReactNode }) {
   const [windows, setWindows] = useState<WindowInstance[]>([])
-  const [nextZIndex, setNextZIndex] = useState(2000) // 🔒 CRÍTICO: Maior que menus (zIndex: 1001)
-  const [windowCounter, setWindowCounter] = useState(0)
+  
+  // 🔒 PROTEÇÃO: Usar useRef para evitar re-criação de callbacks
+  const nextZIndexRef = useRef(2000) // 🔒 CRÍTICO: Maior que menus (zIndex: 1001)
+  const windowCounterRef = useRef(0)
 
   const openWindow = useCallback((windowData: Omit<WindowInstance, 'position' | 'zIndex' | 'isMinimized' | 'isMaximized'>) => {
     setWindows(prev => {
@@ -39,13 +41,9 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
       const existingWindow = prev.find(w => w.type === windowData.type)
       
       if (existingWindow) {
-        console.log(`🔄 Janela do tipo '${windowData.type}' já está aberta, trazendo para frente...`)
-        
-        // Trazer a janela existente para frente (sem fechar/reabrir)
-        const newZIndex = nextZIndex + 1
-        setNextZIndex(newZIndex)
-        
-        console.log(`✅ Janela '${windowData.type}' trazida para frente com zIndex ${newZIndex}`)
+        // 🔒 PROTEÇÃO: Incrementar zIndex usando ref para não causar re-render
+        nextZIndexRef.current += 1
+        const newZIndex = nextZIndexRef.current
         
         // 🔒 CORREÇÃO: Preservar dados do formulário ao trazer para frente
         return prev.map(w => 
@@ -60,10 +58,13 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
             : w
         )
       } else {
+        // 🔒 PROTEÇÃO: Incrementar contador usando ref
+        const currentCounter = windowCounterRef.current
+        windowCounterRef.current += 1
+        
         // Nova janela - usar posição sequencial
-        const baseX = 100 + (windowCounter * 30)
-        const baseY = 100 + (windowCounter * 30)
-        setWindowCounter(c => c + 1)
+        const baseX = 100 + (currentCounter * 30)
+        const baseY = 100 + (currentCounter * 30)
         
         // Garantir que não saia da tela
         const maxX = window.innerWidth - 400
@@ -74,8 +75,9 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
           y: Math.min(baseY, maxY)
         }
         
-        const zIndex = nextZIndex + 1
-        setNextZIndex(zIndex)
+        // 🔒 PROTEÇÃO: Incrementar zIndex usando ref
+        nextZIndexRef.current += 1
+        const zIndex = nextZIndexRef.current
         
         const newWindow: WindowInstance = {
           ...windowData,
@@ -89,7 +91,7 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
         return [...prev, newWindow]
       }
     })
-  }, [nextZIndex, windowCounter])
+  }, []) // 🔒 PROTEÇÃO: Array vazio - função nunca é recriada!
 
   const closeWindow = useCallback((id: string) => {
     setWindows(prev => prev.filter(window => window.id !== id))
@@ -106,8 +108,9 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
   const bringToFront = useCallback((id: string) => {
     console.log(`🔺 bringToFront chamado para windowId: ${id}`)
     
-    const newZIndex = nextZIndex + 1
-    setNextZIndex(newZIndex)
+    // 🔒 PROTEÇÃO: Incrementar zIndex usando ref para não causar re-render
+    nextZIndexRef.current += 1
+    const newZIndex = nextZIndexRef.current
     console.log(`🎯 Atualizando para novo zIndex: ${newZIndex}`)
     
     setWindows(prev => 
@@ -119,7 +122,7 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
         return window
       })
     )
-  }, [nextZIndex])
+  }, []) // 🔒 PROTEÇÃO: Array vazio - função nunca é recriada!
 
   const updateWindowPosition = useCallback((id: string, position: { x: number; y: number }) => {
     setWindows(prev => 

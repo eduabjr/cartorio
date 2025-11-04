@@ -1148,8 +1148,10 @@ export function ServicoCartorioPage({ onClose, resetToOriginalPosition }: Servic
           </div>
         </>
       )}
+      
+      {/* Modal Component - DENTRO da janela */}
+      <modal.ModalComponent />
     </BasePage>
-    <modal.ModalComponent />
     </>
   )
 }

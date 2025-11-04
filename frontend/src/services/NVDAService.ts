@@ -39,6 +39,8 @@ class NVDAService {
   private messageQueue: NVDAMessage[] = []
   private isProcessing: boolean = false
   private lastAnnouncement: string = ''
+  private logCount: number = 0
+  private verboseLogs: boolean = false // Desabilitar logs verbosos por padrão
 
   constructor() {
     this.initialize()
@@ -251,7 +253,9 @@ class NVDAService {
    * Envia mensagem para o NVDA
    */
   public async sendMessage(message: NVDAMessage): Promise<any> {
-    console.log('📤 NVDAService.sendMessage chamado:', message)
+    if (this.verboseLogs || this.logCount++ < 3) {
+      console.log('📤 NVDAService.sendMessage:', message.type)
+    }
     
     if (!this.isAvailable) {
       console.log('❌ NVDA não está disponível, retornando null')
@@ -303,7 +307,9 @@ class NVDAService {
       
       // Listener para resposta
       const handleResponse = (event: MessageEvent) => {
-        console.log('📨 Mensagem recebida:', event.data)
+        if (this.verboseLogs) {
+          console.log('📨 Mensagem recebida:', event.data)
+        }
         if (event.data?.type === 'nvda-response' && event.data?.id === messageId) {
           console.log('✅ Resposta NVDA recebida:', event.data.result)
           window.removeEventListener('message', handleResponse)
@@ -325,7 +331,9 @@ class NVDAService {
       
       // Timeout após 3 segundos (aumentado)
       setTimeout(() => {
-        console.log('⏰ Timeout atingido, removendo listener')
+        if (this.verboseLogs) {
+          console.log('⏰ Timeout atingido')
+        }
         window.removeEventListener('message', handleResponse)
         resolve(null)
       }, 3000)
@@ -369,7 +377,7 @@ class NVDAService {
     // Evitar anúncios duplicados
     const messageKey = `${text}-${options?.priority || 'normal'}`
     if (this.lastAnnouncement === messageKey) {
-      console.log('⚠️ Anúncio duplicado ignorado:', text)
+      // Silenciosamente ignorar duplicados
       return
     }
     this.lastAnnouncement = messageKey

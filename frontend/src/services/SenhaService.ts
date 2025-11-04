@@ -264,13 +264,62 @@ class SenhaServiceClass {
   getConfiguracao(): ConfiguracaoSenha {
     const saved = localStorage.getItem(this.STORAGE_KEYS.CONFIGURACAO)
     if (saved) {
-      return JSON.parse(saved)
+      const config = JSON.parse(saved)
+      // Validar e limitar quantidadeSenhasExibidas (máximo 10) ao carregar
+      if (config.quantidadeSenhasExibidas) {
+        config.quantidadeSenhasExibidas = Math.min(Math.max(config.quantidadeSenhasExibidas, 1), 10)
+      }
+      // Garantir que tipoSom existe (para configs antigas)
+      if (!config.tipoSom) {
+        config.tipoSom = 'beep-simples'
+      }
+      // Garantir que campos de impressão existem (para configs antigas)
+      if (!config.impressaoTitulo) config.impressaoTitulo = 'SISTEMA DE ATENDIMENTO'
+      if (!config.impressaoTituloAlinhamento) config.impressaoTituloAlinhamento = 'center'
+      if (!config.impressaoTituloTamanhoFonte) config.impressaoTituloTamanhoFonte = 16
+      if (config.impressaoMostrarData === undefined) config.impressaoMostrarData = true
+      if (!config.impressaoDataAlinhamento) config.impressaoDataAlinhamento = 'left'
+      if (!config.impressaoDataTamanhoFonte) config.impressaoDataTamanhoFonte = 12
+      if (config.impressaoMostrarHora === undefined) config.impressaoMostrarHora = true
+      if (!config.impressaoHoraAlinhamento) config.impressaoHoraAlinhamento = 'left'
+      if (!config.impressaoHoraTamanhoFonte) config.impressaoHoraTamanhoFonte = 12
+      if (config.impressaoMostrarInstrucao === undefined) config.impressaoMostrarInstrucao = true
+      if (!config.impressaoMensagemInstrucao) config.impressaoMensagemInstrucao = 'Aguarde ser chamado no painel.'
+      if (!config.impressaoInstrucaoAlinhamento) config.impressaoInstrucaoAlinhamento = 'left'
+      if (!config.impressaoInstrucaoTamanhoFonte) config.impressaoInstrucaoTamanhoFonte = 12
+      if (config.impressaoMostrarRodape === undefined) config.impressaoMostrarRodape = true
+      if (!config.impressaoMensagemRodape) config.impressaoMensagemRodape = 'Obrigado pela preferência'
+      if (!config.impressaoRodapeAlinhamento) config.impressaoRodapeAlinhamento = 'center'
+      if (!config.impressaoRodapeTamanhoFonte) config.impressaoRodapeTamanhoFonte = 12
+      if (config.impressaoMostrarServico === undefined) config.impressaoMostrarServico = true
+      if (!config.impressaoServicoAlinhamento) config.impressaoServicoAlinhamento = 'center'
+      if (!config.impressaoServicoTamanhoFonte) config.impressaoServicoTamanhoFonte = 14
+      if (config.impressaoMostrarCategoria === undefined) config.impressaoMostrarCategoria = true
+      if (!config.impressaoCategoriaAlinhamento) config.impressaoCategoriaAlinhamento = 'center'
+      if (!config.impressaoCategoriaTamanhoFonte) config.impressaoCategoriaTamanhoFonte = 13
+      if (!config.impressaoSenhaAlinhamento) config.impressaoSenhaAlinhamento = 'center'
+      if (!config.impressaoSenhaTamanhoFonte) config.impressaoSenhaTamanhoFonte = 24
+      if (!config.painelPublicoTamanhoFonteSenha) config.painelPublicoTamanhoFonteSenha = 80
+      if (!config.painelPublicoTamanhoFonteHistorico) config.painelPublicoTamanhoFonteHistorico = 24
+      if (!config.painelPublicoTitulo) config.painelPublicoTitulo = 'Sistema de Atendimento'
+      if (config.painelPublicoMostrarTitulo === undefined) config.painelPublicoMostrarTitulo = true
+      if (!config.painelPublicoSubtitulo) config.painelPublicoSubtitulo = 'Bem-vindo ao Sistema de Atendimento'
+      if (config.painelPublicoMostrarSubtitulo === undefined) config.painelPublicoMostrarSubtitulo = true
+      if (!config.painelPublicoCorFundo) config.painelPublicoCorFundo = '#1a1a1a'
+      if (!config.painelPublicoCorHeader) config.painelPublicoCorHeader = '#1e3a8a'
+      if (!config.painelPublicoCorSenhaDestaque) config.painelPublicoCorSenhaDestaque = '#3b82f6'
+      if (!config.painelPublicoCorTexto) config.painelPublicoCorTexto = '#ffffff'
+      if (!config.painelPublicoCorHistorico) config.painelPublicoCorHistorico = '#1a1a1a'
+      if (!config.corCategoriaPreferencial) config.corCategoriaPreferencial = '#3b82f6'
+      if (!config.corCategoriaComum) config.corCategoriaComum = '#10b981'
+      return config
     }
 
     const configuracaoPadrao: ConfiguracaoSenha = {
       reiniciarSenhasDiariamente: true,
       horarioReinicio: '00:00',
       tipoAudio: 'voz',
+      tipoSom: 'beep-simples',
       emitirSom: true,
       volumeSom: 90,
       usarVoz: true,
@@ -289,7 +338,45 @@ class SenhaServiceClass {
       tempoEsperaPreferencialParaBloquear: 20,
       formatoSenha: 'padrao',
       formatoPersonalizado: '{categoria}{numero:3}',
-      layoutPainelPublico: 'senha-esquerda'
+      layoutPainelPublico: 'senha-esquerda',
+      painelPublicoTamanhoFonteSenha: 80,
+      painelPublicoTamanhoFonteHistorico: 24,
+      painelPublicoTitulo: 'Sistema de Atendimento',
+      painelPublicoMostrarTitulo: true,
+      painelPublicoSubtitulo: 'Bem-vindo ao Sistema de Atendimento',
+      painelPublicoMostrarSubtitulo: true,
+      painelPublicoCorFundo: '#1a1a1a',
+      painelPublicoCorHeader: '#1e3a8a',
+      painelPublicoCorSenhaDestaque: '#3b82f6',
+      painelPublicoCorTexto: '#ffffff',
+      painelPublicoCorHistorico: '#1a1a1a',
+      corCategoriaPreferencial: '#3b82f6',
+      corCategoriaComum: '#10b981',
+      impressaoTitulo: 'SISTEMA DE ATENDIMENTO',
+      impressaoTituloAlinhamento: 'center',
+      impressaoTituloTamanhoFonte: 16,
+      impressaoMostrarData: true,
+      impressaoDataAlinhamento: 'left',
+      impressaoDataTamanhoFonte: 12,
+      impressaoMostrarHora: true,
+      impressaoHoraAlinhamento: 'left',
+      impressaoHoraTamanhoFonte: 12,
+      impressaoMostrarInstrucao: true,
+      impressaoMensagemInstrucao: 'Aguarde ser chamado no painel.',
+      impressaoInstrucaoAlinhamento: 'left',
+      impressaoInstrucaoTamanhoFonte: 12,
+      impressaoMostrarRodape: true,
+      impressaoMensagemRodape: 'Obrigado pela preferência',
+      impressaoRodapeAlinhamento: 'center',
+      impressaoRodapeTamanhoFonte: 12,
+      impressaoMostrarServico: true,
+      impressaoServicoAlinhamento: 'center',
+      impressaoServicoTamanhoFonte: 14,
+      impressaoMostrarCategoria: true,
+      impressaoCategoriaAlinhamento: 'center',
+      impressaoCategoriaTamanhoFonte: 13,
+      impressaoSenhaAlinhamento: 'center',
+      impressaoSenhaTamanhoFonte: 24
     }
 
     localStorage.setItem(this.STORAGE_KEYS.CONFIGURACAO, JSON.stringify(configuracaoPadrao))
@@ -297,11 +384,17 @@ class SenhaServiceClass {
   }
 
   salvarConfiguracao(config: ConfiguracaoSenha): void {
-    localStorage.setItem(this.STORAGE_KEYS.CONFIGURACAO, JSON.stringify(config))
+    // Validar e limitar quantidadeSenhasExibidas (máximo 10)
+    const configValidada = {
+      ...config,
+      quantidadeSenhasExibidas: Math.min(Math.max(config.quantidadeSenhasExibidas || 3, 1), 10)
+    }
+    
+    localStorage.setItem(this.STORAGE_KEYS.CONFIGURACAO, JSON.stringify(configValidada))
     this.dispatchEvent('configuracao-updated')
     
     // Emitir evento para outras abas/páginas
-    senhaEventService.emit('config_atualizada', config, 'ConfiguracaoSenha')
+    senhaEventService.emit('config_atualizada', configValidada, 'ConfiguracaoSenha')
     console.log('✅ Configuração salva e evento emitido para outras abas')
   }
 

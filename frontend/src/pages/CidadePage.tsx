@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { CustomSelect } from '../components/CustomSelect'
 import { UF_OPTIONS } from '../constants/selectOptions'
+import { useModal } from '../hooks/useModal'
+import { useFormPersist, clearPersistedForm } from '../hooks/useFormPersist'
 
 interface CidadePageProps {
   onClose: () => void
@@ -10,7 +12,11 @@ interface CidadePageProps {
 
 export const CidadePage: React.FC<CidadePageProps> = ({ onClose }) => {
   const { currentTheme, getTheme } = useAccessibility()
+  const modal = useModal()
   const [updateCount, setUpdateCount] = useState(0)
+  
+  // 🔒 Criar uma ref para armazenar a chave de persistência
+  const persistKeyRef = useRef<string>('')
   
   // 🔒 GARANTIA 100%: Re-renderizar quando currentTheme muda
   useEffect(() => {
@@ -49,6 +55,18 @@ export const CidadePage: React.FC<CidadePageProps> = ({ onClose }) => {
 
   // Estado para campo em foco
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  
+  // 💾 Persistir dados do formulário automaticamente
+  const persistKey = 'form-cidade-' + (formData.numeroIBGE || 'novo')
+  persistKeyRef.current = persistKey
+  useFormPersist(persistKey, formData, setFormData, true, 500)
+  
+  // 🔒 Limpar dados persistidos ao fechar a janela
+  const handleClose = () => {
+    clearPersistedForm(persistKeyRef.current)
+    console.log(`🗑️ Janela fechada - Limpando dados temporários: "${persistKeyRef.current}"`)
+    onClose()
+  }
 
   // Função para criar novo registro
   const handleNovo = () => {
@@ -60,16 +78,23 @@ export const CidadePage: React.FC<CidadePageProps> = ({ onClose }) => {
   }
 
   // Função para gravar registro
-  const handleGravar = () => {
+  const handleGravar = async () => {
     console.log('Salvando cidade:', formData)
-    alert('✅ Cidade salva com sucesso!')
+    await modal.alert('✅ Cidade salva com sucesso!')
+    
+    // Limpar dados persistidos após salvar
+    clearPersistedForm('form-cidade-' + (formData.numeroIBGE || 'novo'))
   }
 
   // Função para excluir registro
-  const handleExcluir = () => {
-    if (confirm('⚠️ Deseja realmente excluir esta cidade?')) {
+  const handleExcluir = async () => {
+    const confirmado = await modal.confirm('⚠️ Deseja realmente excluir esta cidade?')
+    if (confirmado) {
       handleNovo()
-      alert('✅ Cidade excluída com sucesso!')
+      await modal.alert('✅ Cidade excluída com sucesso!')
+      
+      // Limpar dados persistidos após excluir
+      clearPersistedForm('form-cidade-' + (formData.numeroIBGE || 'novo'))
     }
   }
 
@@ -181,7 +206,7 @@ export const CidadePage: React.FC<CidadePageProps> = ({ onClose }) => {
   return (
     <BasePage
       title="Cadastro de Cidade (IBGE)"
-      onClose={onClose}
+      onClose={handleClose}
       width="600px"
       height="300px"
       minWidth="600px"
@@ -311,6 +336,8 @@ export const CidadePage: React.FC<CidadePageProps> = ({ onClose }) => {
           </button>
         </div>
       </div>
+      {/* Modal Component */}
+      <modal.ModalComponent />
     </BasePage>
   )
 }

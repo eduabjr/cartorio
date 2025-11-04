@@ -73,32 +73,52 @@ export function TerminalSenhaPage() {
 
   const imprimirSenhaTermica = (senha: Senha) => {
     const senhaFormatada = senhaService.formatarSenha(senha)
+    const config = senhaService.getConfiguracao()
     
-    // Formato de impressão térmica (58mm/80mm)
-    const impressao = `
-================================
-    SISTEMA DE ATENDIMENTO
-================================
-
-         ${senha.servico.nome}
-         
-    ${senha.prioridade ? '★ SENHA PREFERENCIAL ★' : ''}
+    // Construir impressão dinamicamente com base nas configurações
+    let impressao = ''
     
-         ┌─────────────┐
-         │             │
-         │   ${senhaFormatada.padStart(6)}    │
-         │             │
-         └─────────────┘
-
-Data: ${new Date(senha.horaEmissao).toLocaleDateString('pt-BR')}
-Hora: ${new Date(senha.horaEmissao).toLocaleTimeString('pt-BR')}
-
-Aguarde ser chamado no painel.
-
-================================
-    Obrigado pela preferência
-================================
-`
+    // Título (sempre mostrado)
+    impressao += `${config.impressaoTitulo}\n\n`
+    
+    // Serviço
+    if (config.impressaoMostrarServico) {
+      impressao += `         ${senha.servico.nome}\n         \n`
+    }
+    
+    // Categoria (Preferencial)
+    if (config.impressaoMostrarCategoria && senha.prioridade) {
+      impressao += `    ★ SENHA PREFERENCIAL ★\n    \n`
+    }
+    
+    // Senha em caixa
+    impressao += `         ┌─────────────┐\n`
+    impressao += `         │             │\n`
+    impressao += `         │   ${senhaFormatada.padStart(6)}    │\n`
+    impressao += `         │             │\n`
+    impressao += `         └─────────────┘\n\n`
+    
+    // Data
+    if (config.impressaoMostrarData) {
+      impressao += `Data: ${new Date(senha.horaEmissao).toLocaleDateString('pt-BR')}\n`
+    }
+    
+    // Hora
+    if (config.impressaoMostrarHora) {
+      impressao += `Hora: ${new Date(senha.horaEmissao).toLocaleTimeString('pt-BR')}\n`
+    }
+    
+    // Instrução
+    if (config.impressaoMostrarInstrucao && config.impressaoMensagemInstrucao) {
+      impressao += `\n${config.impressaoMensagemInstrucao}\n`
+    }
+    
+    // Rodapé (com tracejado)
+    if (config.impressaoMostrarRodape && config.impressaoMensagemRodape) {
+      impressao += `\n================================\n`
+      impressao += `    ${config.impressaoMensagemRodape}\n`
+      impressao += `================================\n`
+    }
 
     // Tentar imprimir via Electron
     if (window.electron?.print) {
@@ -396,8 +416,9 @@ Aguarde ser chamado no painel.
             </h2>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-              gap: '32px'
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '32px',
+              width: '100%'
             }}>
               {servicos
                 .filter(s => s.categoria === categoriaSelecionada || s.tipoSenha === categoriaSelecionada)

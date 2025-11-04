@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { senhaService } from '../services/SenhaService'
 import { senhaEventService } from '../services/SenhaEventService'
 import { Senha } from '../types/senha'
@@ -9,10 +9,36 @@ export function PainelPublicoPage() {
   const [ultimaSenhaChamada, setUltimaSenhaChamada] = useState<Senha | null>(null)
   const [horaAtual, setHoraAtual] = useState(new Date())
   const [ultimaChamadaId, setUltimaChamadaId] = useState<string | null>(null)
+  const [config, setConfig] = useState(senhaService.getConfiguracao())
+  const [forceRender, setForceRender] = useState(0)
+  const configRef = useRef(config)
+
+  // Atualizar ref sempre que config mudar
+  useEffect(() => {
+    configRef.current = config
+    console.log('🎨 PAINEL PÚBLICO - Config atualizado:', {
+      tamanhoSenha: config.painelPublicoTamanhoFonteSenha,
+      tamanhoHistorico: config.painelPublicoTamanhoFonteHistorico,
+      forceRender
+    })
+    
+    // Debug: Verificar se os valores estão sendo aplicados no DOM
+    const elementoSenha = document.querySelector('[data-senha-atual]')
+    if (elementoSenha) {
+      const fontSize = window.getComputedStyle(elementoSenha).fontSize
+      console.log('   📏 Font-size real aplicado no DOM:', fontSize)
+    }
+  }, [config, forceRender])
 
   useEffect(() => {
     console.log('🎬 PAINEL PÚBLICO - useEffect INICIADO')
+    const configInicial = senhaService.getConfiguracao()
+    console.log('📐 Config inicial:', {
+      tamanhoSenha: configInicial.painelPublicoTamanhoFonteSenha,
+      tamanhoHistorico: configInicial.painelPublicoTamanhoFonteHistorico
+    })
     carregarSenhas()
+    setConfig(configInicial)
     
     // Atualizar hora a cada segundo
     const timerHora = setInterval(() => {
@@ -23,6 +49,22 @@ export function PainelPublicoPage() {
     const timerSenhas = setInterval(() => {
       carregarSenhas()
     }, 3000)
+    
+    // 🔥 POLLING: Verificar configurações a cada 1 segundo (garantir sincronização)
+    const timerConfig = setInterval(() => {
+      const configAtual = senhaService.getConfiguracao()
+      const configAnterior = configRef.current
+      
+      // Verificar se mudou (usar ref para ter valor atual)
+      if (configAtual.painelPublicoTamanhoFonteSenha !== configAnterior.painelPublicoTamanhoFonteSenha ||
+          configAtual.painelPublicoTamanhoFonteHistorico !== configAnterior.painelPublicoTamanhoFonteHistorico) {
+        console.log('🔄 POLLING - Detectada mudança nas configurações!')
+        console.log('   Antes:', configAnterior.painelPublicoTamanhoFonteSenha, configAnterior.painelPublicoTamanhoFonteHistorico)
+        console.log('   Agora:', configAtual.painelPublicoTamanhoFonteSenha, configAtual.painelPublicoTamanhoFonteHistorico)
+        setConfig(configAtual)
+        setForceRender(prev => prev + 1)
+      }
+    }, 1000)
 
     // Escutar eventos em tempo real
     const unsubscribeEmitida = senhaEventService.on('senha_emitida', (senha: Senha) => {
@@ -89,12 +131,37 @@ export function PainelPublicoPage() {
       carregarSenhas()
     })
 
+    const unsubscribeConfig = senhaEventService.on('config_atualizada', () => {
+      const novaConfig = senhaService.getConfiguracao()
+      console.log('🔄 Painel Público - Evento config_atualizada recebido!')
+      console.log('   📏 Tamanho Senha:', novaConfig.painelPublicoTamanhoFonteSenha)
+      console.log('   📋 Tamanho Histórico:', novaConfig.painelPublicoTamanhoFonteHistorico)
+      setConfig(novaConfig)
+      setForceRender(prev => prev + 1) // Forçar re-renderização
+    })
+    
+    // FALLBACK: Também escutar mudanças no localStorage (caso BroadcastChannel falhe)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'senha-configuracao' && e.newValue) {
+        console.log('💾 FALLBACK - Detectada mudança no localStorage!')
+        const novaConfig = senhaService.getConfiguracao()
+        console.log('   📏 Tamanho Senha:', novaConfig.painelPublicoTamanhoFonteSenha)
+        console.log('   📋 Tamanho Histórico:', novaConfig.painelPublicoTamanhoFonteHistorico)
+        setConfig(novaConfig)
+        setForceRender(prev => prev + 1)
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+
     return () => {
       clearInterval(timerHora)
       clearInterval(timerSenhas)
+      clearInterval(timerConfig)
       unsubscribeEmitida()
       unsubscribeChamada()
       unsubscribeFinalizada()
+      unsubscribeConfig()
+      window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
 
@@ -125,25 +192,59 @@ export function PainelPublicoPage() {
       
       // Tocar BEEP (som)
       if (config.tipoAudio === 'som' || config.tipoAudio === 'ambos') {
+        const tipoSom = config.tipoSom || 'beep-simples'
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const oscillator = audioContext.createOscillator()
-        const gainNode = audioContext.createGain()
+        const volumeFinal = Math.max(0.3, (config.volumeSom || 90) / 100)
         
-        oscillator.connect(gainNode)
-        gainNode.connect(audioContext.destination)
+        console.log('🔔 Painel Público - Tocando som:', tipoSom, '| Volume:', (volumeFinal * 100).toFixed(0) + '%')
         
-        oscillator.frequency.value = 880 // Frequência do beep (Lá 5 - mais agudo e audível)
-        oscillator.type = 'sine'
+        // Função auxiliar para criar um beep
+        const criarBeep = (frequencia: number, duracao: number, delay: number = 0) => {
+          const oscillator = audioContext.createOscillator()
+          const gainNode = audioContext.createGain()
+          
+          oscillator.connect(gainNode)
+          gainNode.connect(audioContext.destination)
+          
+          oscillator.frequency.value = frequencia
+          oscillator.type = 'sine'
+          
+          const startTime = audioContext.currentTime + delay
+          gainNode.gain.setValueAtTime(volumeFinal, startTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duracao)
+          
+          oscillator.start(startTime)
+          oscillator.stop(startTime + duracao)
+        }
         
-        // Aplicar volume de forma mais audível
-        const volumeFinal = Math.max(0.3, (config.volumeSom || 90) / 100) // Mínimo 30% para ser audível
-        gainNode.gain.setValueAtTime(volumeFinal, audioContext.currentTime)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
-        
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.5)
-        
-        console.log('🔔 BEEP tocado - Volume configurado:', config.volumeSom + '% | Volume aplicado:', (volumeFinal * 100).toFixed(0) + '%')
+        // Tocar conforme o tipo selecionado
+        switch (tipoSom) {
+          case 'beep-simples':
+            criarBeep(880, 0.15)
+            break
+          case 'beep-duplo':
+            criarBeep(880, 0.1, 0)
+            criarBeep(880, 0.1, 0.15)
+            break
+          case 'beep-triplo':
+            criarBeep(1046, 0.08, 0)
+            criarBeep(1046, 0.08, 0.12)
+            criarBeep(1046, 0.08, 0.24)
+            break
+          case 'sino':
+            criarBeep(523, 0.3, 0)
+            criarBeep(659, 0.25, 0.1)
+            break
+          case 'campainha':
+            criarBeep(1318, 0.12, 0)
+            criarBeep(1567, 0.12, 0.12)
+            break
+          case 'beep-longo':
+            criarBeep(880, 0.5, 0)
+            break
+          default:
+            criarBeep(880, 0.15)
+        }
       }
       
       // Tocar VOZ (TTS)
@@ -360,14 +461,16 @@ export function PainelPublicoPage() {
                 <div style={{ fontSize: '28px', color: '#f0fdfa', marginBottom: '10px' }}>
                   SENHA
                 </div>
-                <div style={{
-                  fontSize: '120px',
-                  fontWeight: 'bold',
-                  fontFamily: 'monospace',
-                  color: '#fff',
-                  textShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                }}>
-                  {ultimaSenhaChamada.numeroCompleto}
+                <div 
+                  data-senha-atual
+                  style={{
+                    fontSize: `${config.painelPublicoTamanhoFonteSenha || 80}px`,
+                    fontWeight: 'bold',
+                    fontFamily: 'monospace',
+                    color: '#fff',
+                    textShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                  }}>
+                  {senhaService.formatarSenha(ultimaSenhaChamada)}
                 </div>
               </div>
               <div style={{
@@ -380,7 +483,7 @@ export function PainelPublicoPage() {
                   GUICHÊ
                 </div>
                 <div style={{
-                  fontSize: '120px',
+                  fontSize: `${config.painelPublicoTamanhoFonteSenha || 80}px`,
                   fontWeight: 'bold',
                   fontFamily: 'monospace',
                   color: '#fff',
@@ -422,7 +525,7 @@ export function PainelPublicoPage() {
                     backgroundColor: senha.servico.cor + '30',
                     border: `2px solid ${senha.servico.cor}`,
                     borderRadius: '8px',
-                    fontSize: '20px',
+                    fontSize: `${config.painelPublicoTamanhoFonteHistorico || 24}px`,
                     fontWeight: 'bold',
                     fontFamily: 'monospace',
                     color: '#fff',
@@ -432,7 +535,7 @@ export function PainelPublicoPage() {
                   }}
                 >
                   {senha.prioridade && <span style={{ color: '#f59e0b' }}>★</span>}
-                  {senha.numeroCompleto}
+                  {senhaService.formatarSenha(senha)}
                 </div>
               ))}
             </div>
@@ -506,14 +609,14 @@ export function PainelPublicoPage() {
                   </div>
                   
                   <div style={{
-                    fontSize: '56px',
+                    fontSize: `${Math.floor((config.painelPublicoTamanhoFonteSenha || 80) * 0.7)}px`,
                     fontWeight: 'bold',
                     fontFamily: 'monospace',
                     color: '#fff',
                     marginBottom: '15px',
                     textAlign: 'center'
                   }}>
-                    {senha.numeroCompleto}
+                    {senhaService.formatarSenha(senha)}
                   </div>
                   
                   <div style={{

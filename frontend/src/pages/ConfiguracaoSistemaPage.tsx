@@ -1341,9 +1341,9 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
             </button>
       </div>
     </div>
+        {/* Modal Component - DENTRO da janela */}
+        <modal.ModalComponent />
       </BasePage>
-      {/* Modal Component */}
-      <modal.ModalComponent />
     </>
   )
 }
