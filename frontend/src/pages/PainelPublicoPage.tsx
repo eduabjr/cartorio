@@ -398,31 +398,62 @@ export function PainelPublicoPage() {
       color: '#fff',
       fontFamily: 'Arial, sans-serif'
     }}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: '#0f172a',
-        padding: '20px 40px',
-        borderBottom: '4px solid #14b8a6',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <h1 style={{
-          fontSize: '48px',
-          fontWeight: 'bold',
-          margin: 0,
-          color: '#14b8a6'
-        }}>
-          🏢 PAINEL DE SENHAS
-        </h1>
+      {/* Header - Configurável pelo Layout do Painel Público */}
+      {(config.painelPublicoMostrarTitulo !== false || config.painelPublicoMostrarSubtitulo !== false) && (
         <div style={{
-          fontSize: '36px',
-          fontWeight: 'bold',
-          color: '#94a3b8'
+          background: `linear-gradient(135deg, ${config.painelPublicoCorHeader || '#1e3a8a'} 0%, ${config.painelPublicoCorSenhaDestaque || '#3b82f6'} 100%)`,
+          padding: config.painelPublicoMostrarTitulo !== false && config.painelPublicoMostrarSubtitulo !== false ? '32px 40px' :
+                   config.painelPublicoMostrarTitulo === false && config.painelPublicoMostrarSubtitulo === false ? '0' :
+                   '24px 40px',
+          borderBottom: `4px solid ${config.painelPublicoCorSenhaDestaque || '#14b8a6'}`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px',
+          color: config.painelPublicoCorTexto || '#fff',
+          minHeight: config.painelPublicoMostrarTitulo === false && config.painelPublicoMostrarSubtitulo === false ? '0' : 'auto',
+          transition: 'all 0.3s ease'
         }}>
-          {horaAtual.toLocaleTimeString('pt-BR')}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            width: '100%' 
+          }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {config.painelPublicoMostrarTitulo !== false && (
+                <h1 style={{
+                  fontSize: '48px',
+                  fontWeight: '700',
+                  margin: 0,
+                  color: config.painelPublicoCorTexto || '#fff'
+                }}>
+                  {config.painelPublicoTitulo || 'Sistema de Atendimento'}
+                </h1>
+              )}
+              {config.painelPublicoMostrarSubtitulo !== false && (
+                <div style={{
+                  fontSize: '20px',
+                  opacity: 0.9,
+                  color: config.painelPublicoCorTexto || '#fff'
+                }}>
+                  {config.painelPublicoSubtitulo || 'Bem-vindo ao Sistema de Atendimento'}
+                </div>
+              )}
+            </div>
+            <div style={{
+              fontSize: '36px',
+              fontWeight: '700',
+              fontFamily: 'monospace',
+              color: config.painelPublicoCorTexto || '#fff',
+              opacity: 0.95
+            }}>
+              {horaAtual.toLocaleTimeString('pt-BR')}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Conteúdo Principal */}
       <div style={{

@@ -53,10 +53,22 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
   
   // Ajustar índice quando mudar o filtro
   useEffect(() => {
-    if (indiceVisualizacao >= senhasFiltradas.length && senhasFiltradas.length > 0) {
+    console.log('🔍 CONTROLADOR - Senhas filtradas atualizadas:')
+    console.log('   📊 Filtro ativo:', filtroAtivo)
+    console.log('   📈 Total senhas filtradas:', senhasFiltradas.length)
+    console.log('   📍 Índice atual:', indiceVisualizacao)
+    
+    if (senhasFiltradas.length === 0) {
+      // Se não há senhas, resetar para 0
+      console.log('   ⚠️ Nenhuma senha - resetando índice para 0')
       setIndiceVisualizacao(0)
+    } else if (indiceVisualizacao >= senhasFiltradas.length) {
+      // Se índice está além do array, ajustar para o último
+      const novoIndice = senhasFiltradas.length - 1
+      console.log(`   🔄 Ajustando índice de ${indiceVisualizacao} para ${novoIndice}`)
+      setIndiceVisualizacao(novoIndice)
     }
-  }, [senhasFiltradas.length, indiceVisualizacao])
+  }, [senhasFiltradas.length, indiceVisualizacao, filtroAtivo])
 
   useEffect(() => {
     if (VERBOSE_LOGS) console.log('🎬 CONTROLADOR - useEffect INICIADO')
@@ -435,6 +447,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
         setSenhasComum(comum)
         setTodasSenhas(todas)
         console.log('✅ Estados atualizados com sucesso')
+        console.log('📊 RESUMO - Preferenciais:', pref.length, '| Comuns:', comum.length, '| Total:', todas.length)
       } catch (error) {
         console.error('❌ ERRO em carregarDados:', error)
         setMeuGuiche(null)
@@ -573,7 +586,16 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
     if (senhaAtual) {
       senhaService.finalizarAtendimento(senhaAtual.id)
       setSenhaAtual(null)
-      setIndiceVisualizacao(0) // Resetar para a primeira
+      setIndiceVisualizacao(0)
+      carregarDados()
+    }
+  }
+
+  const marcarComoAusente = () => {
+    if (senhaAtual) {
+      senhaService.marcarAusente(senhaAtual.id)
+      setSenhaAtual(null)
+      setIndiceVisualizacao(0)
       carregarDados()
     }
   }
@@ -772,25 +794,49 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
             </button>
           </div>
 
-          {/* Finalizar Serviço */}
-          <button
-            onClick={finalizarAtendimento}
-            disabled={!senhaAtual}
-            style={{
-              padding: '14px',
-              fontSize: '15px',
-              fontWeight: 'bold',
-              background: senhaAtual ? '#10b981' : '#9ca3af',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: senhaAtual ? 'pointer' : 'not-allowed',
-              opacity: senhaAtual ? 1 : 0.6,
-              boxShadow: senhaAtual ? '0 2px 4px rgba(0,0,0,0.2)' : 'none'
-            }}
-          >
-            ✅ Finalizar Atendimento
-          </button>
+          {/* Botões de Finalização */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={finalizarAtendimento}
+              disabled={!senhaAtual}
+              style={{
+                flex: 1,
+                padding: '14px',
+                fontSize: '15px',
+                fontWeight: 'bold',
+                background: senhaAtual ? '#10b981' : '#9ca3af',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: senhaAtual ? 'pointer' : 'not-allowed',
+                opacity: senhaAtual ? 1 : 0.6,
+                boxShadow: senhaAtual ? '0 2px 4px rgba(0,0,0,0.2)' : 'none'
+              }}
+              title="Cliente compareceu e foi atendido"
+            >
+              ✅ Finalizar Atendimento
+            </button>
+            <button
+              onClick={marcarComoAusente}
+              disabled={!senhaAtual}
+              style={{
+                flex: 1,
+                padding: '14px',
+                fontSize: '15px',
+                fontWeight: 'bold',
+                background: senhaAtual ? '#ef4444' : '#9ca3af',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: senhaAtual ? 'pointer' : 'not-allowed',
+                opacity: senhaAtual ? 1 : 0.6,
+                boxShadow: senhaAtual ? '0 2px 4px rgba(0,0,0,0.2)' : 'none'
+              }}
+              title="Cliente não compareceu"
+            >
+              ❌ Cliente Ausente
+            </button>
+          </div>
 
           {/* Campo unificado (navegação + estado) + Botões */}
           <div style={{
@@ -804,13 +850,15 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               color: theme.textSecondary,
               marginBottom: '8px',
               textAlign: 'center',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              overflow: 'visible'
             }}>
               {senhaAtual ? (
                 <span style={{ color: '#f59e0b' }}>🔔 Em Atendimento</span>
               ) : (
                 <>
-                  Visualizar Senhas ({indiceVisualizacao + 1}/{senhasFiltradas.length})
+                  Visualizar Senhas ({senhasFiltradas.length === 0 ? '0/0' : `${indiceVisualizacao + 1}/${senhasFiltradas.length}`})
                   {filtroAtivo !== 'todas' && (
                     <span style={{ color: '#3b82f6', marginLeft: '4px' }}>
                       ({filtroAtivo === 'preferencial' ? 'P' : 'C'})
@@ -953,9 +1001,21 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
                 padding: '20px',
                 color: theme.text,
                 maxWidth: '350px',
-                margin: '0 auto'
+                maxHeight: '80vh',
+                margin: '0 auto',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', borderBottom: `3px solid ${headerColor}`, paddingBottom: '10px' }}>
+                {/* Header fixo */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  marginBottom: '15px', 
+                  borderBottom: `3px solid ${headerColor}`, 
+                  paddingBottom: '10px',
+                  flexShrink: 0
+                }}>
                   <h3 style={{ margin: 0, fontSize: '18px', color: headerColor }}>📋 Informações do Sistema</h3>
                   <button
                     onClick={() => setMostrarDiagnostico(false)}
@@ -971,61 +1031,63 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
                   </button>
                 </div>
                 
-                {/* Diagnóstico */}
-                <div style={{ marginBottom: '15px' }}>
-                  <div style={{ fontSize: '13px', marginBottom: '8px', fontWeight: 'bold', color: theme.text }}>
-                    🏢 Guichê: {meuGuiche ? `✅ ${meuGuiche.numero}` : '❌ Não encontrado'}
+                {/* Conteúdo scrollável */}
+                <div style={{ 
+                  flex: 1, 
+                  overflowY: 'auto', 
+                  overflowX: 'hidden',
+                  paddingRight: '8px'
+                }}>
+                  {/* PREFERENCIAL */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '13px', marginBottom: '6px', color: theme.text, fontWeight: 'bold' }}>
+                      📊 Senhas PREFERENCIAL: <strong>{senhasPreferencial.length}</strong>
+                    </div>
+                    {senhasPreferencial.length > 0 && (
+                      <div style={{ marginLeft: '20px', fontSize: '12px', color: theme.textSecondary }}>
+                        {(() => {
+                          const porServico: { [key: string]: number } = {}
+                          senhasPreferencial.forEach(senha => {
+                            const nome = senha.servico.nome
+                            porServico[nome] = (porServico[nome] || 0) + 1
+                          })
+                          return Object.entries(porServico).map(([servico, qtd]) => (
+                            <div key={servico} style={{ marginBottom: '4px' }}>
+                              • {servico}: <strong>{qtd}</strong>
+                            </div>
+                          ))
+                        })()}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: '13px', marginBottom: '8px', color: theme.textSecondary }}>
-                    📊 Senhas P: <strong>{senhasPreferencial.length}</strong>
+
+                  {/* COMUM */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '13px', marginBottom: '6px', color: theme.text, fontWeight: 'bold' }}>
+                      📊 Senhas COMUM: <strong>{senhasComum.length}</strong>
+                    </div>
+                    {senhasComum.length > 0 && (
+                      <div style={{ marginLeft: '20px', fontSize: '12px', color: theme.textSecondary }}>
+                        {(() => {
+                          const porServico: { [key: string]: number } = {}
+                          senhasComum.forEach(senha => {
+                            const nome = senha.servico.nome
+                            porServico[nome] = (porServico[nome] || 0) + 1
+                          })
+                          return Object.entries(porServico).map(([servico, qtd]) => (
+                            <div key={servico} style={{ marginBottom: '4px' }}>
+                              • {servico}: <strong>{qtd}</strong>
+                            </div>
+                          ))
+                        })()}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: '13px', marginBottom: '8px', color: theme.textSecondary }}>
-                    📊 Senhas C: <strong>{senhasComum.length}</strong>
-                  </div>
-                  <div style={{ fontSize: '13px', marginBottom: '8px', color: theme.textSecondary }}>
+
+                  {/* TOTAL */}
+                  <div style={{ fontSize: '13px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb', color: theme.text, fontWeight: 'bold' }}>
                     📊 Total: <strong>{todasSenhas.length}</strong>
                   </div>
-                  <div style={{ fontSize: '13px', marginBottom: '15px', color: theme.textSecondary }}>
-                    🎯 Filtro: <strong>{filtroAtivo === 'todas' ? 'Todas' : filtroAtivo === 'preferencial' ? 'Preferencial' : 'Comum'}</strong>
-                  </div>
-                </div>
-                
-                {/* Lista resumida de senhas */}
-                <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '15px' }}>
-                  <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: theme.text }}>📝 Senhas na Fila:</h4>
-                  
-                  {todasSenhas.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: '#9ca3af', padding: '20px', fontSize: '13px' }}>
-                      Nenhuma senha aguardando
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {todasSenhas.map((senha) => (
-                        <div
-                          key={senha.id}
-                          style={{
-                            padding: '8px 12px',
-                            backgroundColor: senha.id === senhaAtual?.id ? '#fef3c7' : senha.servico.cor + '20',
-                            borderRadius: '8px',
-                            border: `2px solid ${senha.servico.cor}`,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            fontFamily: 'monospace',
-                            color: senha.servico.cor,
-                            boxShadow: senha.id === senhaAtual?.id ? '0 2px 6px rgba(245, 158, 11, 0.3)' : 'none'
-                          }}
-                        >
-                          {senhaService.formatarSenha(senha)}
-                          {senha.id === senhaAtual?.id && (
-                            <span style={{ fontSize: '12px' }}>🔔</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 
                 {!meuGuiche && (
@@ -1037,14 +1099,15 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      marginTop: '15px',
+                      marginTop: '12px',
                       backgroundColor: '#10b981',
                       color: '#fff',
                       border: 'none',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       fontWeight: 'bold',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      flexShrink: 0
                     }}
                   >
                     🔧 Corrigir Sistema

@@ -529,6 +529,17 @@ class SenhaServiceClass {
     return this.getSenhas().filter(s => s.status === 'atendendo')
   }
 
+  excluirSenha(senhaId: string): void {
+    const senhas = this.getSenhas()
+    const senhasFiltradas = senhas.filter(s => s.id !== senhaId)
+    localStorage.setItem(this.STORAGE_KEYS.SENHAS, JSON.stringify(senhasFiltradas))
+    
+    // Emitir evento de senha excluída
+    senhaEventService.emit('senha_excluida', { id: senhaId }, 'SenhaService')
+    
+    console.log(`🗑️ Senha excluída: ${senhaId}`)
+  }
+
   getUltimasSenhasChamadas(quantidade: number = 10): Senha[] {
     const senhas = this.getSenhas()
       .filter(s => s.horaChamada)
