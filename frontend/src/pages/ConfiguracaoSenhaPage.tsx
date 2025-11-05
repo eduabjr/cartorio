@@ -3262,30 +3262,44 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
           <div style={{
             backgroundColor: theme.surface,
             borderRadius: '16px',
-            padding: '32px',
+            padding: '20px',
             maxWidth: '500px',
             width: '90%',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
             boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             border: `2px solid ${theme.border}`
           }}>
             <h2 style={{ 
-              margin: '0 0 24px 0', 
-              fontSize: '22px', 
+              margin: '0 0 12px 0', 
+              fontSize: '20px', 
               color: theme.text,
-              borderBottom: `3px solid ${headerColor}`,
-              paddingBottom: '12px'
+              borderBottom: `2px solid ${headerColor}`,
+              paddingBottom: '8px',
+              flexShrink: 0
             }}>
               ➕ Adicionar Novo Serviço
             </h2>
 
+            {/* Conteúdo com scroll */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              marginBottom: '8px',
+              paddingRight: '8px'
+            }}>
+
             {/* Nome do Serviço */}
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '12px' }}>
               <label style={{ 
-                fontSize: '14px', 
+                fontSize: '13px', 
                 fontWeight: '600', 
                 color: theme.text, 
                 display: 'block', 
-                marginBottom: '8px' 
+                marginBottom: '6px' 
               }}>
                 Nome do Serviço:
               </label>
@@ -3293,13 +3307,13 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
                 type="text"
                 value={nomeNovoServico}
                 onChange={(e) => setNomeNovoServico(e.target.value)}
-                placeholder="Ex: Casamento, Certidão, Procuração..."
+                placeholder="Ex: Casamento, Certidão..."
                 style={{
                   width: '100%',
-                  padding: '12px',
-                  fontSize: '15px',
+                  padding: '8px 10px',
+                  fontSize: '14px',
                   border: `2px solid ${theme.border}`,
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   backgroundColor: theme.background,
                   color: theme.text
                 }}
@@ -3307,13 +3321,13 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
             </div>
 
             {/* Sigla */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '10px' }}>
               <label style={{ 
-                fontSize: '14px', 
+                fontSize: '13px', 
                 fontWeight: '600', 
                 color: theme.text, 
                 display: 'block', 
-                marginBottom: '8px' 
+                marginBottom: '6px' 
               }}>
                 Sigla (sem P/C):
               </label>
@@ -3321,16 +3335,16 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
                 type="text"
                 value={siglaNovoServico}
                 onChange={(e) => setSiglaNovoServico(e.target.value.toUpperCase())}
-                placeholder="Ex: CA, CT, PR..."
+                placeholder="Ex: CA, CT..."
                 maxLength={3}
                 style={{
-                  width: '120px',
-                  padding: '12px',
-                  fontSize: '18px',
+                  width: '110px',
+                  padding: '8px 10px',
+                  fontSize: '16px',
                   fontWeight: '700',
                   textAlign: 'center',
                   border: `2px solid ${theme.border}`,
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   backgroundColor: theme.background,
                   color: theme.text,
                   fontFamily: 'monospace'
@@ -3341,12 +3355,12 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
               <label style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                marginTop: '8px',
+                gap: '6px',
+                marginTop: '6px',
                 cursor: 'pointer',
-                padding: '8px',
+                padding: '6px',
                 backgroundColor: theme.background,
-                borderRadius: '6px',
+                borderRadius: '4px',
                 border: `1px solid ${theme.border}`
               }}>
                 <input
@@ -3356,13 +3370,13 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
                   style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                 />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: theme.text }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: theme.text }}>
                     Adicionar P/C automaticamente à sigla
                   </div>
-                  <div style={{ fontSize: '11px', color: theme.textSecondary, marginTop: '2px' }}>
+                  <div style={{ fontSize: '10px', color: theme.textSecondary, marginTop: '2px' }}>
                     {adicionarLetraPCAutomaticamente 
                       ? 'Sigla final: ' + (siglaNovoServico ? `${siglaNovoServico}P / ${siglaNovoServico}C` : 'CAP / CAC')
-                      : 'Sigla final: ' + (siglaNovoServico || 'CA (sem P/C)')
+                      : 'Sigla final: ' + (siglaNovoServico || 'CA')
                     }
                   </div>
                 </div>
@@ -3370,48 +3384,48 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
             </div>
 
             {/* Checkboxes P e C */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '10px' }}>
               <label style={{ 
-                fontSize: '14px', 
+                fontSize: '13px', 
                 fontWeight: '600', 
                 color: theme.text, 
                 display: 'block', 
-                marginBottom: '12px' 
+                marginBottom: '8px' 
               }}>
                 Cadastrar em:
               </label>
               
-              <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 {/* Checkbox P */}
                 <label style={{
                   flex: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px',
+                  gap: '8px',
+                  padding: '10px 12px',
                   backgroundColor: cadastrarEmP ? '#dbeafe' : theme.background,
-                  border: `3px solid ${cadastrarEmP ? '#3b82f6' : theme.border}`,
-                  borderRadius: '10px',
+                  border: `2px solid ${cadastrarEmP ? '#3b82f6' : theme.border}`,
+                  borderRadius: '8px',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: cadastrarEmP ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none'
+                  transition: 'all 0.2s ease',
+                  boxShadow: cadastrarEmP ? '0 2px 8px rgba(59, 130, 246, 0.2)' : 'none'
                 }}>
                   <input
                     type="checkbox"
                     checked={cadastrarEmP}
                     onChange={(e) => setCadastrarEmP(e.target.checked)}
                     style={{ 
-                      width: '24px', 
-                      height: '24px',
+                      width: '20px', 
+                      height: '20px',
                       cursor: 'pointer',
                       accentColor: '#3b82f6'
                     }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#3b82f6' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#3b82f6' }}>
                       P - Preferencial
                     </div>
-                    <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                    <div style={{ fontSize: '11px', color: theme.textSecondary }}>
                       Idosos, gestantes, PCD
                     </div>
                   </div>
@@ -3422,31 +3436,31 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
                   flex: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px',
+                  gap: '8px',
+                  padding: '10px 12px',
                   backgroundColor: cadastrarEmC ? '#d1fae5' : theme.background,
-                  border: `3px solid ${cadastrarEmC ? '#10b981' : theme.border}`,
-                  borderRadius: '10px',
+                  border: `2px solid ${cadastrarEmC ? '#10b981' : theme.border}`,
+                  borderRadius: '8px',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: cadastrarEmC ? '0 4px 12px rgba(16, 185, 129, 0.3)' : 'none'
+                  transition: 'all 0.2s ease',
+                  boxShadow: cadastrarEmC ? '0 2px 8px rgba(16, 185, 129, 0.2)' : 'none'
                 }}>
                   <input
                     type="checkbox"
                     checked={cadastrarEmC}
                     onChange={(e) => setCadastrarEmC(e.target.checked)}
                     style={{ 
-                      width: '24px', 
-                      height: '24px',
+                      width: '20px', 
+                      height: '20px',
                       cursor: 'pointer',
                       accentColor: '#10b981'
                     }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#10b981' }}>
                       C - Comum
                     </div>
-                    <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                    <div style={{ fontSize: '11px', color: theme.textSecondary }}>
                       Atendimento geral
                     </div>
                   </div>
@@ -3457,64 +3471,64 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
             {/* Preview */}
             {(cadastrarEmP || cadastrarEmC) && nomeNovoServico && siglaNovoServico && (
               <div style={{
-                padding: '16px',
+                padding: '10px',
                 backgroundColor: theme.background,
-                borderRadius: '8px',
-                marginBottom: '24px',
-                border: `2px solid ${theme.border}`
+                borderRadius: '6px',
+                marginBottom: '8px',
+                border: `1px solid ${theme.border}`
               }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: theme.textSecondary, marginBottom: '12px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: theme.textSecondary, marginBottom: '8px' }}>
                   📝 Serviços que serão criados:
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {cadastrarEmP && (
                     <div style={{ 
-                      padding: '10px', 
+                      padding: '8px', 
                       backgroundColor: '#dbeafe', 
                       borderRadius: '6px',
-                      border: '2px solid #3b82f6',
+                      border: '1px solid #3b82f6',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px'
+                      gap: '8px'
                     }}>
                       <div style={{
-                        padding: '8px 12px',
+                        padding: '6px 10px',
                         backgroundColor: '#3b82f6',
                         color: '#fff',
-                        borderRadius: '6px',
+                        borderRadius: '4px',
                         fontWeight: '700',
-                        fontSize: '14px',
+                        fontSize: '12px',
                         fontFamily: 'monospace'
                       }}>
                         {adicionarLetraPCAutomaticamente ? `${siglaNovoServico}P` : siglaNovoServico}
                       </div>
-                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e40af' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e40af' }}>
                         {nomeNovoServico} Preferencial
                       </div>
                     </div>
                   )}
                   {cadastrarEmC && (
                     <div style={{ 
-                      padding: '10px', 
+                      padding: '8px', 
                       backgroundColor: '#d1fae5', 
                       borderRadius: '6px',
-                      border: '2px solid #10b981',
+                      border: '1px solid #10b981',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px'
+                      gap: '8px'
                     }}>
                       <div style={{
-                        padding: '8px 12px',
+                        padding: '6px 10px',
                         backgroundColor: '#10b981',
                         color: '#fff',
-                        borderRadius: '6px',
+                        borderRadius: '4px',
                         fontWeight: '700',
-                        fontSize: '14px',
+                        fontSize: '12px',
                         fontFamily: 'monospace'
                       }}>
                         {adicionarLetraPCAutomaticamente ? `${siglaNovoServico}C` : siglaNovoServico}
                       </div>
-                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#047857' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#047857' }}>
                         {nomeNovoServico} Comum
                       </div>
                     </div>
@@ -3522,19 +3536,21 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
                 </div>
               </div>
             )}
+            </div>
+            {/* Fim do conteúdo com scroll */}
 
             {/* Botões de ação */}
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexShrink: 0 }}>
               <button
                 onClick={() => setMostrarModalServico(false)}
                 style={{
-                  padding: '12px 24px',
+                  padding: '10px 20px',
                   backgroundColor: '#6c757d',
                   color: '#fff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '600'
                 }}
               >
@@ -3543,13 +3559,13 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
               <button
                 onClick={salvarNovoServico}
                 style={{
-                  padding: '12px 24px',
+                  padding: '10px 20px',
                   backgroundColor: '#10b981',
                   color: '#fff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '600'
                 }}
               >
