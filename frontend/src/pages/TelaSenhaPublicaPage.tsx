@@ -568,14 +568,15 @@ export function TelaSenhaPublicaPage() {
             paddingRight: '10px'
           }}>
             {Array.from({ length: quantidadeLimitada }, (_, index) => {
-              const senha = senhasChamadas[index] || null
+              // Pular a senha em destaque (começar do índice 1)
+              const senha = senhasChamadas[index + 1] || null
               return (
               <div
                 key={senha?.id || `empty-${index}`}
                 style={{
                   padding: '32px 28px',
-                  backgroundColor: senha ? (index === 0 ? `${senha.servico.cor}25` : '#0a0a0a') : '#0a0a0a',
-                  border: `4px solid ${senha ? (index === 0 ? senha.servico.cor : '#2a2a2a') : '#2a2a2a'}`,
+                  backgroundColor: senha ? '#0a0a0a' : '#0a0a0a',
+                  border: `4px solid ${senha ? '#2a2a2a' : '#2a2a2a'}`,
                   borderRadius: '20px',
                   display: 'flex',
                   flexDirection: configuracao.layoutPainelPublico === 'senha-cima' || configuracao.layoutPainelPublico === 'senha-baixo' ? 'column' : 'row',
@@ -583,7 +584,7 @@ export function TelaSenhaPublicaPage() {
                   justifyContent: 'center',
                   gap: '28px',
                   transition: 'all 0.3s ease',
-                  boxShadow: senha && index === 0 ? `0 6px 20px ${senha.servico.cor}50` : '0 2px 8px rgba(0,0,0,0.2)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                   height: configuracao.layoutPainelPublico === 'senha-cima' || configuracao.layoutPainelPublico === 'senha-baixo' 
                     ? 'auto' 
                     : `calc((100% - ${(quantidadeLimitada - 1) * 16}px) / ${quantidadeLimitada})`,

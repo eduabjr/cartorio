@@ -35,7 +35,7 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
   const [siglaNovoServico, setSiglaNovoServico] = useState('')
   const [cadastrarEmP, setCadastrarEmP] = useState(false)
   const [cadastrarEmC, setCadastrarEmC] = useState(false)
-  const [adicionarLetraPCAutomaticamente, setAdicionarLetraPCAutomaticamente] = useState(true)
+  const [adicionarLetraPCAutomaticamente, setAdicionarLetraPCAutomaticamente] = useState(false)
   const [configuracaoSomAlterada, setConfiguracaoSomAlterada] = useState(false)
   
   // Usar useRef para salvar configuração original (não causa re-render)
@@ -246,7 +246,7 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
     setSiglaNovoServico('')
     setCadastrarEmP(false)
     setCadastrarEmC(false)
-    setAdicionarLetraPCAutomaticamente(true)
+    setAdicionarLetraPCAutomaticamente(false)
     setMostrarModalServico(true)
   }
 
@@ -784,8 +784,11 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
                               type="text"
                               value={servico.nome}
                               onChange={(e) => {
+                                const valor = e.target.value
+                                // Aceitar apenas letras, espaços e acentos
+                                const apenasLetras = valor.replace(/[^a-zA-ZÀ-ÿ\s]/g, '')
                                 const novosServicos = servicos.map(s =>
-                                  s.id === servico.id ? { ...s, nome: e.target.value } : s
+                                  s.id === servico.id ? { ...s, nome: apenasLetras } : s
                                 )
                                 setServicos(novosServicos)
                               }}
@@ -811,8 +814,11 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
                               maxLength={2}
                               value={servico.sigla}
                               onChange={(e) => {
+                                const valor = e.target.value
+                                // Aceitar apenas letras (sem números)
+                                const apenasLetras = valor.replace(/[^a-zA-Z]/g, '').toUpperCase()
                                 const novosServicos = servicos.map(s =>
-                                  s.id === servico.id ? { ...s, sigla: e.target.value.toUpperCase() } : s
+                                  s.id === servico.id ? { ...s, sigla: apenasLetras } : s
                                 )
                                 setServicos(novosServicos)
                               }}
@@ -3306,7 +3312,12 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
               <input
                 type="text"
                 value={nomeNovoServico}
-                onChange={(e) => setNomeNovoServico(e.target.value)}
+                onChange={(e) => {
+                  const valor = e.target.value
+                  // Aceitar apenas letras, espaços e acentos
+                  const apenasLetras = valor.replace(/[^a-zA-ZÀ-ÿ\s]/g, '')
+                  setNomeNovoServico(apenasLetras)
+                }}
                 placeholder="Ex: Casamento, Certidão..."
                 style={{
                   width: '100%',
@@ -3334,7 +3345,12 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
               <input
                 type="text"
                 value={siglaNovoServico}
-                onChange={(e) => setSiglaNovoServico(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  const valor = e.target.value
+                  // Aceitar apenas letras (sem números)
+                  const apenasLetras = valor.replace(/[^a-zA-Z]/g, '').toUpperCase()
+                  setSiglaNovoServico(apenasLetras)
+                }}
                 placeholder="Ex: CA, CT..."
                 maxLength={3}
                 style={{

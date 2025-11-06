@@ -30,6 +30,14 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
   const [mostrarSeletorSenha, setMostrarSeletorSenha] = useState<string | null>(null)
   const [filtroStatusMonitoramento, setFiltroStatusMonitoramento] = useState<'todos' | 'aguardando' | 'atendendo' | 'finalizado' | 'ausente'>('todos')
   const [buscaTexto, setBuscaTexto] = useState<string>('')
+  const [filtroCategoriaDetalhes, setFiltroCategoriaDetalhes] = useState<'todas' | 'preferencial' | 'comum'>('todas')
+  const [filtroServicoEstatisticas, setFiltroServicoEstatisticas] = useState<string>('todos')
+  const [buscaServicoEstatisticas, setBuscaServicoEstatisticas] = useState<string>('')
+  const [servicosExpandidos, setServicosExpandidos] = useState<Set<string>>(new Set())
+  const [dropdownEstatisticasPreferencial, setDropdownEstatisticasPreferencial] = useState<boolean>(false)
+  const [dropdownEstatisticasComum, setDropdownEstatisticasComum] = useState<boolean>(false)
+  const [paginaServicoCategoria, setPaginaServicoCategoria] = useState<number>(1)
+  const itensPorPagina = 4
 
   useEffect(() => {
     carregarDados()
@@ -62,6 +70,12 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
       unsubscribeCancelada()
     }
   }, [])
+
+  // Resetar página quando busca ou filtro mudarem
+  useEffect(() => {
+    setPaginaServicoCategoria(1)
+  }, [buscaServicoEstatisticas, filtroServicoEstatisticas])
+
 
   const carregarDados = () => {
     setSenhas(senhaService.getSenhas())
@@ -113,20 +127,6 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
     }
   }
 
-  const calcularTempoChamando = (senha: Senha): string => {
-    if (!senha.horaChamada) return '-'
-    
-    const inicio = new Date(senha.horaChamada)
-    const fim = senha.horaAtendimento ? new Date(senha.horaAtendimento) : new Date()
-    const diffMs = fim.getTime() - inicio.getTime()
-    const diffSeconds = Math.floor(diffMs / 1000)
-    
-    if (diffSeconds < 60) return `${diffSeconds}s`
-    const minutes = Math.floor(diffSeconds / 60)
-    const seconds = diffSeconds % 60
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
-
   const calcularTempoOcioso = (guiche: Guiche): string => {
     const senhasDoGuiche = senhas.filter(s => s.guicheId === guiche.id)
     const ultimaSenhaFinalizada = senhasDoGuiche
@@ -175,9 +175,37 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
     
     const fim = senha.horaFinalizacao ? new Date(senha.horaFinalizacao) : new Date()
     const diffMs = fim.getTime() - inicio.getTime()
-    const diffMin = Math.floor(diffMs / 1000 / 60)
+    const diffSegundos = Math.floor(diffMs / 1000)
     
-    return formatarTempo(diffMin)
+    const horas = Math.floor(diffSegundos / 3600)
+    const minutos = Math.floor((diffSegundos % 3600) / 60)
+    const segundos = diffSegundos % 60
+    
+    // Formatar com horas, minutos e segundos
+    if (horas > 0) {
+      if (minutos === 0 && segundos === 0) return `${horas}h`
+      if (segundos === 0) return `${horas}h ${minutos}min`
+      return `${horas}h ${minutos}min ${segundos}s`
+    }
+    
+    if (minutos > 0) {
+      if (segundos === 0) return `${minutos}min`
+      return `${minutos}min ${segundos}s`
+    }
+    
+    return `${segundos}s`
+  }
+
+  const toggleServicoExpandido = (servicoId: string) => {
+    setServicosExpandidos(prev => {
+      const novo = new Set(prev)
+      if (novo.has(servicoId)) {
+        novo.delete(servicoId)
+      } else {
+        novo.add(servicoId)
+      }
+      return novo
+    })
   }
 
   const formatarTempo = (minutos: number): string => {
@@ -192,32 +220,50 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
     const agora = new Date()
     const dataHora = agora.toLocaleString('pt-BR')
 
+    // Calcular estatísticas adicionais
+    const senhasPreferenciais = senhas.filter(s => s.prioridade)
+    const senhasComuns = senhas.filter(s => !s.prioridade)
+    
+    // Estatísticas por serviço
+    const porServico: Record<string, { emitidas: number, atendidas: number }> = {}
+    senhas.forEach(senha => {
+      const servicoNome = senha.servico.nome
+      if (!porServico[servicoNome]) {
+        porServico[servicoNome] = { emitidas: 0, atendidas: 0 }
+      }
+      porServico[servicoNome].emitidas++
+      if (senha.status === 'finalizado') {
+        porServico[servicoNome].atendidas++
+      }
+    })
+
     let html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Relatório de Senhas - ${agora.toLocaleDateString('pt-BR')}</title>
+    <title>Relatório Resumo - ${agora.toLocaleDateString('pt-BR')}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         h1 { color: #008080; text-align: center; }
-        h2 { color: #333; border-bottom: 2px solid #008080; padding-bottom: 5px; }
+        h2 { color: #333; border-bottom: 2px solid #008080; padding-bottom: 5px; margin-top: 30px; }
         .header { text-align: center; margin-bottom: 30px; }
-        .stats { display: flex; justify-content: space-around; margin: 20px 0; }
-        .stat-box { border: 2px solid #008080; border-radius: 8px; padding: 15px; text-align: center; min-width: 150px; }
+        .stats { display: flex; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; }
+        .stat-box { border: 2px solid #008080; border-radius: 8px; padding: 15px; text-align: center; min-width: 150px; margin: 10px; }
         .stat-value { font-size: 36px; font-weight: bold; color: #008080; }
         .stat-label { color: #666; margin-top: 5px; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th { background-color: #008080; color: white; padding: 12px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; }
-        tr:hover { background-color: #f5f5f5; }
+        .summary-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .summary-box { border: 1px solid #ddd; border-radius: 8px; padding: 15px; }
+        .summary-box h3 { margin-top: 0; color: #008080; }
+        .summary-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .summary-item:last-child { border-bottom: none; }
         .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
         @media print { button { display: none; } }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📊 Relatório de Atendimento por Senhas</h1>
+        <h1>📊 Relatório Resumo de Atendimento por Senhas</h1>
         <p>Gerado em: ${dataHora}</p>
     </div>
 `
@@ -239,51 +285,75 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
             <div class="stat-label">Tempo Médio de Espera</div>
         </div>
     </div>
+
+    <div class="summary-section">
+        <div class="summary-box">
+            <h3>⭐ Senhas Preferenciais</h3>
+            <div class="summary-item">
+                <span>Emitidas:</span>
+                <strong>${senhasPreferenciais.length}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Atendidas:</span>
+                <strong>${senhasPreferenciais.filter(s => s.status === 'finalizado').length}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Aguardando:</span>
+                <strong>${senhasPreferenciais.filter(s => s.status === 'aguardando').length}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Ausentes:</span>
+                <strong>${senhasPreferenciais.filter(s => s.status === 'ausente').length}</strong>
+            </div>
+        </div>
+
+        <div class="summary-box">
+            <h3>📋 Senhas Comuns</h3>
+            <div class="summary-item">
+                <span>Emitidas:</span>
+                <strong>${senhasComuns.length}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Atendidas:</span>
+                <strong>${senhasComuns.filter(s => s.status === 'finalizado').length}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Aguardando:</span>
+                <strong>${senhasComuns.filter(s => s.status === 'aguardando').length}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Ausentes:</span>
+                <strong>${senhasComuns.filter(s => s.status === 'ausente').length}</strong>
+            </div>
+        </div>
+    </div>
+
+    <h2>Estatísticas por Serviço</h2>
+    <div class="summary-box">
+`
+
+      Object.entries(porServico)
+        .filter(([nome]) => nome !== 'Atendimento Preferencial' && nome !== 'Atendimento Comum')
+        .sort(([, a], [, b]) => b.emitidas - a.emitidas)
+        .forEach(([nome, stats]) => {
+          html += `
+        <div class="summary-item">
+            <span><strong>${nome}</strong></span>
+            <span>${stats.emitidas} emitidas • ${stats.atendidas} atendidas</span>
+        </div>
+`
+        })
+
+      html += `
+    </div>
 `
     }
 
     html += `
-    <h2>Detalhamento de Senhas</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Senha</th>
-                <th>Serviço</th>
-                <th>Status</th>
-                <th>Guichê</th>
-                <th>Emissão</th>
-                <th>Tempo de Espera</th>
-            </tr>
-        </thead>
-        <tbody>
-`
-
-    senhas.forEach(senha => {
-      const agora = new Date()
-      const espera = senha.tempoEspera || Math.floor((agora.getTime() - new Date(senha.horaEmissao).getTime()) / 1000 / 60)
-
-      html += `
-            <tr>
-                <td><strong>${senha.numeroCompleto}</strong>${senha.prioridade ? ' ★' : ''}</td>
-                <td>${senha.servico.nome}</td>
-                <td>${senha.status === 'aguardando' ? '⏳ Aguardando' :
-                      senha.status === 'chamando' ? '📢 Chamando' :
-                      senha.status === 'atendendo' ? '💼 Atendendo' :
-                      senha.status === 'finalizado' ? '✅ Finalizado' : '❌ Ausente'}</td>
-                <td>${senha.guicheNumero || '-'}</td>
-                <td>${new Date(senha.horaEmissao).toLocaleTimeString('pt-BR')}</td>
-                <td>${formatarTempo(espera)}</td>
-            </tr>
-`
-    })
-
-    html += `
-        </tbody>
-    </table>
-
     <div class="footer">
         <p>Sistema de Atendimento por Senhas - Cartório</p>
-        <p>Relatório gerado automaticamente</p>
+        <p>Relatório resumo gerado automaticamente</p>
+        <p><em>Para relatório completo com todas as senhas, utilize a exportação para Excel</em></p>
     </div>
 
     <script>
@@ -307,17 +377,100 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
   }
 
   const exportarExcel = () => {
-    let csv = 'Senha;Servico;Status;Guiche;Emissao;Tempo_Espera\n'
+    const agora = new Date()
+    const dataHora = agora.toLocaleString('pt-BR')
+    
+    // Cabeçalho com informações gerais
+    let csv = `RELATÓRIO COMPLETO DE SENHAS\n`
+    csv += `Gerado em: ${dataHora}\n`
+    csv += `\n`
+    
+    // Resumo geral
+    if (estatisticas) {
+      csv += `RESUMO GERAL\n`
+      csv += `Total Emitidas;${estatisticas.totalEmitidas}\n`
+      csv += `Total Atendidas;${estatisticas.totalAtendidas}\n`
+      csv += `Tempo Médio de Espera;${formatarTempo(estatisticas.tempoMedioEspera)}\n`
+      csv += `\n`
+    }
+    
+    // Estatísticas por categoria
+    const preferenciais = senhas.filter(s => s.prioridade)
+    const comuns = senhas.filter(s => !s.prioridade)
+    
+    csv += `ESTATÍSTICAS POR CATEGORIA\n`
+    csv += `Tipo;Emitidas;Atendidas;Aguardando;Ausentes\n`
+    csv += `Preferencial;${preferenciais.length};${preferenciais.filter(s => s.status === 'finalizado').length};${preferenciais.filter(s => s.status === 'aguardando').length};${preferenciais.filter(s => s.status === 'ausente').length}\n`
+    csv += `Comum;${comuns.length};${comuns.filter(s => s.status === 'finalizado').length};${comuns.filter(s => s.status === 'aguardando').length};${comuns.filter(s => s.status === 'ausente').length}\n`
+    csv += `\n`
+    
+    // Estatísticas por serviço
+    const porServico: Record<string, { emitidas: number, atendidas: number, preferenciais: number, comuns: number }> = {}
+    senhas.forEach(senha => {
+      const servicoNome = senha.servico.nome
+      if (!porServico[servicoNome]) {
+        porServico[servicoNome] = { emitidas: 0, atendidas: 0, preferenciais: 0, comuns: 0 }
+      }
+      porServico[servicoNome].emitidas++
+      if (senha.status === 'finalizado') {
+        porServico[servicoNome].atendidas++
+      }
+      if (senha.prioridade) {
+        porServico[servicoNome].preferenciais++
+      } else {
+        porServico[servicoNome].comuns++
+      }
+    })
+    
+    csv += `ESTATÍSTICAS POR SERVIÇO\n`
+    csv += `Serviço;Emitidas;Atendidas;Preferenciais;Comuns\n`
+    Object.entries(porServico)
+      .filter(([nome]) => nome !== 'Atendimento Preferencial' && nome !== 'Atendimento Comum')
+      .sort(([, a], [, b]) => b.emitidas - a.emitidas)
+      .forEach(([nome, stats]) => {
+        csv += `${nome};${stats.emitidas};${stats.atendidas};${stats.preferenciais};${stats.comuns}\n`
+      })
+    csv += `\n`
+    
+    // Detalhamento completo de todas as senhas
+    csv += `DETALHAMENTO COMPLETO DE SENHAS\n`
+    csv += `Número;Número Completo;Prioridade;Serviço;Sigla Serviço;Status;Guichê;Número Guichê;Funcionário;Data Emissão;Hora Emissão;Data Chamada;Hora Chamada;Data Atendimento;Hora Atendimento;Data Finalização;Hora Finalização;Tempo Espera (min);Duração Atendimento (min)\n`
     
     senhas.forEach(senha => {
       const agora = new Date()
       const espera = senha.tempoEspera || Math.floor((agora.getTime() - new Date(senha.horaEmissao).getTime()) / 1000 / 60)
+      
+      let duracao = '-'
+      if (senha.horaFinalizacao && (senha.horaAtendimento || senha.horaChamada)) {
+        const inicio = senha.horaAtendimento 
+          ? new Date(senha.horaAtendimento)
+          : senha.horaChamada 
+            ? new Date(senha.horaChamada)
+            : null
+        if (inicio) {
+          const fim = new Date(senha.horaFinalizacao)
+          const diffMs = fim.getTime() - inicio.getTime()
+          duracao = Math.floor(diffMs / 1000 / 60).toString()
+        }
+      }
+      
       const status = senha.status === 'aguardando' ? 'Aguardando' :
                      senha.status === 'chamando' ? 'Chamando' :
                      senha.status === 'atendendo' ? 'Atendendo' :
                      senha.status === 'finalizado' ? 'Finalizado' : 'Ausente'
       
-      csv += `${senha.numeroCompleto};${senha.servico.nome};${status};${senha.guicheNumero || '-'};${new Date(senha.horaEmissao).toLocaleTimeString('pt-BR')};${formatarTempo(espera)}\n`
+      const guiche = guiches.find(g => g.id === senha.guicheId)
+      
+      const dataEmissao = new Date(senha.horaEmissao).toLocaleDateString('pt-BR')
+      const horaEmissao = new Date(senha.horaEmissao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      const dataChamada = senha.horaChamada ? new Date(senha.horaChamada).toLocaleDateString('pt-BR') : '-'
+      const horaChamada = senha.horaChamada ? new Date(senha.horaChamada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-'
+      const dataAtendimento = senha.horaAtendimento ? new Date(senha.horaAtendimento).toLocaleDateString('pt-BR') : '-'
+      const horaAtendimento = senha.horaAtendimento ? new Date(senha.horaAtendimento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-'
+      const dataFinalizacao = senha.horaFinalizacao ? new Date(senha.horaFinalizacao).toLocaleDateString('pt-BR') : '-'
+      const horaFinalizacao = senha.horaFinalizacao ? new Date(senha.horaFinalizacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-'
+      
+      csv += `${senha.numero};${senha.numeroCompleto};${senha.prioridade ? 'Sim' : 'Não'};${senha.servico.nome};${senha.servico.sigla};${status};${guiche?.nome || '-'};${guiche?.numero || '-'};${guiche?.funcionarioNome || '-'};${dataEmissao};${horaEmissao};${dataChamada};${horaChamada};${dataAtendimento};${horaAtendimento};${dataFinalizacao};${horaFinalizacao};${espera};${duracao}\n`
     })
 
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -325,7 +478,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
     const url = URL.createObjectURL(blob)
     
     link.setAttribute('href', url)
-    link.setAttribute('download', `relatorio_senhas_${new Date().toISOString().split('T')[0]}.csv`)
+    link.setAttribute('download', `relatorio_completo_senhas_${new Date().toISOString().split('T')[0]}.csv`)
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
@@ -652,56 +805,248 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
 
             {/* ABA: Estatísticas */}
             {abaAtiva === 'estatisticas' && estatisticas && (
-              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: theme.text }}>
-                  Estatísticas do Dia - {new Date().toLocaleDateString('pt-BR')}
-                </h3>
+              <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+                {/* Header */}
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: theme.text }}>
+                    📊 Estatísticas e Desempenho
+                  </h3>
+                  <div style={{ fontSize: '13px', color: theme.textSecondary, marginTop: '4px' }}>
+                    📅 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </div>
+                </div>
 
-                {/* Resumo Geral */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+                {/* Cards Principais - Grid 6 colunas */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                  {/* Total Emitidas */}
                   <div style={{
-                    padding: '24px',
+                    padding: '16px',
                     backgroundColor: theme.surface,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '12px',
+                    border: `2px solid #3b82f6`,
+                    borderRadius: '10px',
                     textAlign: 'center'
                   }}>
-                    <div style={{ fontSize: '42px', fontWeight: '700', color: '#3b82f6', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '28px', fontWeight: '700', color: '#3b82f6', marginBottom: '4px' }}>
                       {estatisticas.totalEmitidas}
                     </div>
-                    <div style={{ fontSize: '14px', color: theme.textSecondary }}>
-                      Total Emitidas
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: theme.text }}>
+                      Emitidas
                     </div>
                   </div>
 
+                  {/* Total Atendidas */}
                   <div style={{
-                    padding: '24px',
+                    padding: '16px',
                     backgroundColor: theme.surface,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '12px',
+                    border: `2px solid #10b981`,
+                    borderRadius: '10px',
                     textAlign: 'center'
                   }}>
-                    <div style={{ fontSize: '42px', fontWeight: '700', color: '#10b981', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '28px', fontWeight: '700', color: '#10b981', marginBottom: '4px' }}>
                       {estatisticas.totalAtendidas}
                     </div>
-                    <div style={{ fontSize: '14px', color: theme.textSecondary }}>
-                      Total Atendidas
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: theme.text }}>
+                      Atendidas
                     </div>
                   </div>
 
+                  {/* Aguardando */}
                   <div style={{
-                    padding: '24px',
+                    padding: '16px',
                     backgroundColor: theme.surface,
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '12px',
+                    border: `2px solid #f59e0b`,
+                    borderRadius: '10px',
                     textAlign: 'center'
                   }}>
-                    <div style={{ fontSize: '42px', fontWeight: '700', color: '#f59e0b', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b', marginBottom: '4px' }}>
+                      {senhas.filter(s => s.status === 'aguardando').length}
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: theme.text }}>
+                      Aguardando
+                    </div>
+                  </div>
+
+                  {/* Ausentes */}
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: theme.surface,
+                    border: `2px solid #ef4444`,
+                    borderRadius: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '28px', fontWeight: '700', color: '#ef4444', marginBottom: '4px' }}>
+                      {estatisticas.totalAusentes || 0}
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: theme.text }}>
+                      Ausentes
+                    </div>
+                  </div>
+
+                  {/* Taxa de Atendimento */}
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: theme.surface,
+                    border: `2px solid ${theme.border}`,
+                    borderRadius: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '28px', fontWeight: '700', color: headerColor, marginBottom: '4px' }}>
+                      {estatisticas.totalEmitidas > 0 ? Math.round((estatisticas.totalAtendidas / estatisticas.totalEmitidas) * 100) : 0}%
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: theme.text }}>
+                      Taxa Atend.
+                    </div>
+                  </div>
+
+                  {/* Tempo Médio */}
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: theme.surface,
+                    border: `2px solid ${theme.border}`,
+                    borderRadius: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: theme.text, marginBottom: '4px' }}>
                       {formatarTempo(estatisticas.tempoMedioEspera)}
                     </div>
-                    <div style={{ fontSize: '14px', color: theme.textSecondary }}>
-                      Tempo Médio de Espera
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: theme.text }}>
+                      Tempo Médio
                     </div>
+                  </div>
+                </div>
+
+                {/* Comparativo P vs C */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                  {/* Preferenciais */}
+                  <div 
+                    onClick={() => setDropdownEstatisticasPreferencial(!dropdownEstatisticasPreferencial)}
+                    style={{
+                      padding: '20px',
+                      backgroundColor: '#eff6ff',
+                      border: `2px solid #3b82f6`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      userSelect: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dbeafe'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#eff6ff'
+                    }}
+                  >
+                    {!dropdownEstatisticasPreferencial ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ fontSize: '24px' }}>⭐</div>
+                        <div>
+                          <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e40af' }}>
+                            SENHAS PREFERENCIAIS
+                          </div>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary }}>
+                            Prioridade no atendimento
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af', textAlign: 'center', marginBottom: '8px' }}>
+                          ⭐ ESTATÍSTICAS PREFERENCIAIS
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '16px' }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#3b82f6' }}>
+                              {senhas.filter(s => s.prioridade).length}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e40af' }}>Emitidas</div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#10b981' }}>
+                              {senhas.filter(s => s.prioridade && s.status === 'finalizado').length}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#065f46' }}>Atendidas</div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#f59e0b' }}>
+                              {senhas.filter(s => s.prioridade && s.status === 'aguardando').length}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e' }}>Aguardando</div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#ef4444' }}>
+                              {senhas.filter(s => s.prioridade && s.status === 'ausente').length}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#991b1b' }}>Ausentes</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Comuns */}
+                  <div 
+                    onClick={() => setDropdownEstatisticasComum(!dropdownEstatisticasComum)}
+                    style={{
+                      padding: '20px',
+                      backgroundColor: '#f0fdf4',
+                      border: `2px solid #10b981`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      userSelect: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#d1fae5'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f0fdf4'
+                    }}
+                  >
+                    {!dropdownEstatisticasComum ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ fontSize: '24px' }}>📋</div>
+                        <div>
+                          <div style={{ fontSize: '16px', fontWeight: '700', color: '#065f46' }}>
+                            SENHAS COMUNS
+                          </div>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary }}>
+                            Atendimento por ordem de chegada
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#065f46', textAlign: 'center', marginBottom: '8px' }}>
+                          📋 ESTATÍSTICAS COMUNS
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '16px' }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#10b981' }}>
+                              {senhas.filter(s => !s.prioridade).length}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#065f46' }}>Emitidas</div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#10b981' }}>
+                              {senhas.filter(s => !s.prioridade && s.status === 'finalizado').length}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#065f46' }}>Atendidas</div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#f59e0b' }}>
+                              {senhas.filter(s => !s.prioridade && s.status === 'aguardando').length}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e' }}>Aguardando</div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#ef4444' }}>
+                              {senhas.filter(s => !s.prioridade && s.status === 'ausente').length}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#991b1b' }}>Ausentes</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -711,14 +1056,112 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   backgroundColor: theme.surface,
                   border: `1px solid ${theme.border}`,
                   borderRadius: '12px',
-                  marginBottom: '24px'
+                  marginBottom: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  maxHeight: '600px'
                 }}>
-                  <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '600', color: theme.text }}>
-                    📋 Por Serviço e Categoria
-                  </h4>
-                  {Object.entries(estatisticas.porServico).map(([servicoId, stats]) => {
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
+                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: theme.text }}>
+                      📋 Por Serviço e Categoria
+                    </h4>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        value={buscaServicoEstatisticas}
+                        onChange={(e) => {
+                          setBuscaServicoEstatisticas(e.target.value)
+                          if (e.target.value) {
+                            setFiltroServicoEstatisticas('todos')
+                          }
+                        }}
+                        placeholder="🔍 Buscar serviço (nome ou sigla)..."
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: '13px',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '6px',
+                          backgroundColor: theme.background,
+                          color: theme.text,
+                          width: '280px',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = headerColor
+                          e.currentTarget.style.boxShadow = `0 0 0 2px ${headerColor}20`
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = theme.border
+                          e.currentTarget.style.boxShadow = 'none'
+                        }}
+                      />
+                      {buscaServicoEstatisticas && (
+                        <button
+                          onClick={() => {
+                            setBuscaServicoEstatisticas('')
+                            setFiltroServicoEstatisticas('todos')
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            fontSize: '12px',
+                            border: 'none',
+                            borderRadius: '6px',
+                            backgroundColor: '#6b7280',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                          }}
+                        >
+                          ✕ Limpar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ 
+                    flex: 1, 
+                    overflowY: 'auto', 
+                    overflowX: 'hidden',
+                    paddingRight: '8px',
+                    maxHeight: '500px'
+                  }}>
+                    {(() => {
+                      const servicosFiltrados = Object.entries(estatisticas.porServico)
+                        .filter(([servicoId]) => {
+                          const servico = senhaService.getServicos().find(s => s.id === servicoId)
+                          if (!servico) return false
+                          
+                          // Filtrar categorias P e C
+                          if (servico.nome === 'Atendimento Preferencial' || servico.nome === 'Atendimento Comum') return false
+                          
+                          // Filtrar por busca de texto
+                          if (buscaServicoEstatisticas) {
+                            const busca = buscaServicoEstatisticas.toLowerCase().trim()
+                            return servico.nome.toLowerCase().includes(busca) || 
+                                   servico.sigla.toLowerCase().includes(busca)
+                          }
+                          
+                          // Filtrar por seleção específica (se ainda usado)
+                          if (filtroServicoEstatisticas !== 'todos') {
+                            return servicoId === filtroServicoEstatisticas
+                          }
+                          
+                          return true
+                        })
+                      
+                      const totalItens = servicosFiltrados.length
+                      const totalPaginas = Math.ceil(totalItens / itensPorPagina)
+                      const inicioIndice = (paginaServicoCategoria - 1) * itensPorPagina
+                      const fimIndice = inicioIndice + itensPorPagina
+                      const servicosPagina = servicosFiltrados.slice(inicioIndice, fimIndice)
+                      
+                      return (
+                        <>
+                          {servicosPagina.map(([servicoId, stats]) => {
                     const servico = senhaService.getServicos().find(s => s.id === servicoId)
                     if (!servico) return null
+                    
+                    // Filtrar categorias P e C (não são serviços, são tipos de atendimento)
+                    if (servico.nome === 'Atendimento Preferencial' || servico.nome === 'Atendimento Comum') return null
 
                     // Calcular estatísticas por tipo (Preferencial/Comum)
                     const senhasDoServico = senhas.filter(s => s.servico.id === servicoId)
@@ -735,26 +1178,40 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                       atendidas: comuns.filter(s => s.status === 'finalizado').length
                     }
 
+                    const estaExpandido = servicosExpandidos.has(servicoId)
+                    
                     return (
                       <div
                         key={servicoId}
                         style={{
-                          padding: '16px',
                           backgroundColor: theme.background,
                           border: `2px solid ${servico.cor}`,
                           borderRadius: '10px',
-                          marginBottom: '12px'
+                          marginBottom: '12px',
+                          minWidth: 0,
+                          flexShrink: 0,
+                          overflow: 'hidden'
                         }}
                       >
-                        {/* Header do Serviço */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          marginBottom: '12px',
-                          paddingBottom: '12px',
-                          borderBottom: `1px solid ${theme.border}`
-                        }}>
+                        {/* Header do Serviço - Clicável */}
+                        <div 
+                          onClick={() => toggleServicoExpandido(servicoId)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '16px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s ease',
+                            userSelect: 'none'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = `${servico.cor}10`
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }}
+                        >
                           <div style={{
                             width: '48px',
                             height: '48px',
@@ -765,91 +1222,536 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '20px',
-                            fontWeight: '700'
+                            fontWeight: '700',
+                            flexShrink: 0
                           }}>
                             {servico.sigla}
                           </div>
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: '16px', fontWeight: '700', color: theme.text }}>
                               {servico.nome}
                             </div>
-                            <div style={{ fontSize: '12px', color: theme.textSecondary }}>
-                              Total: {stats.emitidas} emitidas • {stats.atendidas} atendidas • {formatarTempo(stats.tempoMedio)}
+                            <div style={{ fontSize: '12px', color: theme.textSecondary, display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span>{stats.emitidas} emitidas • {stats.atendidas} atendidas</span>
+                              {statsP.emitidas > 0 && (
+                                <span style={{ 
+                                  padding: '2px 8px', 
+                                  backgroundColor: '#eff6ff', 
+                                  color: '#1e40af',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  fontWeight: '600'
+                                }}>
+                                  ⭐ {statsP.emitidas}P
+                                </span>
+                              )}
+                              {statsC.emitidas > 0 && (
+                                <span style={{ 
+                                  padding: '2px 8px', 
+                                  backgroundColor: '#f0fdf4', 
+                                  color: '#065f46',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  fontWeight: '600'
+                                }}>
+                                  📋 {statsC.emitidas}C
+                                </span>
+                              )}
                             </div>
+                          </div>
+                          <div style={{
+                            fontSize: '24px',
+                            color: servico.cor,
+                            transition: 'transform 0.2s ease',
+                            transform: estaExpandido ? 'rotate(180deg)' : 'rotate(0deg)',
+                            flexShrink: 0
+                          }}>
+                            ▼
                           </div>
                         </div>
 
-                        {/* Estatísticas por Tipo */}
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          {/* Preferencial */}
-                          {statsP.emitidas > 0 && (
-                            <div style={{
-                              flex: 1,
-                              padding: '12px',
-                              backgroundColor: '#eff6ff',
-                              border: '1px solid #3b82f6',
-                              borderRadius: '8px'
-                            }}>
-                              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e40af', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                ⭐ PREFERENCIAL
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-around', gap: '8px' }}>
-                                <div style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6' }}>
-                                    {statsP.emitidas}
+                        {/* Detalhes Expandidos - Estatísticas por Tipo */}
+                        {estaExpandido && (
+                          <div style={{ 
+                            padding: '0 16px 16px 16px',
+                            borderTop: `1px solid ${theme.border}`,
+                            paddingTop: '12px'
+                          }}>
+                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                              {/* Preferencial */}
+                              {statsP.emitidas > 0 && (
+                                <div style={{
+                                  flex: '1 1 200px',
+                                  minWidth: '200px',
+                                  padding: '12px',
+                                  backgroundColor: '#eff6ff',
+                                  border: '1px solid #3b82f6',
+                                  borderRadius: '8px'
+                                }}>
+                                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e40af', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    ⭐ PREFERENCIAL
                                   </div>
-                                  <div style={{ fontSize: '10px', color: theme.textSecondary }}>
-                                    Emitidas
+                                  <div style={{ display: 'flex', justifyContent: 'space-around', gap: '8px' }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6' }}>
+                                        {statsP.emitidas}
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: theme.textSecondary }}>
+                                        Emitidas
+                                      </div>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
+                                        {statsP.atendidas}
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: theme.textSecondary }}>
+                                        Atendidas
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                                <div style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
-                                    {statsP.atendidas}
-                                  </div>
-                                  <div style={{ fontSize: '10px', color: theme.textSecondary }}>
-                                    Atendidas
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                              )}
 
-                          {/* Comum */}
-                          {statsC.emitidas > 0 && (
-                            <div style={{
-                              flex: 1,
-                              padding: '12px',
-                              backgroundColor: '#f0fdf4',
-                              border: '1px solid #10b981',
-                              borderRadius: '8px'
-                            }}>
-                              <div style={{ fontSize: '12px', fontWeight: '600', color: '#065f46', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                📋 COMUM
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-around', gap: '8px' }}>
-                                <div style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
-                                    {statsC.emitidas}
+                              {/* Comum */}
+                              {statsC.emitidas > 0 && (
+                                <div style={{
+                                  flex: '1 1 200px',
+                                  minWidth: '200px',
+                                  padding: '12px',
+                                  backgroundColor: '#f0fdf4',
+                                  border: '1px solid #10b981',
+                                  borderRadius: '8px'
+                                }}>
+                                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#065f46', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    📋 COMUM
                                   </div>
-                                  <div style={{ fontSize: '10px', color: theme.textSecondary }}>
-                                    Emitidas
+                                  <div style={{ display: 'flex', justifyContent: 'space-around', gap: '8px' }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
+                                        {statsC.emitidas}
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: theme.textSecondary }}>
+                                        Emitidas
+                                      </div>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
+                                        {statsC.atendidas}
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: theme.textSecondary }}>
+                                        Atendidas
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                                <div style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
-                                    {statsC.atendidas}
-                                  </div>
-                                  <div style={{ fontSize: '10px', color: theme.textSecondary }}>
-                                    Atendidas
-                                  </div>
+                              )}
+
+                              {/* Se não tem nenhum P ou C */}
+                              {statsP.emitidas === 0 && statsC.emitidas === 0 && (
+                                <div style={{ 
+                                  flex: 1, 
+                                  padding: '20px', 
+                                  textAlign: 'center', 
+                                  color: theme.textSecondary,
+                                  fontSize: '13px'
+                                }}>
+                                  Nenhuma senha emitida para este serviço
                                 </div>
-                              </div>
+                              )}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     )
-                  })}
+                          })}
+                          
+                          {totalItens === 0 && (
+                            <div style={{ padding: '40px', textAlign: 'center', color: theme.textSecondary }}>
+                              <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>
+                                📋
+                              </div>
+                              <div style={{ fontSize: '14px' }}>
+                                {buscaServicoEstatisticas 
+                                  ? `Nenhum serviço encontrado para "${buscaServicoEstatisticas}"`
+                                  : filtroServicoEstatisticas === 'todos' 
+                                    ? 'Nenhum serviço específico cadastrado' 
+                                    : 'Nenhuma senha emitida para este serviço'}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {totalPaginas > 1 && (
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'center', 
+                              alignItems: 'center', 
+                              gap: '8px', 
+                              marginTop: '16px',
+                              padding: '12px',
+                              borderTop: `1px solid ${theme.border}`,
+                              flexShrink: 0
+                            }}>
+                              <button
+                                onClick={() => setPaginaServicoCategoria(prev => Math.max(1, prev - 1))}
+                                disabled={paginaServicoCategoria === 1}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  border: `1px solid ${theme.border}`,
+                                  borderRadius: '6px',
+                                  cursor: paginaServicoCategoria === 1 ? 'not-allowed' : 'pointer',
+                                  backgroundColor: paginaServicoCategoria === 1 ? theme.border : theme.background,
+                                  color: paginaServicoCategoria === 1 ? theme.textSecondary : theme.text,
+                                  opacity: paginaServicoCategoria === 1 ? 0.5 : 1,
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (paginaServicoCategoria > 1) {
+                                    e.currentTarget.style.backgroundColor = headerColor
+                                    e.currentTarget.style.color = '#fff'
+                                    e.currentTarget.style.borderColor = headerColor
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (paginaServicoCategoria > 1) {
+                                    e.currentTarget.style.backgroundColor = theme.background
+                                    e.currentTarget.style.color = theme.text
+                                    e.currentTarget.style.borderColor = theme.border
+                                  }
+                                }}
+                              >
+                                ← Anterior
+                              </button>
+                              
+                              <div style={{ 
+                                display: 'flex', 
+                                gap: '4px', 
+                                alignItems: 'center',
+                                fontSize: '12px',
+                                color: theme.textSecondary
+                              }}>
+                                {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                                  let paginaNum: number
+                                  if (totalPaginas <= 5) {
+                                    paginaNum = i + 1
+                                  } else if (paginaServicoCategoria <= 3) {
+                                    paginaNum = i + 1
+                                  } else if (paginaServicoCategoria >= totalPaginas - 2) {
+                                    paginaNum = totalPaginas - 4 + i
+                                  } else {
+                                    paginaNum = paginaServicoCategoria - 2 + i
+                                  }
+                                  
+                                  return (
+                                    <button
+                                      key={paginaNum}
+                                      onClick={() => setPaginaServicoCategoria(paginaNum)}
+                                      style={{
+                                        padding: '6px 10px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        border: `1px solid ${paginaServicoCategoria === paginaNum ? headerColor : theme.border}`,
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        backgroundColor: paginaServicoCategoria === paginaNum ? headerColor : theme.background,
+                                        color: paginaServicoCategoria === paginaNum ? '#fff' : theme.text,
+                                        transition: 'all 0.2s ease',
+                                        minWidth: '32px'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (paginaServicoCategoria !== paginaNum) {
+                                          e.currentTarget.style.backgroundColor = `${headerColor}20`
+                                          e.currentTarget.style.borderColor = headerColor
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (paginaServicoCategoria !== paginaNum) {
+                                          e.currentTarget.style.backgroundColor = theme.background
+                                          e.currentTarget.style.borderColor = theme.border
+                                        }
+                                      }}
+                                    >
+                                      {paginaNum}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                              
+                              <button
+                                onClick={() => setPaginaServicoCategoria(prev => Math.min(totalPaginas, prev + 1))}
+                                disabled={paginaServicoCategoria === totalPaginas}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  border: `1px solid ${theme.border}`,
+                                  borderRadius: '6px',
+                                  cursor: paginaServicoCategoria === totalPaginas ? 'not-allowed' : 'pointer',
+                                  backgroundColor: paginaServicoCategoria === totalPaginas ? theme.border : theme.background,
+                                  color: paginaServicoCategoria === totalPaginas ? theme.textSecondary : theme.text,
+                                  opacity: paginaServicoCategoria === totalPaginas ? 0.5 : 1,
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (paginaServicoCategoria < totalPaginas) {
+                                    e.currentTarget.style.backgroundColor = headerColor
+                                    e.currentTarget.style.color = '#fff'
+                                    e.currentTarget.style.borderColor = headerColor
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (paginaServicoCategoria < totalPaginas) {
+                                    e.currentTarget.style.backgroundColor = theme.background
+                                    e.currentTarget.style.color = theme.text
+                                    e.currentTarget.style.borderColor = theme.border
+                                  }
+                                }}
+                              >
+                                Próxima →
+                              </button>
+                              
+                              <div style={{ 
+                                fontSize: '11px', 
+                                color: theme.textSecondary,
+                                marginLeft: '8px'
+                              }}>
+                                Página {paginaServicoCategoria} de {totalPaginas}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Ranking e Performance em 2 Colunas */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                  {/* Ranking de Serviços */}
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '12px'
+                  }}>
+                    <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '700', color: theme.text }}>
+                      🏆 Ranking de Serviços
+                    </h4>
+                    {Object.entries(estatisticas.porServico)
+                      .filter(([servicoId]) => {
+                        const servico = senhaService.getServicos().find(s => s.id === servicoId)
+                        // Filtrar categorias P e C (não são serviços reais)
+                        return servico && servico.nome !== 'Atendimento Preferencial' && servico.nome !== 'Atendimento Comum'
+                      })
+                      .sort(([, a], [, b]) => b.emitidas - a.emitidas)
+                      .slice(0, 5)
+                      .map(([servicoId, stats], index) => {
+                        const servico = senhaService.getServicos().find(s => s.id === servicoId)
+                        if (!servico) return null
+                        
+                        return (
+                          <div
+                            key={servicoId}
+                            style={{
+                              padding: '12px',
+                              backgroundColor: theme.background,
+                              borderLeft: `4px solid ${servico.cor}`,
+                              borderRadius: '6px',
+                              marginBottom: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px'
+                            }}
+                          >
+                            <div style={{ 
+                              fontSize: '24px', 
+                              fontWeight: '700',
+                              color: index === 0 ? '#f59e0b' : index === 1 ? '#9ca3af' : index === 2 ? '#d97706' : theme.textSecondary,
+                              minWidth: '30px'
+                            }}>
+                              {index + 1}º
+                            </div>
+                            <div style={{
+                              width: '28px',
+                              height: '28px',
+                              backgroundColor: servico.cor,
+                              color: '#fff',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '12px',
+                              fontWeight: '700'
+                            }}>
+                              {servico.sigla}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: theme.text }}>
+                                {servico.nome}
+                              </div>
+                              <div style={{ fontSize: '11px', color: theme.textSecondary }}>
+                                {stats.emitidas} senhas ({stats.atendidas} atendidas)
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '20px', fontWeight: '700', color: servico.cor }}>
+                              {stats.emitidas}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    {Object.entries(estatisticas.porServico)
+                      .filter(([servicoId]) => {
+                        const servico = senhaService.getServicos().find(s => s.id === servicoId)
+                        return servico && servico.nome !== 'Atendimento Preferencial' && servico.nome !== 'Atendimento Comum'
+                      }).length === 0 && (
+                      <div style={{ padding: '30px', textAlign: 'center', color: theme.textSecondary }}>
+                        <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>
+                          🏆
+                        </div>
+                        <div style={{ fontSize: '13px' }}>
+                          Nenhum serviço específico ainda
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Performance dos Guichês */}
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '12px'
+                  }}>
+                    <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '700', color: theme.text }}>
+                      🏢 Performance dos Guichês
+                    </h4>
+                    {guiches.filter(g => g.ativo).slice(0, 5).map((guiche) => {
+                      const senhasDoGuiche = senhas.filter(s => s.guicheId === guiche.id)
+                      const atendidas = senhasDoGuiche.filter(s => s.status === 'finalizado').length
+                      const total = senhasDoGuiche.filter(s => s.status === 'finalizado' || s.status === 'atendendo' || s.status === 'chamando').length
+                      
+                      return (
+                        <div
+                          key={guiche.id}
+                          style={{
+                            padding: '12px',
+                            backgroundColor: theme.background,
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            marginBottom: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px'
+                          }}
+                        >
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            backgroundColor: headerColor,
+                            color: '#fff',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '18px',
+                            fontWeight: '700'
+                          }}>
+                            {guiche.numero}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: theme.text }}>
+                              {guiche.nome}
+                            </div>
+                            <div style={{ fontSize: '11px', color: theme.textSecondary }}>
+                              {guiche.funcionarioNome || 'Sem funcionário'}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
+                              {atendidas}
+                            </div>
+                            <div style={{ fontSize: '10px', color: theme.textSecondary }}>
+                              de {total}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {guiches.filter(g => g.ativo).length === 0 && (
+                      <div style={{ padding: '20px', textAlign: 'center', color: theme.textSecondary, fontSize: '13px' }}>
+                        Nenhum guichê ativo
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Informações Adicionais */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '8px' }}>
+                      ⏱️ Tempo Máx. Espera
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#ef4444' }}>
+                      {senhas.length > 0 ? formatarTempo(Math.max(...senhas.map(s => {
+                        if (!s.tempoEspera && s.status === 'aguardando') {
+                          return Math.floor((new Date().getTime() - new Date(s.horaEmissao).getTime()) / 1000 / 60)
+                        }
+                        return s.tempoEspera || 0
+                      }))) : '0 min'}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '8px' }}>
+                      📊 Taxa de Ausência
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#ef4444' }}>
+                      {estatisticas.totalEmitidas > 0 ? Math.round(((estatisticas.totalAusentes || 0) / estatisticas.totalEmitidas) * 100) : 0}%
+                    </div>
+                  </div>
+
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '8px' }}>
+                      🏢 Guichês Ativos
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: headerColor }}>
+                      {guiches.filter(g => g.ativo).length}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '8px' }}>
+                      🎯 Serviços Ativos
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: headerColor }}>
+                      {senhaService.getServicos().filter(s => s.ativo).length}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Botões de Exportação */}
@@ -857,29 +1759,36 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   display: 'flex', 
                   gap: '12px', 
                   justifyContent: 'center',
-                  marginTop: '24px'
+                  marginTop: '24px',
+                  flexWrap: 'wrap'
                 }}>
                   <button
                     onClick={exportarPDF}
                     style={{
-                      padding: '12px 32px',
-                      fontSize: '15px',
+                      padding: '14px 28px',
+                      fontSize: '14px',
                       fontWeight: '600',
-                      border: 'none',
-                      borderRadius: '8px',
+                      border: `2px solid #8b5cf6`,
+                      borderRadius: '10px',
                       cursor: 'pointer',
-                      backgroundColor: '#8b5cf6',
-                      color: '#fff',
-                      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
-                      transition: 'all 0.2s ease'
+                      backgroundColor: theme.background,
+                      color: '#8b5cf6',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#7c3aed'
+                      e.currentTarget.style.backgroundColor = '#8b5cf6'
+                      e.currentTarget.style.color = '#fff'
                       e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#8b5cf6'
+                      e.currentTarget.style.backgroundColor = theme.background
+                      e.currentTarget.style.color = '#8b5cf6'
                       e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
                     }}
                     title="Gerar relatório em PDF (impressão)"
                   >
@@ -888,24 +1797,30 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   <button
                     onClick={exportarExcel}
                     style={{
-                      padding: '12px 32px',
-                      fontSize: '15px',
+                      padding: '14px 28px',
+                      fontSize: '14px',
                       fontWeight: '600',
-                      border: 'none',
-                      borderRadius: '8px',
+                      border: `2px solid #10b981`,
+                      borderRadius: '10px',
                       cursor: 'pointer',
-                      backgroundColor: '#10b981',
-                      color: '#fff',
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                      transition: 'all 0.2s ease'
+                      backgroundColor: theme.background,
+                      color: '#10b981',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#059669'
+                      e.currentTarget.style.backgroundColor = '#10b981'
+                      e.currentTarget.style.color = '#fff'
                       e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#10b981'
+                      e.currentTarget.style.backgroundColor = theme.background
+                      e.currentTarget.style.color = '#10b981'
                       e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
                     }}
                     title="Exportar dados para Excel (CSV)"
                   >
@@ -1018,7 +1933,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                     
                     const senhasDoGuiche = senhas.filter(s => s.guicheId === guiche.id)
                     const senhasAtendidas = senhasDoGuiche.filter(s => s.status === 'finalizado')
-                    const senhasChamadas = senhasDoGuiche.filter(s => s.status === 'finalizado' || s.status === 'atendendo' || s.status === 'chamando')
+                    const senhasAusentes = senhasDoGuiche.filter(s => s.status === 'ausente')
+                    const senhasChamadas = senhasDoGuiche.filter(s => s.status === 'finalizado' || s.status === 'atendendo' || s.status === 'chamando' || s.status === 'ausente')
 
                     const estaAtendendo = senhaAtual !== undefined
                     const mostrarDetalhes = guicheSelecionado === guiche.id
@@ -1111,7 +2027,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                             )}
                           </div>
 
-                          <div style={{ display: 'flex', gap: '12px', minWidth: '280px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: '12px', minWidth: '350px', flexWrap: 'wrap' }}>
                             <div style={{ textAlign: 'center', minWidth: '70px' }}>
                               <div style={{ fontSize: '22px', fontWeight: '700', color: '#3b82f6' }}>
                                 {senhasChamadas.length}
@@ -1126,6 +2042,14 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                               </div>
                               <div style={{ fontSize: '10px', color: theme.textSecondary }}>
                                 Atendidas
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'center', minWidth: '70px' }}>
+                              <div style={{ fontSize: '22px', fontWeight: '700', color: '#ef4444' }}>
+                                {senhasAusentes.length}
+                              </div>
+                              <div style={{ fontSize: '10px', color: theme.textSecondary }}>
+                                Ausentes
                               </div>
                             </div>
                             <div style={{ textAlign: 'center', minWidth: '70px' }}>
@@ -1214,7 +2138,16 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                             marginTop: '16px'
                           }}>
                             <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: theme.text }}>
-                              📊 Senhas Chamadas ({senhasFiltradas.length})
+                              📊 Senhas Chamadas ({senhasFiltradas.filter(s => {
+                                if (filtroCategoriaDetalhes === 'preferencial') return s.prioridade
+                                if (filtroCategoriaDetalhes === 'comum') return !s.prioridade
+                                return true
+                              }).length})
+                              {filtroCategoriaDetalhes !== 'todas' && (
+                                <span style={{ fontSize: '12px', fontWeight: '500', marginLeft: '6px', color: theme.textSecondary }}>
+                                  - {filtroCategoriaDetalhes === 'preferencial' ? '⭐ Preferenciais' : '📋 Comuns'}
+                                </span>
+                              )}
                             </h4>
 
                             {/* Totais e Estatísticas */}
@@ -1280,15 +2213,83 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                               {/* Por Serviço e Categoria */}
                               {Object.keys(porServico).length > 0 && (
                                 <div>
-                                  <h5 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '700', color: theme.text }}>
-                                    📋 Por Serviço e Categoria:
-                                  </h5>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                    <h5 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: theme.text }}>
+                                      📋 Por Serviço e Categoria:
+                                    </h5>
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                      <button
+                                        onClick={() => setFiltroCategoriaDetalhes('todas')}
+                                        style={{
+                                          padding: '6px 12px',
+                                          fontSize: '11px',
+                                          fontWeight: '600',
+                                          border: `2px solid ${filtroCategoriaDetalhes === 'todas' ? headerColor : theme.border}`,
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          backgroundColor: filtroCategoriaDetalhes === 'todas' ? headerColor : theme.background,
+                                          color: filtroCategoriaDetalhes === 'todas' ? '#fff' : theme.text,
+                                          transition: 'all 0.2s ease',
+                                          height: '28px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}
+                                      >
+                                        Todas
+                                      </button>
+                                      <button
+                                        onClick={() => setFiltroCategoriaDetalhes('preferencial')}
+                                        style={{
+                                          padding: '6px 12px',
+                                          fontSize: '11px',
+                                          fontWeight: '600',
+                                          border: `2px solid ${filtroCategoriaDetalhes === 'preferencial' ? '#3b82f6' : theme.border}`,
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          backgroundColor: filtroCategoriaDetalhes === 'preferencial' ? '#3b82f6' : theme.background,
+                                          color: filtroCategoriaDetalhes === 'preferencial' ? '#fff' : theme.text,
+                                          transition: 'all 0.2s ease',
+                                          height: '28px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}
+                                      >
+                                        ⭐ P
+                                      </button>
+                                      <button
+                                        onClick={() => setFiltroCategoriaDetalhes('comum')}
+                                        style={{
+                                          padding: '6px 12px',
+                                          fontSize: '11px',
+                                          fontWeight: '600',
+                                          border: `2px solid ${filtroCategoriaDetalhes === 'comum' ? '#10b981' : theme.border}`,
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          backgroundColor: filtroCategoriaDetalhes === 'comum' ? '#10b981' : theme.background,
+                                          color: filtroCategoriaDetalhes === 'comum' ? '#fff' : theme.text,
+                                          transition: 'all 0.2s ease',
+                                          height: '28px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}
+                                      >
+                                        📋 C
+                                      </button>
+                                    </div>
+                                  </div>
                                   {Object.entries(porServico).map(([servico, senhasDoServico]) => {
                                     const servicoObj = senhaService.getServicos().find(s => s.nome === servico)
                                     const preferenciais = senhasDoServico.filter(s => s.prioridade)
                                     const comuns = senhasDoServico.filter(s => !s.prioridade)
                                     const preferenciaisFinalizadas = preferenciais.filter(s => s.status === 'finalizado')
                                     const comunsFinalizadas = comuns.filter(s => s.status === 'finalizado')
+                                    
+                                    // Aplicar filtro de categoria
+                                    if (filtroCategoriaDetalhes === 'preferencial' && preferenciais.length === 0) return null
+                                    if (filtroCategoriaDetalhes === 'comum' && comuns.length === 0) return null
                                     
                                     return (
                                       <div
@@ -1301,7 +2302,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                           marginBottom: '10px'
                                         }}
                                       >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                                           <div style={{ fontSize: '13px', fontWeight: '700', color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <span style={{
                                               width: '24px',
@@ -1319,17 +2320,86 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                             </span>
                                             {servico}
                                           </div>
-                                          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.text }}>
-                                            {senhasDoServico.length} total
+                                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            {preferenciais.length > 0 && (
+                                              <span style={{ 
+                                                padding: '3px 8px', 
+                                                backgroundColor: '#eff6ff', 
+                                                color: '#1e40af',
+                                                borderRadius: '4px',
+                                                fontSize: '11px',
+                                                fontWeight: '700'
+                                              }}>
+                                                ⭐ {preferenciais.length}P
+                                              </span>
+                                            )}
+                                            {comuns.length > 0 && (
+                                              <span style={{ 
+                                                padding: '3px 8px', 
+                                                backgroundColor: '#f0fdf4', 
+                                                color: '#065f46',
+                                                borderRadius: '4px',
+                                                fontSize: '11px',
+                                                fontWeight: '700'
+                                              }}>
+                                                📋 {comuns.length}C
+                                              </span>
+                                            )}
+                                            <span style={{ fontSize: '13px', fontWeight: '700', color: theme.text }}>
+                                              {senhasDoServico.length} total
+                                            </span>
                                           </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                          {preferenciais.length > 0 && (
+                                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'nowrap' }}>
+                                          {filtroCategoriaDetalhes === 'todas' ? (
+                                            <>
+                                              {preferenciais.length > 0 && (
+                                                <div style={{
+                                                  flex: 1,
+                                                  padding: '8px',
+                                                  backgroundColor: '#eff6ff',
+                                                  border: '2px solid #3b82f6',
+                                                  borderRadius: '6px',
+                                                  minWidth: '120px'
+                                                }}>
+                                                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', marginBottom: '4px' }}>
+                                                    ⭐ PREFERENCIAL
+                                                  </div>
+                                                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#3b82f6' }}>
+                                                    {preferenciais.length}
+                                                  </div>
+                                                  <div style={{ fontSize: '9px', color: theme.textSecondary }}>
+                                                    {preferenciaisFinalizadas.length} finalizadas
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {comuns.length > 0 && (
+                                                <div style={{
+                                                  flex: 1,
+                                                  padding: '8px',
+                                                  backgroundColor: '#f0fdf4',
+                                                  border: '2px solid #10b981',
+                                                  borderRadius: '6px',
+                                                  minWidth: '120px'
+                                                }}>
+                                                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#065f46', marginBottom: '4px' }}>
+                                                    📋 COMUM
+                                                  </div>
+                                                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
+                                                    {comuns.length}
+                                                  </div>
+                                                  <div style={{ fontSize: '9px', color: theme.textSecondary }}>
+                                                    {comunsFinalizadas.length} finalizadas
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </>
+                                          ) : filtroCategoriaDetalhes === 'preferencial' && preferenciais.length > 0 ? (
                                             <div style={{
                                               flex: 1,
                                               padding: '8px',
                                               backgroundColor: '#eff6ff',
-                                              border: '1px solid #3b82f6',
+                                              border: '2px solid #3b82f6',
                                               borderRadius: '6px'
                                             }}>
                                               <div style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', marginBottom: '4px' }}>
@@ -1342,13 +2412,12 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                                 {preferenciaisFinalizadas.length} finalizadas
                                               </div>
                                             </div>
-                                          )}
-                                          {comuns.length > 0 && (
+                                          ) : filtroCategoriaDetalhes === 'comum' && comuns.length > 0 ? (
                                             <div style={{
                                               flex: 1,
                                               padding: '8px',
                                               backgroundColor: '#f0fdf4',
-                                              border: '1px solid #10b981',
+                                              border: '2px solid #10b981',
                                               borderRadius: '6px'
                                             }}>
                                               <div style={{ fontSize: '11px', fontWeight: '600', color: '#065f46', marginBottom: '4px' }}>
@@ -1361,7 +2430,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                                 {comunsFinalizadas.length} finalizadas
                                               </div>
                                             </div>
-                                          )}
+                                          ) : null}
                                         </div>
                                       </div>
                                     )
@@ -1373,7 +2442,13 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                             {senhasFiltradas.length > 0 ? (
                               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  {senhasFiltradas.slice().reverse().slice(0, 10).map((senha) => (
+                                  {senhasFiltradas
+                                    .filter(s => {
+                                      if (filtroCategoriaDetalhes === 'preferencial') return s.prioridade
+                                      if (filtroCategoriaDetalhes === 'comum') return !s.prioridade
+                                      return true
+                                    })
+                                    .slice().reverse().slice(0, 10).map((senha) => (
                                     <div
                                       key={senha.id}
                                       style={{
@@ -1405,34 +2480,71 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                         <div style={{ fontSize: '10px', color: theme.textSecondary, marginTop: '2px' }}>
                                           {senha.status === 'finalizado' ? (
                                             <>
-                                              Duração: {calcularDuracaoAtendimento(senha)} • Chamou: {calcularTempoChamando(senha)}
+                                              Iniciou: {senha.horaAtendimento 
+                                                ? new Date(senha.horaAtendimento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                : senha.horaChamada 
+                                                  ? new Date(senha.horaChamada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                  : '-'
+                                              } • Finalizado: {senha.horaFinalizacao 
+                                                ? new Date(senha.horaFinalizacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                : '-'
+                                              }
+                                            </>
+                                          ) : senha.status === 'ausente' ? (
+                                            <>
+                                              ❌ Ausente • Iniciou: {senha.horaAtendimento 
+                                                ? new Date(senha.horaAtendimento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                : senha.horaChamada 
+                                                  ? new Date(senha.horaChamada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                  : '-'
+                                              }
                                             </>
                                           ) : (
                                             <>
-                                              Chamou: {calcularTempoChamando(senha)}
+                                              Iniciou: {senha.horaAtendimento 
+                                                ? new Date(senha.horaAtendimento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                : senha.horaChamada 
+                                                  ? new Date(senha.horaChamada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                  : '-'
+                                              }
                                             </>
                                           )}
                                         </div>
                                       </div>
-                                      <div style={{ fontSize: '11px', color: theme.textSecondary, textAlign: 'center' }}>
-                                        <div>{new Date(senha.horaChamada || senha.horaEmissao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+                                      <div style={{ fontSize: '11px', color: theme.textSecondary, textAlign: 'right', minWidth: '60px' }}>
+                                        <div style={{ fontWeight: '600', color: theme.text }}>
+                                          {new Date(senha.horaChamada || senha.horaEmissao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                        </div>
                                       </div>
                                       <span style={{
                                         padding: '3px 8px',
                                         borderRadius: '8px',
                                         fontSize: '10px',
                                         fontWeight: '600',
-                                        backgroundColor: senha.status === 'finalizado' ? '#d1fae5' : '#fef3c7',
-                                        color: senha.status === 'finalizado' ? '#065f46' : '#92400e'
+                                        backgroundColor: senha.status === 'finalizado' ? '#d1fae5' : senha.status === 'ausente' ? '#fee2e2' : '#fef3c7',
+                                        color: senha.status === 'finalizado' ? '#065f46' : senha.status === 'ausente' ? '#991b1b' : '#92400e'
                                       }}>
-                                        {senha.status === 'finalizado' ? '✅' : '💼'}
+                                        {senha.status === 'finalizado' ? '✅' : senha.status === 'ausente' ? '❌' : '💼'}
                                       </span>
                                     </div>
                                   ))}
                                 </div>
-                                {senhasFiltradas.length > 10 && (
+                                {senhasFiltradas.filter(s => {
+                                  if (filtroCategoriaDetalhes === 'preferencial') return s.prioridade
+                                  if (filtroCategoriaDetalhes === 'comum') return !s.prioridade
+                                  return true
+                                }).length > 10 && (
                                   <div style={{ textAlign: 'center', padding: '8px', fontSize: '11px', color: theme.textSecondary }}>
-                                    Mostrando últimas 10 de {senhasFiltradas.length} senhas
+                                    Mostrando últimas 10 de {senhasFiltradas.filter(s => {
+                                      if (filtroCategoriaDetalhes === 'preferencial') return s.prioridade
+                                      if (filtroCategoriaDetalhes === 'comum') return !s.prioridade
+                                      return true
+                                    }).length} senhas
+                                    {filtroCategoriaDetalhes !== 'todas' && (
+                                      <span style={{ fontWeight: '600', marginLeft: '4px' }}>
+                                        ({filtroCategoriaDetalhes === 'preferencial' ? 'Preferenciais' : 'Comuns'})
+                                      </span>
+                                    )}
                                   </div>
                                 )}
                               </div>

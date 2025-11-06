@@ -12,11 +12,11 @@ interface TempoEsperaRealProps {
  * Componente que exibe tempo de espera atualizado em tempo real
  */
 export function TempoEsperaReal({ dataInicial, style, className, prefixo = '' }: TempoEsperaRealProps) {
-  const minutos = useTempoDecorrido(dataInicial)
+  const tempo = useTempoDecorrido(dataInicial)
   
   return (
     <span style={style} className={className}>
-      {prefixo}{formatarTempo(minutos)}
+      {prefixo}{formatarTempo(tempo)}
     </span>
   )
 }

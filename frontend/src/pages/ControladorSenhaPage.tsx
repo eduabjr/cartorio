@@ -672,8 +672,8 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
     }, 500)
   }
 
-  const calcularTempoMedio = (senhas: Senha[]): { minutos: number; segundos: number } => {
-    if (senhas.length === 0) return { minutos: 0, segundos: 0 }
+  const calcularTempoMedio = (senhas: Senha[]): { horas: number; minutos: number; segundos: number } => {
+    if (senhas.length === 0) return { horas: 0, minutos: 0, segundos: 0 }
     
     const totalSegundos = senhas.reduce((acc, s) => {
       const esperaMs = agora.getTime() - new Date(s.horaEmissao).getTime()
@@ -682,23 +682,38 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
     }, 0)
     
     const mediaSegundos = Math.floor(totalSegundos / senhas.length)
-    const minutos = Math.floor(mediaSegundos / 60)
+    const horas = Math.floor(mediaSegundos / 3600)
+    const minutos = Math.floor((mediaSegundos % 3600) / 60)
     const segundos = mediaSegundos % 60
     
-    return { minutos, segundos }
+    return { horas, minutos, segundos }
   }
   
-  const formatarTempo = (tempo: { minutos: number; segundos: number }): string => {
-    if (tempo.minutos === 0 && tempo.segundos === 0) return '0s'
-    if (tempo.minutos === 0) return `${tempo.segundos}s`
-    if (tempo.segundos === 0) return `${tempo.minutos}min`
-    return `${tempo.minutos}min ${tempo.segundos}s`
+  const formatarTempo = (tempo: { horas: number; minutos: number; segundos: number }): string => {
+    // Se tudo é zero
+    if (tempo.horas === 0 && tempo.minutos === 0 && tempo.segundos === 0) return '0s'
+    
+    // Se tem horas
+    if (tempo.horas > 0) {
+      if (tempo.minutos === 0 && tempo.segundos === 0) return `${tempo.horas}h`
+      if (tempo.segundos === 0) return `${tempo.horas}h ${tempo.minutos}min`
+      return `${tempo.horas}h ${tempo.minutos}min ${tempo.segundos}s`
+    }
+    
+    // Se tem apenas minutos e segundos
+    if (tempo.minutos > 0) {
+      if (tempo.segundos === 0) return `${tempo.minutos}min`
+      return `${tempo.minutos}min ${tempo.segundos}s`
+    }
+    
+    // Apenas segundos
+    return `${tempo.segundos}s`
   }
   
-  const calcularPorcentagemBarra = (tempo: { minutos: number; segundos: number }): number => {
-    const totalSegundos = tempo.minutos * 60 + tempo.segundos
-    // Máximo de 15 minutos (900 segundos) = 100%
-    const porcentagem = Math.min((totalSegundos / 900) * 100, 100)
+  const calcularPorcentagemBarra = (tempo: { horas: number; minutos: number; segundos: number }): number => {
+    const totalSegundos = tempo.horas * 3600 + tempo.minutos * 60 + tempo.segundos
+    // Máximo de 2 horas (7200 segundos) = 100%
+    const porcentagem = Math.min((totalSegundos / 7200) * 100, 100)
     return porcentagem
   }
 
@@ -820,9 +835,8 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               onClick={marcarComoAusente}
               disabled={!senhaAtual}
               style={{
-                flex: 1,
-                padding: '14px',
-                fontSize: '15px',
+                padding: '10px 16px',
+                fontSize: '13px',
                 fontWeight: 'bold',
                 background: senhaAtual ? '#ef4444' : '#9ca3af',
                 color: '#fff',
@@ -834,7 +848,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               }}
               title="Cliente não compareceu"
             >
-              ❌ Cliente Ausente
+              ❌ Ausência
             </button>
           </div>
 

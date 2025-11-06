@@ -3,13 +3,14 @@ import { useState, useEffect } from 'react'
 /**
  * Hook para calcular tempo decorrido em tempo real
  * Atualiza automaticamente a cada segundo
+ * Retorna: { horas, minutos, segundos }
  */
-export function useTempoDecorrido(dataInicial: Date | string | undefined): number {
-  const [minutos, setMinutos] = useState(0)
+export function useTempoDecorrido(dataInicial: Date | string | undefined): { horas: number; minutos: number; segundos: number } {
+  const [tempo, setTempo] = useState({ horas: 0, minutos: 0, segundos: 0 })
 
   useEffect(() => {
     if (!dataInicial) {
-      setMinutos(0)
+      setTempo({ horas: 0, minutos: 0, segundos: 0 })
       return
     }
 
@@ -17,8 +18,13 @@ export function useTempoDecorrido(dataInicial: Date | string | undefined): numbe
       const agora = new Date()
       const inicio = new Date(dataInicial)
       const diffMs = agora.getTime() - inicio.getTime()
-      const diffMin = Math.floor(diffMs / 1000 / 60)
-      setMinutos(diffMin)
+      const diffSegundos = Math.floor(diffMs / 1000)
+      
+      const horas = Math.floor(diffSegundos / 3600)
+      const minutos = Math.floor((diffSegundos % 3600) / 60)
+      const segundos = diffSegundos % 60
+      
+      setTempo({ horas, minutos, segundos })
     }
 
     // Calcular imediatamente
@@ -30,7 +36,7 @@ export function useTempoDecorrido(dataInicial: Date | string | undefined): numbe
     return () => clearInterval(intervalo)
   }, [dataInicial])
 
-  return minutos
+  return tempo
 }
 
 /**
@@ -52,15 +58,41 @@ export function useTempoReal() {
 }
 
 /**
- * Formata minutos em formato legível
+ * Formata tempo em formato legível
+ * Aceita número (minutos) ou objeto { horas, minutos, segundos }
  */
-export function formatarTempo(minutos: number): string {
-  if (minutos < 1) return '< 1 min'
-  if (minutos < 60) return `${Math.floor(minutos)} min`
+export function formatarTempo(tempo: number | { horas: number; minutos: number; segundos: number }): string {
+  // Se for número (compatibilidade com código antigo)
+  if (typeof tempo === 'number') {
+    if (tempo < 1) return '< 1 min'
+    if (tempo < 60) return `${Math.floor(tempo)} min`
+    
+    const horas = Math.floor(tempo / 60)
+    const mins = Math.floor(tempo % 60)
+    
+    return `${horas}h${mins > 0 ? ` ${mins}min` : ''}`
+  }
   
-  const horas = Math.floor(minutos / 60)
-  const mins = Math.floor(minutos % 60)
+  // Se for objeto com horas, minutos e segundos
+  const { horas, minutos, segundos } = tempo
   
-  return `${horas}h${mins > 0 ? ` ${mins}min` : ''}`
+  // Se tudo é zero
+  if (horas === 0 && minutos === 0 && segundos === 0) return '0s'
+  
+  // Se tem horas
+  if (horas > 0) {
+    if (minutos === 0 && segundos === 0) return `${horas}h`
+    if (segundos === 0) return `${horas}h ${minutos}min`
+    return `${horas}h ${minutos}min ${segundos}s`
+  }
+  
+  // Se tem apenas minutos e segundos
+  if (minutos > 0) {
+    if (segundos === 0) return `${minutos}min`
+    return `${minutos}min ${segundos}s`
+  }
+  
+  // Apenas segundos
+  return `${segundos}s`
 }
 
