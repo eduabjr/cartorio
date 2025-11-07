@@ -213,6 +213,70 @@ export function GerenciamentoGuichesPage({ onClose }: GerenciamentoGuichesPagePr
     }))
   }
 
+  // Agrupa serviços por nome base (removendo Preferencial/Comum)
+  const agruparServicosPorBase = (servicos: ServicoSenha[]) => {
+    const grupos: { [nomeBase: string]: ServicoSenha[] } = {}
+    
+    servicos.forEach(servico => {
+      // Pular serviços gerais P e C
+      if (servico.nome === 'Atendimento Preferencial' || servico.nome === 'Atendimento Comum') {
+        return
+      }
+      
+      // Extrair nome base removendo " Preferencial" e " Comum"
+      let nomeBase = servico.nome
+        .replace(' Preferencial', '')
+        .replace(' Comum', '')
+      
+      if (!grupos[nomeBase]) {
+        grupos[nomeBase] = []
+      }
+      grupos[nomeBase].push(servico)
+    })
+    
+    return grupos
+  }
+
+  // Verifica se um grupo de serviços está selecionado (todos os serviços do grupo)
+  const isGrupoSelecionado = (guicheId: string, servicosGrupo: ServicoSenha[]) => {
+    const guiche = guiches.find(g => g.id === guicheId)
+    if (!guiche) return false
+    return servicosGrupo.every(s => guiche.servicosAtendidos.includes(s.id))
+  }
+
+  // Alterna seleção de todo um grupo de serviços
+  const toggleGrupoServico = (guicheId: string, servicosGrupo: ServicoSenha[]) => {
+    setGuiches(guiches.map(g => {
+      if (g.id === guicheId) {
+        const todosSelecionados = servicosGrupo.every(s => g.servicosAtendidos.includes(s.id))
+        
+        let servicosAtendidos: string[]
+        if (todosSelecionados) {
+          // Remover todos os serviços do grupo
+          servicosAtendidos = g.servicosAtendidos.filter(
+            id => !servicosGrupo.find(s => s.id === id)
+          )
+        } else {
+          // Adicionar todos os serviços do grupo
+          const idsParaAdicionar = servicosGrupo
+            .filter(s => !g.servicosAtendidos.includes(s.id))
+            .map(s => s.id)
+          servicosAtendidos = [...g.servicosAtendidos, ...idsParaAdicionar]
+        }
+        
+        return { ...g, servicosAtendidos }
+      }
+      return g
+    }))
+  }
+
+  // Conta quantos grupos de serviços estão selecionados para um guichê
+  const contarGruposSelecionados = (guicheId: string) => {
+    return Object.entries(agruparServicosPorBase(servicos))
+      .filter(([_, servicosGrupo]) => isGrupoSelecionado(guicheId, servicosGrupo))
+      .length
+  }
+
   const toggleExpandirSecao = (guicheId: string, secao: 'guiche' | 'funcionario' | 'servicos') => {
     setGuichesExpandidos(prev => ({
       ...prev,
@@ -489,40 +553,67 @@ export function GerenciamentoGuichesPage({ onClose }: GerenciamentoGuichesPagePr
               {/* Serviços */}
               <div style={{ marginTop: '20px' }}>
                 <label style={{ fontSize: '12px', color: theme.textSecondary, display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                  Serviços Atendidos
+                  Serviços no Painel de Senhas
                 </label>
                 <div style={{ 
                   display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: '8px'
+                  flexDirection: 'column',
+                  gap: '8px',
+                  maxHeight: '250px',
+                  overflowY: 'auto',
+                  padding: '8px',
+                  backgroundColor: theme.background,
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.border}`
                 }}>
-                  {servicos.map((servico) => {
-                    const selecionado = novoGuiche.servicosSelecionados.includes(servico.id)
+                  {/* Serviços Base - Sem categorias P/C */}
+                  {Object.entries(agruparServicosPorBase(servicos)).map(([nomeBase, servicosGrupo]) => {
+                    const todosSelecionados = servicosGrupo.every(s => novoGuiche.servicosSelecionados.includes(s.id))
+                    const cor = servicosGrupo[0]?.cor || theme.border
+                    
                     return (
-                      <button
-                        key={servico.id}
-                        onClick={() => {
-                          setNovoGuiche({
-                            ...novoGuiche,
-                            servicosSelecionados: selecionado
-                              ? novoGuiche.servicosSelecionados.filter(s => s !== servico.id)
-                              : [...novoGuiche.servicosSelecionados, servico.id]
-                          })
-                        }}
+                      <label
+                        key={nomeBase}
                         style={{
-                          padding: '10px 16px',
-                          backgroundColor: selecionado ? servico.cor : theme.background,
-                          color: selecionado ? '#fff' : servico.cor,
-                          border: `2px solid ${servico.cor}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 12px',
+                          backgroundColor: todosSelecionados ? cor + '20' : theme.surface,
+                          border: `2px solid ${todosSelecionados ? cor : theme.border}`,
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: 'bold',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s',
+                          fontSize: '13px',
+                          fontWeight: todosSelecionados ? '600' : '400'
                         }}
                       >
-                        {selecionado ? '✓' : ''} {servico.sigla} {servico.nome}
-                      </button>
+                        <input
+                          type="checkbox"
+                          checked={todosSelecionados}
+                          onChange={() => {
+                            let novosServicos: string[]
+                            if (todosSelecionados) {
+                              // Remover todos os serviços do grupo
+                              novosServicos = novoGuiche.servicosSelecionados.filter(
+                                id => !servicosGrupo.find(s => s.id === id)
+                              )
+                            } else {
+                              // Adicionar todos os serviços do grupo
+                              const idsParaAdicionar = servicosGrupo
+                                .filter(s => !novoGuiche.servicosSelecionados.includes(s.id))
+                                .map(s => s.id)
+                              novosServicos = [...novoGuiche.servicosSelecionados, ...idsParaAdicionar]
+                            }
+                            setNovoGuiche({
+                              ...novoGuiche,
+                              servicosSelecionados: novosServicos
+                            })
+                          }}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <span style={{ color: theme.text }}>{nomeBase}</span>
+                      </label>
                     )
                   })}
                 </div>
@@ -669,7 +760,7 @@ export function GerenciamentoGuichesPage({ onClose }: GerenciamentoGuichesPagePr
                           {guiche.nome}
                         </div>
                         <div style={{ fontSize: '12px', color: theme.textSecondary }}>
-                          {guiche.funcionarioNome || 'Sem funcionário'} • {guiche.servicosAtendidos.length} serviço(s)
+                          {guiche.funcionarioNome || 'Sem funcionário'} • {contarGruposSelecionados(guiche.id)} serviço(s)
                         </div>
                       </div>
                     </div>
@@ -978,7 +1069,11 @@ export function GerenciamentoGuichesPage({ onClose }: GerenciamentoGuichesPagePr
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontSize: '16px' }}>⚙️</span>
                             <span style={{ fontSize: '13px', fontWeight: 'bold', color: theme.text }}>
-                              Serviços ({guiche.servicosAtendidos.length}/{servicos.length})
+                              Serviços no Painel de Senhas ({
+                                Object.entries(agruparServicosPorBase(servicos))
+                                  .filter(([_, servicosGrupo]) => isGrupoSelecionado(guiche.id, servicosGrupo))
+                                  .length
+                              }/{Object.keys(agruparServicosPorBase(servicos)).length})
                             </span>
                           </div>
                           <span style={{ fontSize: '16px', color: theme.textSecondary }}>
@@ -989,40 +1084,47 @@ export function GerenciamentoGuichesPage({ onClose }: GerenciamentoGuichesPagePr
                         {guichesExpandidos[guiche.id]?.servicos && (
                           <div style={{ 
                             display: 'flex', 
-                            flexWrap: 'wrap', 
+                            flexDirection: 'column',
                             gap: '8px',
                             padding: '10px',
                             backgroundColor: theme.background,
                             borderRadius: '6px',
-                            border: `1px solid ${theme.border}`
+                            border: `1px solid ${theme.border}`,
+                            maxHeight: '250px',
+                            overflowY: 'auto'
                           }}>
-                            {servicos.map(servico => (
-                            <label
-                              key={servico.id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 12px',
-                                backgroundColor: guiche.servicosAtendidos.includes(servico.id) ? servico.cor + '20' : theme.surface,
-                                border: `2px solid ${guiche.servicosAtendidos.includes(servico.id) ? servico.cor : theme.border}`,
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                fontSize: '13px',
-                                fontWeight: guiche.servicosAtendidos.includes(servico.id) ? '600' : '400'
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={guiche.servicosAtendidos.includes(servico.id)}
-                                onChange={() => toggleServico(guiche.id, servico.id)}
-                                style={{ width: '16px', height: '16px' }}
-                              />
-                              <span style={{ color: servico.cor, fontWeight: '700' }}>{servico.sigla}</span>
-                              <span style={{ color: theme.text }}>{servico.nome}</span>
-                            </label>
-                            ))}
+                            {/* Serviços Base - Sem categorias P/C */}
+                            {Object.entries(agruparServicosPorBase(servicos)).map(([nomeBase, servicosGrupo]) => {
+                              const selecionado = isGrupoSelecionado(guiche.id, servicosGrupo)
+                              const cor = servicosGrupo[0]?.cor || theme.border
+                              
+                              return (
+                                <label
+                                  key={nomeBase}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 12px',
+                                    backgroundColor: selecionado ? cor + '20' : theme.surface,
+                                    border: `2px solid ${selecionado ? cor : theme.border}`,
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    fontSize: '13px',
+                                    fontWeight: selecionado ? '600' : '400'
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selecionado}
+                                    onChange={() => toggleGrupoServico(guiche.id, servicosGrupo)}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                  />
+                                  <span style={{ color: theme.text }}>{nomeBase}</span>
+                                </label>
+                              )
+                            })}
                           </div>
                         )}
                       </div>

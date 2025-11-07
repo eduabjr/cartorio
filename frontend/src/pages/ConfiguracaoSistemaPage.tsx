@@ -27,6 +27,22 @@ interface BloqueioHorario {
   mensagemBloqueio: string
 }
 
+interface DadosEmpresa {
+  nome: string
+  cnpj: string
+  endereco: string
+  numero: string
+  complemento: string
+  bairro: string
+  cidade: string
+  uf: string
+  cep: string
+  telefone: string
+  celular: string
+  email: string
+  site: string
+}
+
 export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
@@ -87,8 +103,32 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
       mensagemBloqueio: 'Sistema bloqueado fora do horário de funcionamento.'
     }
   })
+
+  // Estados para Dados da Empresa
+  const [dadosEmpresa, setDadosEmpresa] = useState<DadosEmpresa>(() => {
+    const saved = localStorage.getItem('dados-empresa')
+    if (saved) {
+      return JSON.parse(saved)
+    }
+    return {
+      nome: '',
+      cnpj: '',
+      endereco: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
+      cep: '',
+      telefone: '',
+      celular: '',
+      email: '',
+      site: ''
+    }
+  })
   
   const [horarioAtual, setHorarioAtual] = useState(new Date())
+  const [buscandoCep, setBuscandoCep] = useState(false)
   
   // Atualizar horário a cada minuto
   useEffect(() => {
@@ -156,14 +196,51 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
     return agora >= inicioComExtra && agora <= fimComExtra
   }
   
+  const buscarEnderecoPorCep = async (cep: string) => {
+    const cepLimpo = cep.replace(/\D/g, '')
+    
+    if (cepLimpo.length !== 8) return
+    
+    setBuscandoCep(true)
+    
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+      const data = await response.json()
+      
+      if (!data.erro) {
+        setDadosEmpresa({
+          ...dadosEmpresa,
+          cep: cep,
+          endereco: data.logradouro || '',
+          bairro: data.bairro || '',
+          cidade: data.localidade || '',
+          uf: data.uf || ''
+        })
+        
+        modal.showSuccess('CEP encontrado! Dados preenchidos automaticamente.')
+      } else {
+        modal.showError('CEP não encontrado.')
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error)
+      modal.showError('Erro ao buscar CEP. Verifique sua conexão.')
+    } finally {
+      setBuscandoCep(false)
+    }
+  }
+
   const salvarConfigGerais = async () => {
     console.log('🔵 BOTÃO SALVAR CLICADO!')
     console.log('📊 Estado atual:', configGerais)
     
     try {
-      // Salvar no localStorage
+      // Salvar configurações gerais
       localStorage.setItem('config-gerais-sistema', JSON.stringify(configGerais))
       console.log('✅ Salvo em config-gerais-sistema')
+      
+      // Salvar dados da empresa
+      localStorage.setItem('dados-empresa', JSON.stringify(dadosEmpresa))
+      console.log('✅ Dados da empresa salvos')
       
       // Sincronizar com configurações de acessibilidade (auto-logout)
       const accessibilitySettings = localStorage.getItem('accessibility-settings')
@@ -973,6 +1050,449 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção: Dados da Empresa */}
+                <div style={{
+                  padding: '28px',
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: theme.surface,
+                  overflow: 'hidden'
+                }}>
+                  <h3 style={{
+                    margin: '0 0 20px 0',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: theme.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    🏢 Dados da Empresa
+                  </h3>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                    {/* CNPJ e Nome da Empresa */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: '32px' }}>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          CNPJ
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.cnpj}
+                          onChange={(e) => {
+                            let valor = e.target.value.replace(/\D/g, '')
+                            if (valor.length <= 14) {
+                              // Formatar: 00.000.000/0000-00
+                              if (valor.length > 12) {
+                                valor = valor.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+                              } else if (valor.length > 8) {
+                                valor = valor.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4')
+                              } else if (valor.length > 5) {
+                                valor = valor.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3')
+                              } else if (valor.length > 2) {
+                                valor = valor.replace(/^(\d{2})(\d{0,3})/, '$1.$2')
+                              }
+                              setDadosEmpresa({ ...dadosEmpresa, cnpj: valor })
+                            }
+                          }}
+                          placeholder="00.000.000/0000-00"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          Nome da Empresa
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.nome}
+                          onChange={(e) => setDadosEmpresa({ ...dadosEmpresa, nome: e.target.value })}
+                          placeholder="Digite o nome da empresa"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* CEP, Endereço e Número */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '150px 2fr 120px', gap: '32px' }}>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          CEP
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.cep}
+                          onChange={(e) => {
+                            let valor = e.target.value.replace(/\D/g, '')
+                            if (valor.length <= 8) {
+                              // Formatar: 00000-000
+                              if (valor.length > 5) {
+                                valor = valor.replace(/^(\d{5})(\d{0,3})/, '$1-$2')
+                              }
+                              setDadosEmpresa({ ...dadosEmpresa, cep: valor })
+                              
+                              // Buscar endereço automaticamente quando tiver 8 dígitos
+                              if (valor.replace(/\D/g, '').length === 8) {
+                                buscarEnderecoPorCep(valor)
+                              }
+                            }
+                          }}
+                          placeholder="00000-000"
+                          disabled={buscandoCep}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${buscandoCep ? headerColor : theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: buscandoCep ? theme.surface : theme.background,
+                            color: theme.text,
+                            cursor: buscandoCep ? 'wait' : 'text'
+                          }}
+                        />
+                        {buscandoCep && (
+                          <div style={{ fontSize: '10px', color: headerColor, marginTop: '4px', textAlign: 'center' }}>
+                            Buscando...
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          Endereço
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.endereco}
+                          onChange={(e) => setDadosEmpresa({ ...dadosEmpresa, endereco: e.target.value })}
+                          placeholder="Rua, Avenida, etc."
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          Número
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.numero}
+                          onChange={(e) => setDadosEmpresa({ ...dadosEmpresa, numero: e.target.value })}
+                          placeholder="Nº"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Complemento, Bairro, Cidade e UF */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 100px', gap: '32px' }}>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          Complemento
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.complemento}
+                          onChange={(e) => setDadosEmpresa({ ...dadosEmpresa, complemento: e.target.value })}
+                          placeholder="Apto, Sala, etc."
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          Bairro
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.bairro}
+                          onChange={(e) => setDadosEmpresa({ ...dadosEmpresa, bairro: e.target.value })}
+                          placeholder="Bairro"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          Cidade
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.cidade}
+                          onChange={(e) => setDadosEmpresa({ ...dadosEmpresa, cidade: e.target.value })}
+                          placeholder="Cidade"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          UF
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.uf}
+                          onChange={(e) => {
+                            const valor = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2)
+                            setDadosEmpresa({ ...dadosEmpresa, uf: valor })
+                          }}
+                          placeholder="UF"
+                          maxLength={2}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            textAlign: 'center',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text,
+                            textTransform: 'uppercase'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Telefone, Celular, Email */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '32px' }}>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          Telefone
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.telefone}
+                          onChange={(e) => {
+                            let valor = e.target.value.replace(/\D/g, '')
+                            if (valor.length <= 10) {
+                              // Formatar: (00) 0000-0000
+                              if (valor.length > 6) {
+                                valor = valor.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+                              } else if (valor.length > 2) {
+                                valor = valor.replace(/^(\d{2})(\d{0,4})/, '($1) $2')
+                              }
+                              setDadosEmpresa({ ...dadosEmpresa, telefone: valor })
+                            }
+                          }}
+                          placeholder="(00) 0000-0000"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          Celular
+                        </label>
+                        <input
+                          type="text"
+                          value={dadosEmpresa.celular}
+                          onChange={(e) => {
+                            let valor = e.target.value.replace(/\D/g, '')
+                            if (valor.length <= 11) {
+                              // Formatar: (00) 00000-0000
+                              if (valor.length > 7) {
+                                valor = valor.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3')
+                              } else if (valor.length > 2) {
+                                valor = valor.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
+                              }
+                              setDadosEmpresa({ ...dadosEmpresa, celular: valor })
+                            }
+                          }}
+                          placeholder="(00) 00000-0000"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: theme.textSecondary,
+                          marginBottom: '8px'
+                        }}>
+                          E-mail
+                        </label>
+                        <input
+                          type="email"
+                          value={dadosEmpresa.email}
+                          onChange={(e) => setDadosEmpresa({ ...dadosEmpresa, email: e.target.value })}
+                          placeholder="contato@empresa.com.br"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: theme.background,
+                            color: theme.text
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Site */}
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: theme.textSecondary,
+                        marginBottom: '6px'
+                      }}>
+                        Site (opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={dadosEmpresa.site}
+                        onChange={(e) => setDadosEmpresa({ ...dadosEmpresa, site: e.target.value })}
+                        placeholder="www.empresa.com.br"
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          fontSize: '14px',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '6px',
+                          backgroundColor: theme.background,
+                          color: theme.text
+                        }}
+                      />
                     </div>
                   </div>
                 </div>

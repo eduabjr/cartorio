@@ -33,6 +33,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
   const [filtroAtivo, setFiltroAtivo] = useState<'todas' | 'preferencial' | 'comum'>('todas')
   const [mostrarResumo, setMostrarResumo] = useState(false)
   const [mostrarDiagnostico, setMostrarDiagnostico] = useState(false)
+  const [mostrarPopupChamarSenha, setMostrarPopupChamarSenha] = useState(false)
   const [configuracao, setConfiguracao] = useState<ConfiguracaoSenha | null>(null)
 
   // Próxima senha da fila geral (para o botão telefone)
@@ -906,7 +907,15 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               </div>
               
               <button
-                onClick={chamarProximaSenha}
+                onClick={() => {
+                  if (senhaAtual) {
+                    // Se já tem senha, apenas re-chamar
+                    chamarProximaSenha()
+                  } else {
+                    // Se não tem senha, abrir popup de confirmação
+                    setMostrarPopupChamarSenha(true)
+                  }
+                }}
                 disabled={!proximaSenhaFila && !senhaAtual}
                 style={{
                   padding: '12px 18px',
@@ -1341,6 +1350,117 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
             🏢 Guichê {meuGuiche?.numero || '--'}
           </div>
         </div>
+        
+        {/* Popup Chamar Senha */}
+        {mostrarPopupChamarSenha && proximaSenhaFila && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }} onClick={() => setMostrarPopupChamarSenha(false)}>
+            <div style={{
+              backgroundColor: theme.surface,
+              borderRadius: '12px',
+              width: '400px',
+              overflow: 'hidden',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+            }} onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{
+                padding: '20px',
+                backgroundColor: headerColor,
+                color: '#fff',
+                textAlign: 'center',
+                fontSize: '18px',
+                fontWeight: 'bold'
+              }}>
+                📢 Chamar Senha
+              </div>
+
+              {/* Corpo */}
+              <div style={{ padding: '30px', textAlign: 'center' }}>
+                <div style={{ fontSize: '14px', color: theme.textSecondary, marginBottom: '16px' }}>
+                  Próxima senha da fila:
+                </div>
+                <div style={{
+                  fontSize: '48px',
+                  fontWeight: 'bold',
+                  color: proximaSenhaFila.prioridade ? '#3b82f6' : '#10b981',
+                  marginBottom: '16px',
+                  fontFamily: 'monospace'
+                }}>
+                  {senhaService.formatarSenha(proximaSenhaFila)}
+                </div>
+                <div style={{
+                  display: 'inline-block',
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  backgroundColor: proximaSenhaFila.prioridade ? '#dbeafe' : '#d1fae5',
+                  color: proximaSenhaFila.prioridade ? '#1e40af' : '#065f46',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  marginBottom: '20px'
+                }}>
+                  {proximaSenhaFila.prioridade ? '⭐ Preferencial' : '📋 Comum'}
+                </div>
+                <div style={{ fontSize: '13px', color: theme.textSecondary }}>
+                  Confirmar chamada desta senha?
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{
+                padding: '16px 20px',
+                borderTop: `2px solid ${theme.border}`,
+                display: 'flex',
+                gap: '10px'
+              }}>
+                <button
+                  onClick={() => setMostrarPopupChamarSenha(false)}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    backgroundColor: '#6b7280',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setMostrarPopupChamarSenha(false)
+                    chamarProximaSenha()
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    backgroundColor: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✓ Chamar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Modal Component - DENTRO da janela */}
         <modal.ModalComponent />

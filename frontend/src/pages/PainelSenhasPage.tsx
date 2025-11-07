@@ -24,8 +24,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
   const [senhas, setSenhas] = useState<Senha[]>([])
   const [guiches, setGuiches] = useState<Guiche[]>([])
   const [estatisticas, setEstatisticas] = useState<EstatisticasSenha | null>(null)
-  const [filtroTipoSenha, setFiltroTipoSenha] = useState<string>('todas')
-  const [filtroServico, setFiltroServico] = useState<string>('todos')
+  const [filtroTipoSenha, _setFiltroTipoSenha] = useState<string>('todas')
+  const [filtroServico, _setFiltroServico] = useState<string>('todos')
   const [guicheSelecionado, setGuicheSelecionado] = useState<string | null>(null)
   const [mostrarSeletorSenha, setMostrarSeletorSenha] = useState<string | null>(null)
   const [filtroStatusMonitoramento, setFiltroStatusMonitoramento] = useState<'todos' | 'aguardando' | 'atendendo' | 'finalizado' | 'ausente'>('todos')
@@ -37,6 +37,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
   const [dropdownEstatisticasPreferencial, setDropdownEstatisticasPreferencial] = useState<boolean>(false)
   const [dropdownEstatisticasComum, setDropdownEstatisticasComum] = useState<boolean>(false)
   const [paginaServicoCategoria, setPaginaServicoCategoria] = useState<number>(1)
+  const [mostrarRelatorioGuiche, setMostrarRelatorioGuiche] = useState<string | null>(null)
+  const [diasRelatorioGuiche, setDiasRelatorioGuiche] = useState<number>(1)
   const itensPorPagina = 4
 
   useEffect(() => {
@@ -140,26 +142,197 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
     if (!ultimaSenhaFinalizada || !ultimaSenhaFinalizada.horaFinalizacao) {
       // Se não há senhas finalizadas, verifica se há senhas em atendimento
       const senhaAtual = senhasDoGuiche.find(s => s.status === 'chamando' || s.status === 'atendendo')
-      if (senhaAtual) return '0 min' // Está atendendo agora
+      if (senhaAtual) return '0s' // Está atendendo agora
       
       // Se não há nenhuma senha, tempo ocioso desde o início do dia
       const inicioDia = new Date()
       inicioDia.setHours(0, 0, 0, 0)
       const diffMs = agora.getTime() - inicioDia.getTime()
-      const diffMin = Math.floor(diffMs / 1000 / 60)
-      return formatarTempo(diffMin)
+      const diffSegundos = Math.floor(diffMs / 1000)
+      return formatarTempoCompleto(diffSegundos)
     }
 
     const fim = new Date(ultimaSenhaFinalizada.horaFinalizacao)
     const agora2 = new Date()
     const diffMs = agora2.getTime() - fim.getTime()
-    const diffMin = Math.floor(diffMs / 1000 / 60)
+    const diffSegundos = Math.floor(diffMs / 1000)
     
     // Se está atendendo agora, tempo ocioso é 0
     const senhaAtual = senhasDoGuiche.find(s => s.status === 'chamando' || s.status === 'atendendo')
-    if (senhaAtual) return '0 min'
+    if (senhaAtual) return '0s'
     
-    return formatarTempo(diffMin)
+    return formatarTempoCompleto(diffSegundos)
+  }
+
+  const calcularTempoTotalAtendimento = (guiche: Guiche): string => {
+    const senhasDoGuiche = senhas.filter(s => s.guicheId === guiche.id)
+    const senhasFinalizadas = senhasDoGuiche.filter(s => 
+      s.status === 'finalizado' && s.horaAtendimento && s.horaFinalizacao
+    )
+
+    if (senhasFinalizadas.length === 0) {
+      // Se está em atendimento agora, calcular tempo da senha atual
+      const senhaAtual = senhasDoGuiche.find(s => s.status === 'chamando' || s.status === 'atendendo')
+      if (senhaAtual && senhaAtual.horaAtendimento) {
+        const diffMs = agora.getTime() - new Date(senhaAtual.horaAtendimento).getTime()
+        const diffSegundos = Math.floor(diffMs / 1000)
+        return formatarTempoCompleto(diffSegundos)
+      }
+      return '0s'
+    }
+
+    // Somar tempo de todas as senhas finalizadas
+    let totalMs = 0
+    senhasFinalizadas.forEach(senha => {
+      if (senha.horaAtendimento && senha.horaFinalizacao) {
+        const diffMs = new Date(senha.horaFinalizacao).getTime() - new Date(senha.horaAtendimento).getTime()
+        totalMs += diffMs
+      }
+    })
+
+    // Se está em atendimento agora, adicionar tempo da senha atual
+    const senhaAtual = senhasDoGuiche.find(s => s.status === 'chamando' || s.status === 'atendendo')
+    if (senhaAtual && senhaAtual.horaAtendimento) {
+      const diffMs = agora.getTime() - new Date(senhaAtual.horaAtendimento).getTime()
+      totalMs += diffMs
+    }
+
+    const totalSegundos = Math.floor(totalMs / 1000)
+    return formatarTempoCompleto(totalSegundos)
+  }
+
+  // Gerar relatório do guichê
+  const gerarRelatorioGuiche = (guicheId: string) => {
+    const guiche = guiches.find(g => g.id === guicheId)
+    if (!guiche) return null
+
+    const agoraData = new Date()
+    const dataInicio = new Date(agoraData)
+    
+    // Se for 0 dias, considera apenas hoje
+    if (diasRelatorioGuiche === 0 || diasRelatorioGuiche === 1) {
+      dataInicio.setHours(0, 0, 0, 0)
+    } else {
+      dataInicio.setDate(agoraData.getDate() - diasRelatorioGuiche)
+      dataInicio.setHours(0, 0, 0, 0)
+    }
+
+    // Buscar todas as senhas do período
+    const senhasDoGuiche = senhas.filter(s => {
+      const dataEmissao = new Date(s.horaEmissao)
+      return s.guicheId === guiche.id && dataEmissao >= dataInicio && dataEmissao <= agoraData
+    })
+
+    const senhasChamadas = senhasDoGuiche.filter(s => s.status !== 'aguardando')
+    const senhasFinalizadas = senhasDoGuiche.filter(s => s.status === 'finalizado')
+    const senhasAusentes = senhasDoGuiche.filter(s => s.status === 'ausente')
+    const senhasPreferenciaisAtendidas = senhasFinalizadas.filter(s => s.prioridade)
+    const senhasComunsAtendidas = senhasFinalizadas.filter(s => !s.prioridade)
+
+    // Calcular tempo médio de atendimento
+    let tempoMedioAtendimento = '0min'
+    if (senhasFinalizadas.length > 0) {
+      const temposAtendimento = senhasFinalizadas.map(s => {
+        if (!s.horaAtendimento || !s.horaFinalizacao) return 0
+        return new Date(s.horaFinalizacao).getTime() - new Date(s.horaAtendimento).getTime()
+      }).filter(t => t > 0)
+
+      if (temposAtendimento.length > 0) {
+        const mediaMs = temposAtendimento.reduce((a, b) => a + b, 0) / temposAtendimento.length
+        const minutos = Math.floor(mediaMs / 60000)
+        const segundos = Math.floor((mediaMs % 60000) / 1000)
+        tempoMedioAtendimento = `${minutos}min ${segundos}s`
+      }
+    }
+
+    return {
+      guiche,
+      diasPeriodo: diasRelatorioGuiche,
+      dataInicio,
+      dataFim: agoraData,
+      totalChamadas: senhasChamadas.length,
+      totalFinalizadas: senhasFinalizadas.length,
+      totalAusentes: senhasAusentes.length,
+      preferenciais: senhasPreferenciaisAtendidas.length,
+      comuns: senhasComunsAtendidas.length,
+      tempoMedioAtendimento,
+      senhas: senhasDoGuiche
+    }
+  }
+
+  // Exportar relatório do guichê para Excel
+  const exportarExcelGuiche = () => {
+    const relatorio = mostrarRelatorioGuiche ? gerarRelatorioGuiche(mostrarRelatorioGuiche) : null
+    if (!relatorio) return
+
+    const periodoTexto = diasRelatorioGuiche === 1 
+      ? 'Hoje' 
+      : `Últimos ${diasRelatorioGuiche} dias`
+
+    // Cabeçalho CSV
+    let csv = 'RELATÓRIO DO GUICHÊ - SISTEMA DE SENHAS\n'
+    csv += `Guichê:,${relatorio.guiche.numero} - ${relatorio.guiche.nome}\n`
+    csv += `Funcionário:,${relatorio.guiche.funcionarioNome || 'Não atribuído'}\n`
+    csv += `Período:,${periodoTexto}\n`
+    csv += `Data Inicial:,${relatorio.dataInicio.toLocaleDateString('pt-BR')}\n`
+    csv += `Data Final:,${relatorio.dataFim.toLocaleDateString('pt-BR')}\n`
+    csv += `Gerado em:,${new Date().toLocaleString('pt-BR')}\n`
+    csv += '\n'
+
+    // Resumo Geral
+    csv += 'RESUMO GERAL\n'
+    csv += `Total de Chamadas:,${relatorio.totalChamadas}\n`
+    csv += `Finalizadas:,${relatorio.totalFinalizadas}\n`
+    csv += `Ausentes:,${relatorio.totalAusentes}\n`
+    csv += `Tempo Médio de Atendimento:,${relatorio.tempoMedioAtendimento}\n`
+    csv += '\n'
+
+    // Por Categoria
+    csv += 'POR CATEGORIA\n'
+    csv += `Preferenciais Atendidas:,${relatorio.preferenciais}\n`
+    csv += `Comuns Atendidas:,${relatorio.comuns}\n`
+    csv += '\n'
+
+    // Detalhamento de Senhas
+    csv += 'DETALHAMENTO DE SENHAS\n'
+    csv += 'Senha,Serviço,Categoria,Status,Emissão,Chamada,Atendimento,Finalização,Duração\n'
+    
+    relatorio.senhas.forEach(senha => {
+      const categoria = senha.prioridade ? 'Preferencial' : 'Comum'
+      const emissao = new Date(senha.horaEmissao).toLocaleString('pt-BR')
+      const chamada = senha.horaChamada ? new Date(senha.horaChamada).toLocaleString('pt-BR') : '-'
+      const atendimento = senha.horaAtendimento ? new Date(senha.horaAtendimento).toLocaleString('pt-BR') : '-'
+      const finalizacao = senha.horaFinalizacao ? new Date(senha.horaFinalizacao).toLocaleString('pt-BR') : '-'
+      
+      // Calcular duração
+      let duracao = '-'
+      if (senha.horaAtendimento && senha.horaFinalizacao) {
+        const diffMs = new Date(senha.horaFinalizacao).getTime() - new Date(senha.horaAtendimento).getTime()
+        const minutos = Math.floor(diffMs / 60000)
+        const segundos = Math.floor((diffMs % 60000) / 1000)
+        duracao = `${minutos}min ${segundos}s`
+      }
+
+      const status = senha.status === 'finalizado' ? 'Finalizado' 
+        : senha.status === 'ausente' ? 'Ausente'
+        : senha.status === 'atendendo' ? 'Atendendo'
+        : senha.status === 'chamando' ? 'Chamando'
+        : 'Aguardando'
+
+      csv += `${senha.numeroCompleto},"${senha.servico.nome}",${categoria},${status},"${emissao}","${chamada}","${atendimento}","${finalizacao}",${duracao}\n`
+    })
+
+    // Download
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    const dataHora = new Date().toISOString().slice(0, 16).replace('T', '_').replace(/:/g, '-')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `Relatorio_Guiche_${relatorio.guiche.numero}_${periodoTexto.replace(/\s/g, '_')}_${dataHora}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const calcularDuracaoAtendimento = (senha: Senha): string => {
@@ -216,6 +389,27 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
     return `${horas}h${mins > 0 ? ` ${mins}min` : ''}`
   }
 
+  const formatarTempoCompleto = (totalSegundos: number): string => {
+    if (totalSegundos < 1) return '0s'
+    
+    const horas = Math.floor(totalSegundos / 3600)
+    const minutos = Math.floor((totalSegundos % 3600) / 60)
+    const segundos = Math.floor(totalSegundos % 60)
+    
+    if (horas > 0) {
+      if (minutos === 0 && segundos === 0) return `${horas}h`
+      if (segundos === 0) return `${horas}h ${minutos}min`
+      return `${horas}h ${minutos}min ${segundos}s`
+    }
+    
+    if (minutos > 0) {
+      if (segundos === 0) return `${minutos}min`
+      return `${minutos}min ${segundos}s`
+    }
+    
+    return `${segundos}s`
+  }
+
   const gerarRelatorioHTML = (): string => {
     const agora = new Date()
     const dataHora = agora.toLocaleString('pt-BR')
@@ -223,6 +417,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
     // Calcular estatísticas adicionais
     const senhasPreferenciais = senhas.filter(s => s.prioridade)
     const senhasComuns = senhas.filter(s => !s.prioridade)
+    const senhasAusentes = senhas.filter(s => s.status === 'ausente')
     
     // Estatísticas por serviço
     const porServico: Record<string, { emitidas: number, atendidas: number }> = {}
@@ -237,6 +432,40 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
       }
     })
 
+    // Ranking de serviços (top 5)
+    const rankingServicos = Object.entries(porServico)
+      .filter(([nome]) => nome !== 'Atendimento Preferencial' && nome !== 'Atendimento Comum')
+      .sort(([, a], [, b]) => b.emitidas - a.emitidas)
+      .slice(0, 5)
+
+    // Performance dos guichês
+    const performanceGuiches = guiches
+      .map(guiche => {
+        const senhasDoGuiche = senhas.filter(s => s.guicheId === guiche.id)
+        const atendidas = senhasDoGuiche.filter(s => s.status === 'finalizado').length
+        return {
+          guiche,
+          atendidas
+        }
+      })
+      .sort((a, b) => b.atendidas - a.atendidas)
+      .slice(0, 5)
+
+    // Calcular tempo máximo de espera
+    let tempoMaxEspera = 0
+    senhas.forEach(senha => {
+      if (senha.status === 'aguardando') {
+        const esperaMs = agora.getTime() - new Date(senha.horaEmissao).getTime()
+        const esperaMin = Math.floor(esperaMs / 1000 / 60)
+        if (esperaMin > tempoMaxEspera) tempoMaxEspera = esperaMin
+      }
+    })
+
+    // Taxa de ausência
+    const taxaAusencia = senhas.length > 0 
+      ? ((senhasAusentes.length / senhas.length) * 100).toFixed(1)
+      : '0.0'
+
     let html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -249,15 +478,15 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
         h2 { color: #333; border-bottom: 2px solid #008080; padding-bottom: 5px; margin-top: 30px; }
         .header { text-align: center; margin-bottom: 30px; }
         .stats { display: flex; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; }
-        .stat-box { border: 2px solid #008080; border-radius: 8px; padding: 15px; text-align: center; min-width: 150px; margin: 10px; }
-        .stat-value { font-size: 36px; font-weight: bold; color: #008080; }
-        .stat-label { color: #666; margin-top: 5px; }
+        .stat-box { border: 2px solid #008080; border-radius: 8px; padding: 15px; text-align: center; min-width: 140px; margin: 10px; }
+        .stat-value { font-size: 32px; font-weight: bold; color: #008080; }
+        .stat-label { color: #666; margin-top: 5px; font-size: 13px; }
         .summary-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
-        .summary-box { border: 1px solid #ddd; border-radius: 8px; padding: 15px; }
-        .summary-box h3 { margin-top: 0; color: #008080; }
+        .summary-box { border: 1px solid #ddd; border-radius: 8px; padding: 15px; background-color: #f9f9f9; }
+        .summary-box h3 { margin-top: 0; color: #008080; font-size: 16px; }
         .summary-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
         .summary-item:last-child { border-bottom: none; }
-        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; page-break-before: avoid; }
         @media print { button { display: none; } }
     </style>
 </head>
@@ -283,6 +512,18 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
         <div class="stat-box">
             <div class="stat-value">${formatarTempo(estatisticas.tempoMedioEspera)}</div>
             <div class="stat-label">Tempo Médio de Espera</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">${senhasAusentes.length}</div>
+            <div class="stat-label">Total Ausentes</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" style="color: #ef4444;">${formatarTempo(tempoMaxEspera)}</div>
+            <div class="stat-label">⏰ Tempo Máx. Espera</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" style="color: #ef4444;">${taxaAusencia}%</div>
+            <div class="stat-label">📊 Taxa de Ausência</div>
         </div>
     </div>
 
@@ -328,32 +569,52 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
         </div>
     </div>
 
-    <h2>Estatísticas por Serviço</h2>
-    <div class="summary-box">
+    <div class="summary-section">
+        <div class="summary-box">
+            <h3>🏆 Ranking de Serviços (Top 5)</h3>
 `
 
-      Object.entries(porServico)
-        .filter(([nome]) => nome !== 'Atendimento Preferencial' && nome !== 'Atendimento Comum')
-        .sort(([, a], [, b]) => b.emitidas - a.emitidas)
-        .forEach(([nome, stats]) => {
-          html += `
-        <div class="summary-item">
-            <span><strong>${nome}</strong></span>
-            <span>${stats.emitidas} emitidas • ${stats.atendidas} atendidas</span>
-        </div>
+      rankingServicos.forEach(([nome, stats], index) => {
+        const posicao = index + 1
+        const medalha = posicao === 1 ? '🥇' : posicao === 2 ? '🥈' : posicao === 3 ? '🥉' : `${posicao}°`
+        html += `
+            <div class="summary-item">
+                <span><strong>${medalha} ${nome}</strong></span>
+                <span>${stats.emitidas} senhas (${stats.atendidas} atendidas)</span>
+            </div>
 `
-        })
+      })
 
       html += `
+        </div>
+
+        <div class="summary-box">
+            <h3>🏢 Performance dos Guichês (Top 5)</h3>
+`
+
+      performanceGuiches.forEach(({ guiche, atendidas }, index) => {
+        const posicao = index + 1
+        const medalha = posicao === 1 ? '🥇' : posicao === 2 ? '🥈' : posicao === 3 ? '🥉' : `${posicao}°`
+        const totalSenhas = senhas.filter(s => s.guicheId === guiche.id).length
+        html += `
+            <div class="summary-item">
+                <span><strong>${medalha} Guichê ${guiche.numero}</strong> - ${guiche.funcionarioNome || 'Não atribuído'}</span>
+                <span>${atendidas} de ${totalSenhas}</span>
+            </div>
+`
+      })
+
+      html += `
+        </div>
     </div>
 `
     }
 
     html += `
     <div class="footer">
-        <p>Sistema de Atendimento por Senhas - Cartório</p>
-        <p>Relatório resumo gerado automaticamente</p>
-        <p><em>Para relatório completo com todas as senhas, utilize a exportação para Excel</em></p>
+        <p><strong>Sistema de Atendimento por Senhas - Cartório</strong></p>
+        <p>📄 Relatório Simplificado em PDF - Gerado automaticamente</p>
+        <p><em>Para relatório completo com detalhamento por funcionário e todas as senhas, utilize a exportação "📊 Relatório Completo em Excel"</em></p>
     </div>
 
     <script>
@@ -429,6 +690,94 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
       .sort(([, a], [, b]) => b.emitidas - a.emitidas)
       .forEach(([nome, stats]) => {
         csv += `${nome};${stats.emitidas};${stats.atendidas};${stats.preferenciais};${stats.comuns}\n`
+      })
+    csv += `\n`
+    
+    // Estatísticas por funcionário/guichê
+    const porFuncionario: Record<string, {
+      funcionario: string,
+      guiche: string,
+      totalChamadas: number,
+      totalFinalizadas: number,
+      totalAusentes: number,
+      preferenciais: number,
+      comuns: number,
+      tempoTotalAtendimento: number,
+      senhas: typeof senhas
+    }> = {}
+    
+    guiches.forEach(guiche => {
+      const senhasDoGuiche = senhas.filter(s => s.guicheId === guiche.id)
+      const senhasChamadas = senhasDoGuiche.filter(s => s.status !== 'aguardando')
+      const senhasFinalizadas = senhasDoGuiche.filter(s => s.status === 'finalizado')
+      const senhasAusentes = senhasDoGuiche.filter(s => s.status === 'ausente')
+      const senhasPreferenciaisAtendidas = senhasFinalizadas.filter(s => s.prioridade)
+      const senhasComunsAtendidas = senhasFinalizadas.filter(s => !s.prioridade)
+      
+      // Calcular tempo total de atendimento
+      let tempoTotalMs = 0
+      senhasFinalizadas.forEach(senha => {
+        if (senha.horaAtendimento && senha.horaFinalizacao) {
+          tempoTotalMs += new Date(senha.horaFinalizacao).getTime() - new Date(senha.horaAtendimento).getTime()
+        }
+      })
+      
+      const chave = guiche.funcionarioNome || `Guichê ${guiche.numero} (Sem funcionário)`
+      porFuncionario[chave] = {
+        funcionario: guiche.funcionarioNome || 'Não atribuído',
+        guiche: `${guiche.numero} - ${guiche.nome}`,
+        totalChamadas: senhasChamadas.length,
+        totalFinalizadas: senhasFinalizadas.length,
+        totalAusentes: senhasAusentes.length,
+        preferenciais: senhasPreferenciaisAtendidas.length,
+        comuns: senhasComunsAtendidas.length,
+        tempoTotalAtendimento: Math.floor(tempoTotalMs / 1000),
+        senhas: senhasDoGuiche
+      }
+    })
+    
+    csv += `ESTATÍSTICAS POR FUNCIONÁRIO/GUICHÊ\n`
+    csv += `Funcionário;Guichê;Chamadas;Finalizadas;Ausentes;Preferenciais;Comuns;Tempo Total Atendimento\n`
+    Object.entries(porFuncionario)
+      .sort(([, a], [, b]) => b.totalFinalizadas - a.totalFinalizadas)
+      .forEach(([, stats]) => {
+        const tempoFormatado = formatarTempoCompleto(stats.tempoTotalAtendimento)
+        csv += `${stats.funcionario};${stats.guiche};${stats.totalChamadas};${stats.totalFinalizadas};${stats.totalAusentes};${stats.preferenciais};${stats.comuns};${tempoFormatado}\n`
+      })
+    csv += `\n`
+    
+    // Detalhamento por funcionário - Senhas atendidas
+    csv += `DETALHAMENTO POR FUNCIONÁRIO\n`
+    Object.entries(porFuncionario)
+      .sort(([, a], [, b]) => b.totalFinalizadas - a.totalFinalizadas)
+      .forEach(([, stats]) => {
+        if (stats.senhas.length > 0) {
+          csv += `\n${stats.funcionario} - ${stats.guiche}\n`
+          csv += `Senha;Serviço;Categoria;Status;Emissão;Chamada;Atendimento;Finalização;Duração\n`
+          
+          stats.senhas.forEach(senha => {
+            const categoria = senha.prioridade ? 'Preferencial' : 'Comum'
+            const emissao = new Date(senha.horaEmissao).toLocaleString('pt-BR')
+            const chamada = senha.horaChamada ? new Date(senha.horaChamada).toLocaleString('pt-BR') : '-'
+            const atendimento = senha.horaAtendimento ? new Date(senha.horaAtendimento).toLocaleString('pt-BR') : '-'
+            const finalizacao = senha.horaFinalizacao ? new Date(senha.horaFinalizacao).toLocaleString('pt-BR') : '-'
+            
+            let duracao = '-'
+            if (senha.horaAtendimento && senha.horaFinalizacao) {
+              const diffMs = new Date(senha.horaFinalizacao).getTime() - new Date(senha.horaAtendimento).getTime()
+              const totalSegundos = Math.floor(diffMs / 1000)
+              duracao = formatarTempoCompleto(totalSegundos)
+            }
+            
+            const status = senha.status === 'finalizado' ? 'Finalizado' 
+              : senha.status === 'ausente' ? 'Ausente'
+              : senha.status === 'atendendo' ? 'Atendendo'
+              : senha.status === 'chamando' ? 'Chamando'
+              : 'Aguardando'
+            
+            csv += `${senha.numeroCompleto};"${senha.servico.nome}";${categoria};${status};"${emissao}";"${chamada}";"${atendimento}";"${finalizacao}";${duracao}\n`
+          })
+        }
       })
     csv += `\n`
     
@@ -559,7 +908,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   <button
                     onClick={() => setFiltroStatusMonitoramento('todos')}
                     style={{
-                      padding: '20px',
+                    padding: '20px',
                       backgroundColor: filtroStatusMonitoramento === 'todos' ? headerColor : theme.surface,
                       border: `2px solid ${filtroStatusMonitoramento === 'todos' ? headerColor : theme.border}`,
                       borderRadius: '12px',
@@ -582,8 +931,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                     style={{
                       padding: '20px',
                       backgroundColor: filtroStatusMonitoramento === 'aguardando' ? '#3b82f6' : theme.surface,
-                      border: `2px solid #3b82f6`,
-                      borderRadius: '12px',
+                    border: `2px solid #3b82f6`,
+                    borderRadius: '12px',
                       textAlign: 'center',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -601,10 +950,10 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   <button
                     onClick={() => setFiltroStatusMonitoramento('atendendo')}
                     style={{
-                      padding: '20px',
+                    padding: '20px',
                       backgroundColor: filtroStatusMonitoramento === 'atendendo' ? '#f59e0b' : theme.surface,
-                      border: `2px solid #f59e0b`,
-                      borderRadius: '12px',
+                    border: `2px solid #f59e0b`,
+                    borderRadius: '12px',
                       textAlign: 'center',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -622,10 +971,10 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   <button
                     onClick={() => setFiltroStatusMonitoramento('finalizado')}
                     style={{
-                      padding: '20px',
+                    padding: '20px',
                       backgroundColor: filtroStatusMonitoramento === 'finalizado' ? '#10b981' : theme.surface,
-                      border: `2px solid #10b981`,
-                      borderRadius: '12px',
+                    border: `2px solid #10b981`,
+                    borderRadius: '12px',
                       textAlign: 'center',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -643,10 +992,10 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   <button
                     onClick={() => setFiltroStatusMonitoramento('ausente')}
                     style={{
-                      padding: '20px',
+                    padding: '20px',
                       backgroundColor: filtroStatusMonitoramento === 'ausente' ? '#ef4444' : theme.surface,
-                      border: `2px solid #ef4444`,
-                      borderRadius: '12px',
+                    border: `2px solid #ef4444`,
+                    borderRadius: '12px',
                       textAlign: 'center',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -706,78 +1055,78 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                         {senhas
                           .filter(s => filtroStatusMonitoramento === 'todos' || s.status === filtroStatusMonitoramento)
                           .slice().reverse().map((senha) => (
-                          <tr key={senha.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                            <td style={{ padding: '12px' }}>
-                              <div style={{
-                                padding: '6px 12px',
-                                backgroundColor: senha.servico.cor,
-                                color: '#fff',
-                                borderRadius: '6px',
-                                display: 'inline-block',
-                                fontWeight: '700',
-                                fontFamily: 'monospace'
-                              }}>
-                                {senha.numeroCompleto}
-                              </div>
-                            </td>
-                            <td style={{ padding: '12px', fontSize: '13px', color: theme.text }}>
-                              {senha.servico.nome}
-                              {senha.prioridade && <span style={{ color: '#ef4444', marginLeft: '8px' }}>★</span>}
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                              <span style={{
-                                padding: '4px 12px',
-                                borderRadius: '12px',
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                backgroundColor: 
-                                  senha.status === 'aguardando' ? '#dbeafe' :
-                                  senha.status === 'chamando' ? '#fef3c7' :
-                                  senha.status === 'atendendo' ? '#fef3c7' :
-                                  senha.status === 'finalizado' ? '#d1fae5' : '#fee2e2',
-                                color:
-                                  senha.status === 'aguardando' ? '#1e40af' :
-                                  senha.status === 'chamando' ? '#92400e' :
-                                  senha.status === 'atendendo' ? '#92400e' :
-                                  senha.status === 'finalizado' ? '#065f46' : '#7f1d1d'
-                              }}>
-                                {senha.status === 'aguardando' ? '⏳ Aguardando' :
-                                 senha.status === 'chamando' ? '📢 Chamando' :
-                                 senha.status === 'atendendo' ? '💼 Atendendo' :
-                                 senha.status === 'finalizado' ? '✅ Finalizado' : '❌ Ausente'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: theme.text, fontWeight: '600' }}>
-                              {senha.guicheNumero || '-'}
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: theme.textSecondary }}>
-                              {new Date(senha.horaEmissao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: theme.text }}>
-                              <TempoEsperaReal 
-                                dataInicial={senha.horaEmissao}
-                                style={{ fontWeight: senha.status === 'aguardando' ? '600' : 'normal' }}
-                              />
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                              <button
-                                onClick={() => excluirSenha(senha)}
-                                style={{
+                            <tr key={senha.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{
                                   padding: '6px 12px',
+                                  backgroundColor: senha.servico.cor,
+                                  color: '#fff',
+                                  borderRadius: '6px',
+                                  display: 'inline-block',
+                                  fontWeight: '700',
+                                  fontFamily: 'monospace'
+                                }}>
+                                  {senha.numeroCompleto}
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px', fontSize: '13px', color: theme.text }}>
+                                {senha.servico.nome}
+                                {senha.prioridade && <span style={{ color: '#ef4444', marginLeft: '8px' }}>★</span>}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center' }}>
+                                <span style={{
+                                  padding: '4px 12px',
+                                  borderRadius: '12px',
                                   fontSize: '12px',
                                   fontWeight: '600',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  backgroundColor: '#ef4444',
-                                  color: '#fff'
-                                }}
-                                title="Excluir senha"
-                              >
-                                🗑️ Excluir
-                              </button>
-                            </td>
-                          </tr>
+                                  backgroundColor: 
+                                    senha.status === 'aguardando' ? '#dbeafe' :
+                                    senha.status === 'chamando' ? '#fef3c7' :
+                                    senha.status === 'atendendo' ? '#fef3c7' :
+                                    senha.status === 'finalizado' ? '#d1fae5' : '#fee2e2',
+                                  color:
+                                    senha.status === 'aguardando' ? '#1e40af' :
+                                    senha.status === 'chamando' ? '#92400e' :
+                                    senha.status === 'atendendo' ? '#92400e' :
+                                    senha.status === 'finalizado' ? '#065f46' : '#7f1d1d'
+                                }}>
+                                  {senha.status === 'aguardando' ? '⏳ Aguardando' :
+                                   senha.status === 'chamando' ? '📢 Chamando' :
+                                   senha.status === 'atendendo' ? '💼 Atendendo' :
+                                   senha.status === 'finalizado' ? '✅ Finalizado' : '❌ Ausente'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: theme.text, fontWeight: '600' }}>
+                                {senha.guicheNumero || '-'}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: theme.textSecondary }}>
+                                {new Date(senha.horaEmissao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: theme.text }}>
+                                <TempoEsperaReal 
+                                  dataInicial={senha.horaEmissao}
+                                  style={{ fontWeight: senha.status === 'aguardando' ? '600' : 'normal' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => excluirSenha(senha)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    backgroundColor: '#ef4444',
+                                    color: '#fff'
+                                  }}
+                                  title="Excluir senha"
+                                >
+                                  🗑️ Excluir
+                                </button>
+                              </td>
+                            </tr>
                         ))}
                       </tbody>
                     </table>
@@ -810,7 +1159,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                 <div style={{ marginBottom: '20px' }}>
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: theme.text }}>
                     📊 Estatísticas e Desempenho
-                  </h3>
+                </h3>
                   <div style={{ fontSize: '13px', color: theme.textSecondary, marginTop: '4px' }}>
                     📅 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </div>
@@ -819,9 +1168,9 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                 {/* Cards Principais - Grid 6 colunas */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginBottom: '20px' }}>
                   {/* Total Emitidas */}
-                  <div style={{
-                    padding: '16px',
-                    backgroundColor: theme.surface,
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: theme.surface,
                     border: `2px solid #3b82f6`,
                     borderRadius: '10px',
                     textAlign: 'center'
@@ -920,7 +1269,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   {/* Preferenciais */}
                   <div 
                     onClick={() => setDropdownEstatisticasPreferencial(!dropdownEstatisticasPreferencial)}
-                    style={{
+                      style={{
                       padding: '20px',
                       backgroundColor: '#eff6ff',
                       border: `2px solid #3b82f6`,
@@ -986,7 +1335,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                   {/* Comuns */}
                   <div 
                     onClick={() => setDropdownEstatisticasComum(!dropdownEstatisticasComum)}
-                    style={{
+                      style={{
                       padding: '20px',
                       backgroundColor: '#f0fdf4',
                       border: `2px solid #10b981`,
@@ -1077,12 +1426,12 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                         }}
                         placeholder="🔍 Buscar serviço (nome ou sigla)..."
                         style={{
-                          padding: '8px 12px',
+                        padding: '8px 12px',
                           fontSize: '13px',
-                          border: `1px solid ${theme.border}`,
+                        border: `1px solid ${theme.border}`,
                           borderRadius: '6px',
-                          backgroundColor: theme.background,
-                          color: theme.text,
+                        backgroundColor: theme.background,
+                        color: theme.text,
                           width: '280px',
                           outline: 'none'
                         }}
@@ -1096,28 +1445,28 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                         }}
                       />
                       {buscaServicoEstatisticas && (
-                        <button
-                          onClick={() => {
+                  <button
+                    onClick={() => {
                             setBuscaServicoEstatisticas('')
                             setFiltroServicoEstatisticas('todos')
-                          }}
-                          style={{
+                    }}
+                    style={{
                             padding: '8px 12px',
                             fontSize: '12px',
-                            border: 'none',
-                            borderRadius: '6px',
+                      border: 'none',
+                      borderRadius: '6px',
                             backgroundColor: '#6b7280',
                             color: '#fff',
-                            cursor: 'pointer',
+                      cursor: 'pointer',
                             fontWeight: '600'
-                          }}
-                        >
+                    }}
+                  >
                           ✕ Limpar
-                        </button>
+                  </button>
                       )}
-                    </div>
+                </div>
                   </div>
-                  <div style={{ 
+                  <div style={{
                     flex: 1, 
                     overflowY: 'auto', 
                     overflowX: 'hidden',
@@ -1183,8 +1532,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                     return (
                       <div
                         key={servicoId}
-                        style={{
-                          backgroundColor: theme.background,
+                            style={{
+                              backgroundColor: theme.background,
                           border: `2px solid ${servico.cor}`,
                           borderRadius: '10px',
                           marginBottom: '12px',
@@ -1197,8 +1546,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                         <div 
                           onClick={() => toggleServicoExpandido(servicoId)}
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
+                              display: 'flex',
+                              alignItems: 'center',
                             gap: '12px',
                             padding: '16px',
                             cursor: 'pointer',
@@ -1210,31 +1559,31 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent'
-                          }}
-                        >
-                          <div style={{
+                            }}
+                          >
+                            <div style={{
                             width: '48px',
                             height: '48px',
                             backgroundColor: servico.cor,
-                            color: '#fff',
+                              color: '#fff',
                             borderRadius: '10px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '20px',
-                            fontWeight: '700',
+                              fontWeight: '700',
                             flexShrink: 0
-                          }}>
+                            }}>
                             {servico.sigla}
-                          </div>
+                            </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: '16px', fontWeight: '700', color: theme.text }}>
                               {servico.nome}
-                            </div>
+                              </div>
                             <div style={{ fontSize: '12px', color: theme.textSecondary, display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                               <span>{stats.emitidas} emitidas • {stats.atendidas} atendidas</span>
                               {statsP.emitidas > 0 && (
-                                <span style={{ 
+                            <span style={{
                                   padding: '2px 8px', 
                                   backgroundColor: '#eff6ff', 
                                   color: '#1e40af',
@@ -1243,7 +1592,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                   fontWeight: '600'
                                 }}>
                                   ⭐ {statsP.emitidas}P
-                                </span>
+                            </span>
                               )}
                               {statsC.emitidas > 0 && (
                                 <span style={{ 
@@ -1251,14 +1600,14 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                   backgroundColor: '#f0fdf4', 
                                   color: '#065f46',
                                   borderRadius: '4px',
-                                  fontSize: '11px',
+                                fontSize: '11px',
                                   fontWeight: '600'
                                 }}>
                                   📋 {statsC.emitidas}C
                                 </span>
                               )}
-                            </div>
                           </div>
+                        </div>
                           <div style={{
                             fontSize: '24px',
                             color: servico.cor,
@@ -1308,13 +1657,13 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                         Atendidas
                                       </div>
                                     </div>
-                                  </div>
-                                </div>
-                              )}
+                    </div>
+                  </div>
+                )}
 
                               {/* Comum */}
                               {statsC.emitidas > 0 && (
-                                <div style={{
+                  <div style={{
                                   flex: '1 1 200px',
                                   minWidth: '200px',
                                   padding: '12px',
@@ -1324,15 +1673,15 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                 }}>
                                   <div style={{ fontSize: '12px', fontWeight: '600', color: '#065f46', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     📋 COMUM
-                                  </div>
+                    </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-around', gap: '8px' }}>
                                     <div style={{ textAlign: 'center' }}>
                                       <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
                                         {statsC.emitidas}
-                                      </div>
+                    </div>
                                       <div style={{ fontSize: '10px', color: theme.textSecondary }}>
                                         Emitidas
-                                      </div>
+                  </div>
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
                                       <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
@@ -1348,7 +1697,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
 
                               {/* Se não tem nenhum P ou C */}
                               {statsP.emitidas === 0 && statsC.emitidas === 0 && (
-                                <div style={{ 
+                  <div style={{
                                   flex: 1, 
                                   padding: '20px', 
                                   textAlign: 'center', 
@@ -1356,10 +1705,10 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                   fontSize: '13px'
                                 }}>
                                   Nenhuma senha emitida para este serviço
-                                </div>
+                    </div>
                               )}
-                            </div>
-                          </div>
+                    </div>
+                  </div>
                         )}
                       </div>
                     )
@@ -1381,7 +1730,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                           )}
                           
                           {totalPaginas > 1 && (
-                            <div style={{ 
+                  <div style={{
                               display: 'flex', 
                               justifyContent: 'center', 
                               alignItems: 'center', 
@@ -1476,7 +1825,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                     </button>
                                   )
                                 })}
-                              </div>
+                    </div>
                               
                               <button
                                 onClick={() => setPaginaServicoCategoria(prev => Math.min(totalPaginas, prev + 1))}
@@ -1517,7 +1866,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                 marginLeft: '8px'
                               }}>
                                 Página {paginaServicoCategoria} de {totalPaginas}
-                              </div>
+                    </div>
                             </div>
                           )}
                         </>
@@ -1529,15 +1878,15 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                 {/* Ranking e Performance em 2 Colunas */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                   {/* Ranking de Serviços */}
-                  <div style={{
-                    padding: '20px',
-                    backgroundColor: theme.surface,
-                    border: `1px solid ${theme.border}`,
+                <div style={{
+                  padding: '20px',
+                  backgroundColor: theme.surface,
+                  border: `1px solid ${theme.border}`,
                     borderRadius: '12px'
-                  }}>
+                }}>
                     <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '700', color: theme.text }}>
                       🏆 Ranking de Serviços
-                    </h4>
+                  </h4>
                     {Object.entries(estatisticas.porServico)
                       .filter(([servicoId]) => {
                         const servico = senhaService.getServicos().find(s => s.id === servicoId)
@@ -1547,24 +1896,24 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                       .sort(([, a], [, b]) => b.emitidas - a.emitidas)
                       .slice(0, 5)
                       .map(([servicoId, stats], index) => {
-                        const servico = senhaService.getServicos().find(s => s.id === servicoId)
-                        if (!servico) return null
-                        
-                        return (
-                          <div
-                            key={servicoId}
-                            style={{
+                    const servico = senhaService.getServicos().find(s => s.id === servicoId)
+                    if (!servico) return null
+
+                    return (
+                      <div
+                        key={servicoId}
+                        style={{
                               padding: '12px',
-                              backgroundColor: theme.background,
+                          backgroundColor: theme.background,
                               borderLeft: `4px solid ${servico.cor}`,
                               borderRadius: '6px',
-                              marginBottom: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
+                          marginBottom: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
                               gap: '12px'
-                            }}
-                          >
-                            <div style={{ 
+                        }}
+                      >
+                        <div style={{
                               fontSize: '24px', 
                               fontWeight: '700',
                               color: index === 0 ? '#f59e0b' : index === 1 ? '#9ca3af' : index === 2 ? '#d97706' : theme.textSecondary,
@@ -1575,28 +1924,28 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                             <div style={{
                               width: '28px',
                               height: '28px',
-                              backgroundColor: servico.cor,
-                              color: '#fff',
+                          backgroundColor: servico.cor,
+                          color: '#fff',
                               borderRadius: '6px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                               fontSize: '12px',
-                              fontWeight: '700'
-                            }}>
-                              {servico.sigla}
-                            </div>
-                            <div style={{ flex: 1 }}>
+                          fontWeight: '700'
+                        }}>
+                          {servico.sigla}
+                        </div>
+                        <div style={{ flex: 1 }}>
                               <div style={{ fontSize: '13px', fontWeight: '600', color: theme.text }}>
-                                {servico.nome}
-                              </div>
+                            {servico.nome}
+                          </div>
                               <div style={{ fontSize: '11px', color: theme.textSecondary }}>
                                 {stats.emitidas} senhas ({stats.atendidas} atendidas)
-                              </div>
+                        </div>
                             </div>
                             <div style={{ fontSize: '20px', fontWeight: '700', color: servico.cor }}>
-                              {stats.emitidas}
-                            </div>
+                            {stats.emitidas}
+                          </div>
                           </div>
                         )
                       })}
@@ -1611,10 +1960,10 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                         </div>
                         <div style={{ fontSize: '13px' }}>
                           Nenhum serviço específico ainda
-                        </div>
-                      </div>
+                          </div>
+                          </div>
                     )}
-                  </div>
+                        </div>
 
                   {/* Performance dos Guichês */}
                   <div style={{
@@ -1662,8 +2011,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '13px', fontWeight: '600', color: theme.text }}>
                               {guiche.nome}
-                            </div>
-                            <div style={{ fontSize: '11px', color: theme.textSecondary }}>
+                          </div>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary }}>
                               {guiche.funcionarioNome || 'Sem funcionário'}
                             </div>
                           </div>
@@ -1673,11 +2022,11 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                             </div>
                             <div style={{ fontSize: '10px', color: theme.textSecondary }}>
                               de {total}
-                            </div>
                           </div>
                         </div>
-                      )
-                    })}
+                      </div>
+                    )
+                  })}
                     {guiches.filter(g => g.ativo).length === 0 && (
                       <div style={{ padding: '20px', textAlign: 'center', color: theme.textSecondary, fontSize: '13px' }}>
                         Nenhum guichê ativo
@@ -1792,7 +2141,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                     }}
                     title="Gerar relatório em PDF (impressão)"
                   >
-                    📄 Exportar PDF
+                    📄 Relatório Simplificado em PDF
                   </button>
                   <button
                     onClick={exportarExcel}
@@ -1824,7 +2173,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                     }}
                     title="Exportar dados para Excel (CSV)"
                   >
-                    📊 Exportar Excel
+                    📊 Relatório Completo em Excel
                   </button>
                 </div>
               </div>
@@ -2027,8 +2376,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                             )}
                           </div>
 
-                          <div style={{ display: 'flex', gap: '12px', minWidth: '350px', flexWrap: 'wrap' }}>
-                            <div style={{ textAlign: 'center', minWidth: '70px' }}>
+                          <div style={{ display: 'flex', gap: '12px', minWidth: '350px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ textAlign: 'center', minWidth: '70px', alignSelf: 'center' }}>
                               <div style={{ fontSize: '22px', fontWeight: '700', color: '#3b82f6' }}>
                                 {senhasChamadas.length}
                               </div>
@@ -2036,7 +2385,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                 Chamadas
                               </div>
                             </div>
-                            <div style={{ textAlign: 'center', minWidth: '70px' }}>
+                            <div style={{ textAlign: 'center', minWidth: '70px', alignSelf: 'center' }}>
                               <div style={{ fontSize: '22px', fontWeight: '700', color: '#10b981' }}>
                                 {senhasAtendidas.length}
                               </div>
@@ -2044,7 +2393,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                 Atendidas
                               </div>
                             </div>
-                            <div style={{ textAlign: 'center', minWidth: '70px' }}>
+                            <div style={{ textAlign: 'center', minWidth: '70px', alignSelf: 'center' }}>
                               <div style={{ fontSize: '22px', fontWeight: '700', color: '#ef4444' }}>
                                 {senhasAusentes.length}
                               </div>
@@ -2052,12 +2401,41 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                 Ausentes
                               </div>
                             </div>
-                            <div style={{ textAlign: 'center', minWidth: '70px' }}>
-                              <div style={{ fontSize: '18px', fontWeight: '700', color: estaAtendendo ? '#10b981' : '#ef4444' }}>
-                                {calcularTempoOcioso(guiche)}
+                            <div style={{ 
+                              textAlign: 'center', 
+                              minWidth: '90px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px',
+                              alignSelf: 'center'
+                            }}>
+                              {/* Ocioso em cima */}
+                              <div style={{
+                                padding: '6px 8px',
+                                backgroundColor: theme.background,
+                                borderRadius: '6px',
+                                border: `1px solid ${theme.border}`
+                              }}>
+                                <div style={{ fontSize: '16px', fontWeight: '700', color: estaAtendendo ? '#10b981' : '#ef4444' }}>
+                                  {calcularTempoOcioso(guiche)}
+                                </div>
+                                <div style={{ fontSize: '9px', color: theme.textSecondary, marginTop: '2px' }}>
+                                  {estaAtendendo ? 'Atendendo' : 'Ocioso'}
+                                </div>
                               </div>
-                              <div style={{ fontSize: '10px', color: theme.textSecondary }}>
-                                {estaAtendendo ? 'Atendendo' : 'Ocioso'}
+                              {/* Tempo Total embaixo */}
+                              <div style={{
+                                padding: '6px 8px',
+                                backgroundColor: theme.background,
+                                borderRadius: '6px',
+                                border: `1px solid ${theme.border}`
+                              }}>
+                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#8b5cf6' }}>
+                                  {calcularTempoTotalAtendimento(guiche)}
+                                </div>
+                                <div style={{ fontSize: '9px', color: theme.textSecondary, marginTop: '2px' }}>
+                                  Tempo Total
+                                </div>
                               </div>
                             </div>
                             {senhaAtual && (
@@ -2101,6 +2479,33 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                               title={estaAtendendo ? 'Finalize o atendimento antes de chamar nova senha' : 'Selecionar senha para chamar'}
                             >
                               📞 Chamar Senha
+                            </button>
+                            <button
+                              onClick={() => setMostrarRelatorioGuiche(guiche.id)}
+                              onTouchStart={(e) => {
+                                e.currentTarget.style.backgroundColor = '#7c3aed'
+                                e.currentTarget.style.transform = 'scale(0.95)'
+                              }}
+                              onTouchEnd={(e) => {
+                                e.currentTarget.style.backgroundColor = '#8b5cf6'
+                                e.currentTarget.style.transform = 'scale(1)'
+                              }}
+                              style={{
+                                padding: '10px 20px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                backgroundColor: '#8b5cf6',
+                                color: '#fff',
+                                transition: 'all 0.2s ease',
+                                WebkitTapHighlightColor: 'transparent',
+                                userSelect: 'none'
+                              }}
+                              title="Ver relatório do guichê"
+                            >
+                              📊 Relatório
                             </button>
                             <button
                               onClick={() => setGuicheSelecionado(mostrarDetalhes ? null : guiche.id)}
@@ -2431,7 +2836,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                               </div>
                                             </div>
                                           ) : null}
-                                        </div>
+                        </div>
                                       </div>
                                     )
                                   })}
@@ -2789,23 +3194,383 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
             display: 'flex',
             justifyContent: 'flex-end'
           }}>
-            <button
+              <button
               onClick={onClose}
-              style={{
-                padding: '10px 20px',
-                fontSize: '14px',
-                fontWeight: '600',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
                 backgroundColor: '#6c757d',
-                color: '#fff'
-              }}
-            >
+                  color: '#fff'
+                }}
+              >
               🚪 Fechar
-            </button>
+              </button>
           </div>
         </div>
+        
+        {/* Modal de Relatório do Guichê */}
+        {mostrarRelatorioGuiche && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }} onClick={() => setMostrarRelatorioGuiche(null)}>
+            <div style={{
+              backgroundColor: theme.surface,
+              borderRadius: '12px',
+              width: '600px',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+            }} onClick={(e) => e.stopPropagation()}>
+              {/* Header Modal */}
+              <div style={{
+                padding: '20px',
+                backgroundColor: headerColor,
+                color: '#fff',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: `2px solid ${theme.border}`
+              }}>
+                <h3 style={{ margin: 0, fontSize: '18px' }}>
+                  📊 Relatório do Guichê {guiches.find(g => g.id === mostrarRelatorioGuiche)?.numero}
+                </h3>
+              <button
+                  onClick={() => setMostrarRelatorioGuiche(null)}
+                style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#fff',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    padding: '0',
+                    lineHeight: '1'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Corpo Modal */}
+              <div style={{ padding: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
+                {/* Filtros de Período */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '12px', color: theme.textSecondary, display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Período do Relatório (dias)
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setDiasRelatorioGuiche(1)}
+                      style={{
+                        padding: '10px 16px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        border: `2px solid ${diasRelatorioGuiche === 1 ? headerColor : theme.border}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: diasRelatorioGuiche === 1 ? headerColor : theme.background,
+                        color: diasRelatorioGuiche === 1 ? '#fff' : theme.text,
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      Hoje
+                    </button>
+                    <button
+                      onClick={() => setDiasRelatorioGuiche(7)}
+                      style={{
+                        padding: '10px 16px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        border: `2px solid ${diasRelatorioGuiche === 7 ? headerColor : theme.border}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: diasRelatorioGuiche === 7 ? headerColor : theme.background,
+                        color: diasRelatorioGuiche === 7 ? '#fff' : theme.text,
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      7 Dias
+                    </button>
+                    <button
+                      onClick={() => setDiasRelatorioGuiche(30)}
+                      style={{
+                        padding: '10px 16px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        border: `2px solid ${diasRelatorioGuiche === 30 ? headerColor : theme.border}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: diasRelatorioGuiche === 30 ? headerColor : theme.background,
+                        color: diasRelatorioGuiche === 30 ? '#fff' : theme.text,
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      30 Dias
+                    </button>
+                    <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={diasRelatorioGuiche}
+                        onChange={(e) => {
+                          const valor = parseInt(e.target.value) || 1
+                          setDiasRelatorioGuiche(Math.min(Math.max(valor, 1), 365))
+                        }}
+                        style={{
+                          width: '80px',
+                          padding: '10px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                          textAlign: 'center',
+                          border: `2px solid ${headerColor}`,
+                  borderRadius: '6px',
+                          backgroundColor: theme.background,
+                          color: theme.text
+                        }}
+                      />
+                      <span style={{ fontSize: '13px', color: theme.textSecondary, fontWeight: '600' }}>
+                        dias
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dados do Relatório */}
+                {(() => {
+                  const relatorio = gerarRelatorioGuiche(mostrarRelatorioGuiche)
+                  if (!relatorio) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: theme.textSecondary }}>
+                        Nenhum dado disponível
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <>
+                      {/* Resumo Geral */}
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(2, 1fr)', 
+                        gap: '12px',
+                        marginBottom: '20px'
+                      }}>
+                        <div style={{
+                          padding: '16px',
+                          backgroundColor: theme.background,
+                          border: `2px solid #3b82f6`,
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, marginBottom: '4px' }}>
+                            Total Chamadas
+                          </div>
+                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#3b82f6' }}>
+                            {relatorio.totalChamadas}
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '16px',
+                          backgroundColor: theme.background,
+                          border: `2px solid #10b981`,
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, marginBottom: '4px' }}>
+                            Finalizadas
+                          </div>
+                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#10b981' }}>
+                            {relatorio.totalFinalizadas}
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '16px',
+                          backgroundColor: theme.background,
+                          border: `2px solid #ef4444`,
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, marginBottom: '4px' }}>
+                            Ausentes
+                          </div>
+                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#ef4444' }}>
+                            {relatorio.totalAusentes}
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '16px',
+                          backgroundColor: theme.background,
+                          border: `2px solid #f59e0b`,
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, marginBottom: '4px' }}>
+                            Tempo Médio
+                          </div>
+                          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#f59e0b' }}>
+                            {relatorio.tempoMedioAtendimento}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Por Categoria */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: theme.text, marginBottom: '12px' }}>
+                          Por Categoria
+                        </h4>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <div style={{
+                            flex: 1,
+                            padding: '16px',
+                            backgroundColor: theme.background,
+                            border: `2px solid #3b82f6`,
+                            borderRadius: '8px',
+                            textAlign: 'center'
+                          }}>
+                            <div style={{ fontSize: '11px', color: theme.textSecondary, marginBottom: '8px' }}>
+                              ⭐ Preferenciais
+                            </div>
+                            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#3b82f6' }}>
+                              {relatorio.preferenciais}
+                            </div>
+                          </div>
+                          <div style={{
+                            flex: 1,
+                            padding: '16px',
+                            backgroundColor: theme.background,
+                            border: `2px solid #10b981`,
+                            borderRadius: '8px',
+                            textAlign: 'center'
+                          }}>
+                            <div style={{ fontSize: '11px', color: theme.textSecondary, marginBottom: '8px' }}>
+                              📋 Comuns
+                            </div>
+                            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#10b981' }}>
+                              {relatorio.comuns}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Lista de Senhas */}
+                      <div>
+                        <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: theme.text, marginBottom: '12px' }}>
+                          Senhas Atendidas ({relatorio.senhas.length})
+                        </h4>
+                        <div style={{
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '6px',
+                          backgroundColor: theme.background
+                        }}>
+                          {relatorio.senhas.length === 0 ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: theme.textSecondary }}>
+                              Nenhuma senha no período selecionado
+                            </div>
+                          ) : (
+                            relatorio.senhas.map(senha => (
+                              <div
+                                key={senha.id}
+                                style={{
+                                  padding: '12px',
+                                  borderBottom: `1px solid ${theme.border}`,
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: theme.text }}>
+                                    {senha.numeroCompleto}
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: theme.textSecondary }}>
+                                    {new Date(senha.horaEmissao).toLocaleString('pt-BR')}
+                                  </div>
+                                </div>
+                                <div style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: senha.status === 'finalizado' ? '#d1fae5' : senha.status === 'ausente' ? '#fee2e2' : '#e0e0e0',
+                                  color: senha.status === 'finalizado' ? '#065f46' : senha.status === 'ausente' ? '#991b1b' : '#374151'
+                                }}>
+                                  {senha.status === 'finalizado' ? '✓ Finalizado' : senha.status === 'ausente' ? '✕ Ausente' : senha.status}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+
+              {/* Footer Modal */}
+              <div style={{
+                padding: '16px 20px',
+                borderTop: `2px solid ${theme.border}`,
+                display: 'flex',
+                gap: '10px',
+                justifyContent: 'space-between'
+              }}>
+                <button
+                  onClick={exportarExcelGuiche}
+                  style={{
+                    padding: '12px 24px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    border: `2px solid #10b981`,
+                    borderRadius: '8px',
+                  cursor: 'pointer',
+                    backgroundColor: theme.background,
+                    color: '#10b981',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#10b981'
+                    e.currentTarget.style.color = '#fff'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.background
+                    e.currentTarget.style.color = '#10b981'
+                  }}
+                >
+                  📊 Relatório Completo em Excel
+                </button>
+              <button
+                  onClick={() => setMostrarRelatorioGuiche(null)}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                    backgroundColor: '#6b7280',
+                    color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                    cursor: 'pointer'
+                }}
+              >
+                  Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+        )}
         
         <modal.ModalComponent />
       </BasePage>

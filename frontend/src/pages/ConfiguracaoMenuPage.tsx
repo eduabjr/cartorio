@@ -261,6 +261,7 @@ export function ConfiguracaoMenuPage({ onClose }: ConfiguracaoMenuPageProps) {
   const headerColor = currentTheme === 'dark' ? '#FF8C00' : '#008080'
   
   const [activeTab, setActiveTab] = useState<ActiveTab>('geral')
+  const [submenuFuncionario, setSubmenuFuncionario] = useState<'acessos' | 'assinaturas'>('acessos')
   const [menuConfig, setMenuConfig] = useState<MenuConfig[]>(DEFAULT_MENU_STRUCTURE)
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set())
@@ -664,7 +665,7 @@ export function ConfiguracaoMenuPage({ onClose }: ConfiguracaoMenuPageProps) {
   return (
     <>
       <BasePage
-        title="Configuração de Menus"
+        title="Configuração de Menus e Permissões"
         onClose={onClose}
         width="900px"
         height="580px"
@@ -818,7 +819,10 @@ export function ConfiguracaoMenuPage({ onClose }: ConfiguracaoMenuPageProps) {
                     {funcionarios.find(f => f.id === selectedFuncionario)?.nome}
                   </div>
                   <button
-                    onClick={() => setSelectedFuncionario('')}
+                    onClick={() => {
+                      setSelectedFuncionario('')
+                      setSubmenuFuncionario('acessos')  // Resetar para acessos ao voltar
+                    }}
                     style={{
                       marginTop: '10px',
                       padding: '6px 12px',
@@ -833,7 +837,146 @@ export function ConfiguracaoMenuPage({ onClose }: ConfiguracaoMenuPageProps) {
                     ← Voltar à lista
                   </button>
                 </div>
-                {menuConfig.map(menu => renderMenuItemFuncionario(menu))}
+
+                {/* Botões de Submenu */}
+                <div style={{
+                  display: 'flex',
+                  gap: '10px',
+                  marginBottom: '15px',
+                  borderBottom: `2px solid ${theme.border}`,
+                  paddingBottom: '10px'
+                }}>
+                  <button
+                    onClick={() => setSubmenuFuncionario('acessos')}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: submenuFuncionario === 'acessos' ? 'bold' : 'normal',
+                      backgroundColor: submenuFuncionario === 'acessos' ? '#3b82f6' : theme.background,
+                      color: submenuFuncionario === 'acessos' ? '#fff' : theme.text,
+                      border: `2px solid ${submenuFuncionario === 'acessos' ? '#3b82f6' : theme.border}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    🔐 Acessos aos Menus
+                  </button>
+                  <button
+                    onClick={() => setSubmenuFuncionario('assinaturas')}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: submenuFuncionario === 'assinaturas' ? 'bold' : 'normal',
+                      backgroundColor: submenuFuncionario === 'assinaturas' ? '#10b981' : theme.background,
+                      color: submenuFuncionario === 'assinaturas' ? '#fff' : theme.text,
+                      border: `2px solid ${submenuFuncionario === 'assinaturas' ? '#10b981' : theme.border}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    ✍️ Assinaturas e Permissões
+                  </button>
+                </div>
+
+                {/* Conteúdo do Submenu Acessos */}
+                {submenuFuncionario === 'acessos' && (
+                  <div>
+                    {menuConfig.map(menu => renderMenuItemFuncionario(menu))}
+                  </div>
+                )}
+
+                {/* Conteúdo do Submenu Assinaturas */}
+                {submenuFuncionario === 'assinaturas' && (
+                  <div style={{
+                    padding: '15px',
+                    backgroundColor: theme.surface,
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.border}`
+                  }}>
+                    <h3 style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '700', 
+                      color: theme.text,
+                      marginBottom: '16px',
+                      borderBottom: `2px solid ${theme.border}`,
+                      paddingBottom: '8px'
+                    }}>
+                      Permissões Especiais de Assinatura
+                    </h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {/* Assinante do Cartão */}
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '12px',
+                        backgroundColor: theme.background,
+                        borderRadius: '6px',
+                        border: `1px solid ${theme.border}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.surface
+                        e.currentTarget.style.borderColor = '#10b981'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.background
+                        e.currentTarget.style.borderColor = theme.border
+                      }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={(() => {
+                            const func = JSON.parse(localStorage.getItem('funcionarios-cadastrados') || '[]')
+                              .find((f: any) => f.codigo === selectedFuncionario || f.id === selectedFuncionario)
+                            return func?.assinante === true || func?.assinante === 'true' || func?.assinante === 'Sim'
+                          })()}
+                          onChange={(e) => {
+                            const funcionariosSalvos = localStorage.getItem('funcionarios-cadastrados')
+                            if (funcionariosSalvos) {
+                              const funcList = JSON.parse(funcionariosSalvos)
+                              const index = funcList.findIndex((f: any) => f.codigo === selectedFuncionario || f.id === selectedFuncionario)
+                              if (index !== -1) {
+                                funcList[index].assinante = e.target.checked
+                                localStorage.setItem('funcionarios-cadastrados', JSON.stringify(funcList))
+                                setFuncionarios(funcList)
+                              }
+                            }
+                          }}
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            cursor: 'pointer'
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: theme.text }}>
+                            ✍️ Assinante do Cartão
+                          </div>
+                          <div style={{ fontSize: '11px', color: theme.textSecondary, marginTop: '2px' }}>
+                            Permite que este funcionário apareça como opção no campo "Assinante do Cartão" no cadastro de clientes
+                          </div>
+                        </div>
+                      </label>
+
+                      {/* Outras permissões podem ser adicionadas aqui */}
+                      <div style={{
+                        padding: '12px',
+                        backgroundColor: '#eff6ff',
+                        borderRadius: '6px',
+                        border: '1px solid #3b82f6',
+                        fontSize: '12px',
+                        color: '#1e40af'
+                      }}>
+                        💡 <strong>Dica:</strong> As permissões de assinatura controlam quais funcionalidades especiais o funcionário pode exercer no sistema.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             

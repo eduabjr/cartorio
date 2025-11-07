@@ -165,7 +165,7 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
   const [formData, setFormData] = useState<Protocolo>({
     id: '',
     numero: '',
-    dataEntrada: new Date().toLocaleDateString('pt-BR'),
+    dataEntrada: '',
     fichaBalcao: '0',
     termo: '',
     livro: '',
@@ -200,6 +200,11 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
   })
   const [selectedAtoId, setSelectedAtoId] = useState<string | null>(null)
   
+  // Garantir que o campo Data Entrada inicie vazio
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, dataEntrada: '' }))
+  }, [])
+
   // Carregar naturezas do localStorage
   useEffect(() => {
     const carregarNaturezas = async () => {
@@ -298,6 +303,7 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
     setFormData({
       ...formData,
       numero: '',
+      dataEntrada: '',
       termo: '',
       livro: '',
       folhas: '',
@@ -515,6 +521,7 @@ export function ProtocoloLancamentoPage({ onClose }: ProtocoloLancamentoPageProp
                       onChange={(e) => setFormData({ ...formData, dataEntrada: e.target.value })}
                       onFocus={() => setFocusedField('dataEntrada')}
                       onBlur={() => setFocusedField(null)}
+                      placeholder="dd / mm / aaaa"
                       style={getInputStyles('dataEntrada')}
                     />
                     <button style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>🔍</button>

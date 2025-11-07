@@ -146,6 +146,22 @@ Telas otimizadas para melhor visualização:
 - ✅ **Funcionário** - Botões maiores com espaçamento adequado
 - ✅ **Todas as Páginas** - Layouts bloqueados e perfeitos
 
+### 📤 Remessa SEADE
+
+Nova tela operacional reproduzindo o fluxo legado de remessas:
+
+- ✅ **Filtro Período** - Campo `MM/AAAA` compacto com máscara automática
+- ✅ **Seleção de Tipo** - Casamento civil/religioso, nascimento, óbitos e óbitos fetais em layout horizontal
+- ✅ **Grid Profissional** - Cabeçalho fixo, zebra striping e todas as colunas SEADE (Processo, Livro, Termo, Data, etc.)
+- ✅ **Contadores** - Total de registros x imagens, com destaque quando vazio
+- ✅ **Ações Rápidas** - Pesquisar, Limpar, Gerar Arquivo, Enviar ao Disquete e Retornar
+- ✅ **Janela Fixa** - Dimensões bloqueadas (1200x700) sem redimensionamento para manter o layout aprovado
+
+### 🧭 Navegação Atualizada
+
+- ✅ **Painel de Senhas (Admin)** movido para o menu *Cadastros*, removendo duplicidade em *Configurações do Sistema*
+- ✅ Menu de *Remessas* atualizado para abrir a nova tela **Remessa SEADE**
+
 ### 🚀 Auto-Abertura de Telas
 
 Acesso direto às funcionalidades principais:
@@ -298,6 +314,16 @@ Proteção total da propriedade intelectual:
 - ✅ Código sequencial automático
 - ✅ Botão "Excluir" condicional (só ativo se houver seleção)
 - ✅ Controle de bloqueios e desbloqueios
+
+#### Remessa SEADE
+
+- ✅ Filtros por período (`MM/AAAA`) e tipo de ato
+- ✅ Seleção horizontal para Cas. Civil, Cas. Religioso, Nascimento, Óbitos e Óbitos Fetais
+- ✅ Grade completa com colunas SEADE (Processo, Livro, Termo, Datas, Estado Civil, Noivos, etc.)
+- ✅ Indicador de registros que não possuem imagem vinculada
+- ✅ Contador de registros x imagens com destaque quando vazio
+- ✅ Ações rápidas: Pesquisar, Limpar, Gerar Arquivo, Enviar ao Disquete e Retornar
+- ✅ Janela de 1200x700px com layout travado
 
 ### 🖼️ Controle de Digitalização de Imagens
 
@@ -525,6 +551,7 @@ F:\cartorio\
 │   │   │   ├── LocalizacaoCadastroPage.tsx  # Cidades e países
 │   │   │   ├── OficiosMandadosPage.tsx # Ofícios e mandados
 │   │   │   ├── CartorioSeadePage.tsx   # Cartório SEADE
+│   │   │   ├── RemessaSEADEPage.tsx    # Remessas SEADE
 │   │   │   ├── ConfiguracoesPage.tsx   # Configurações acessibilidade
 │   │   │   ├── ConfiguracaoSistemaPage.tsx  # Configurações sistema
 │   │   │   └── ...                     # +15 páginas

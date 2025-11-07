@@ -797,7 +797,7 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
   const containerStyles: React.CSSProperties = {
     backgroundColor: theme.background,
     color: theme.text,
-    padding: '4px 4px 0 4px',  // Padding inferior = 0 para reduzir espaço abaixo dos botões
+    padding: '4px',  // Padding uniforme
     borderRadius: '8px',
     flex: 1,  // Ocupa todo espaço disponível
     overflowY: 'auto',  // ⚠️ CRÍTICO - NÃO ALTERAR - Scroll vertical
@@ -819,7 +819,7 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
   // 🔒 BLOQUEIO: formContainerStyles - NÃO MODIFICAR padding ou flexShrink
   const formContainerStyles: React.CSSProperties = {
     backgroundColor: theme.surface,
-    padding: '4px 4px 0 4px',  // Padding inferior = 0 para reduzir espaço
+    padding: '4px',  // Padding uniforme
     borderRadius: '8px',
     border: `1px solid ${theme.border}`,
     overflow: 'visible',
@@ -837,7 +837,7 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
     flexDirection: 'column',
     gap: '4px',  // Reduzido de 6px para 4px
     marginBottom: '0px',  // Reduzido de 2px para 0px - remove margem inferior
-    padding: '2px 2px 0 2px',  // Padding inferior = 0 para reduzir espaço
+    padding: '2px',  // Padding uniforme
     overflow: 'visible',
     height: 'auto',
     minWidth: 0,
@@ -1000,7 +1000,6 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
     gap: '12px',  // Reduzido de 14px para 12px
     marginTop: '4px',  // Reduzido de 8px para 4px
     paddingTop: '4px',  // Reduzido de 8px para 4px
-    paddingBottom: '2px',  // Padding inferior mínimo
     borderTop: `1px solid ${theme.border}`,
     flexWrap: 'nowrap' as const,  // 🔒 FIXO - NÃO quebra - botões ficam na mesma linha
     flexShrink: 0,  // 🔒 FIXO - Botões não encolhem
@@ -1102,13 +1101,13 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
   return (
     <>
     <BasePage
-      title="Funcionário"
+      title="Funcionário e Guichê"
       onClose={handleClose}
       headerColor={headerColor}
-      height="700px"  // Aumentado para acomodar as abas
+      height="620px"  // Reduzido de 700px para 620px para eliminar espaço vazio
       width="900px"
       minWidth="900px"  // 🔒 BLOQUEIO: Impede redução abaixo de 900px
-      minHeight="700px" // Aumentado para acomodar as abas
+      minHeight="620px" // Reduzido de 700px para 620px
       resizable={false}  // 🔒 BLOQUEIO: Desabilita redimensionamento
     >
       {/* 📑 SISTEMA DE ABAS */}

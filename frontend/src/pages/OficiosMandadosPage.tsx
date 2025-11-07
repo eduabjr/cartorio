@@ -19,7 +19,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
   // Estado para o formulário
   const [formData, setFormData] = useState({
     // Entrada
-    data: new Date().toISOString().split('T')[0],
+    data: '',
     atendente: '',
     tipo: '',
     previsaoEntrega: '',
@@ -66,7 +66,7 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
   // Função para criar novo registro
   const handleNovo = () => {
     setFormData({
-      data: new Date().toISOString().split('T')[0],
+      data: '',
       atendente: '',
       tipo: '',
       previsaoEntrega: '',
@@ -652,11 +652,12 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
             <label style={{ ...labelStyles, marginBottom: '0', minWidth: '50px' }}>Data</label>
             <div style={{ position: 'relative', flex: 1 }}>
               <input
-                type="date"
+                type="text"
                 value={formData.data}
                 onChange={(e) => setFormData({ ...formData, data: e.target.value })}
                 onFocus={() => setFocusedField('data')}
                 onBlur={() => setFocusedField(null)}
+                placeholder="dd / mm / aaaa"
                 style={getDateInputStyles('data')}
               />
               <button 
@@ -690,11 +691,12 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
             <label style={{ ...labelStyles, marginBottom: '0', minWidth: '100px', whiteSpace: 'nowrap' }}>Previsão Entrega</label>
             <div style={{ position: 'relative', flex: 1 }}>
               <input
-                type="date"
+                type="text"
                 value={formData.previsaoEntrega}
                 onChange={(e) => setFormData({ ...formData, previsaoEntrega: e.target.value })}
                 onFocus={() => setFocusedField('previsaoEntrega')}
                 onBlur={() => setFocusedField(null)}
+                placeholder="dd / mm / aaaa"
                 style={getDateInputStyles('previsaoEntrega')}
               />
               <button 
@@ -995,11 +997,12 @@ export const OficiosMandadosPage: React.FC<OficiosMandadosPageProps> = ({ onClos
               <label style={{ ...labelStyles, marginBottom: '0', minWidth: '50px' }}>Data</label>
               <div style={{ position: 'relative', flex: 1 }}>
                 <input
-                  type="date"
+                  type="text"
                   value={formData.cumprimentoData}
                   onChange={(e) => setFormData({ ...formData, cumprimentoData: e.target.value })}
                   onFocus={() => setFocusedField('cumprimentoData')}
                   onBlur={() => setFocusedField(null)}
+                  placeholder="dd / mm / aaaa"
                   style={getDateInputStyles('cumprimentoData')}
                 />
                 <button 

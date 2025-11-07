@@ -534,7 +534,10 @@ export function DNVDOBloqueadasPage({ onClose }: DNVDOBloqueadasPageProps) {
               <input
                 type="text"
                 value={formData.numeroDeclaracao}
-                onChange={(e) => setFormData({ ...formData, numeroDeclaracao: e.target.value })}
+                onChange={(e) => {
+                  const valor = e.target.value.replace(/\D/g, '')
+                  setFormData({ ...formData, numeroDeclaracao: valor })
+                }}
                 onFocus={() => setFocusedField('numeroDeclaracao')}
                 onBlur={() => setFocusedField(null)}
                 style={getInputWithIconStyles('numeroDeclaracao')}

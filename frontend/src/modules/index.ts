@@ -189,6 +189,12 @@ export const HospitalCemiterioPageIsolated = createIsolatedPage(
   'Hospital, Cemitério e Funerária'
 )
 
+// 📦 Módulo: Remessa SEADE
+export const RemessaSEADEPageIsolated = createIsolatedPage(
+  () => import('../pages/RemessaSEADEPage').then(m => ({ default: m.RemessaSEADEPage })),
+  'Remessa SEADE'
+)
+
 /**
  * 📋 Mapa de todos os módulos disponíveis
  * 
@@ -224,7 +230,8 @@ export const modules = {
   recepcaoArquivos: RecepcaoArquivosPageIsolated,
   feriados: FeriadosPageIsolated,
   controleDigitalizacao: ControleDigitalizacaoPageIsolated,
-  hospitalCemiterio: HospitalCemiterioPageIsolated
+  hospitalCemiterio: HospitalCemiterioPageIsolated,
+  remessaSEADE: RemessaSEADEPageIsolated
 } as const
 
 export type ModuleName = keyof typeof modules

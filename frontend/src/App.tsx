@@ -42,7 +42,8 @@ import {
   ConfiguracaoSenhaPageIsolated,
   ControladorSenhaPageIsolated,
   PainelSenhasPageIsolated,
-  GerenciamentoGuichesPageIsolated
+  GerenciamentoGuichesPageIsolated,
+  RemessaSEADEPageIsolated
 } from './modules'
 // Rotas públicas (não precisam de isolamento, carregadas diretamente)
 import { TelaSenhaPublicaPage } from './pages/TelaSenhaPublicaPage'
@@ -834,6 +835,16 @@ function AppContent() {
             })
             console.log('✅ Janela de Ofícios e Mandados aberta!')
           } },
+          { id: 'painel-senhas-admin', label: 'Painel de Senhas (Admin)', icon: '', adminOnly: true, onClick: () => {
+            console.log('✅ Abrindo Painel Administrativo de Senhas...')
+            openWindow({
+              id: 'painel-senhas-admin-window',
+              type: 'painel-senhas-admin',
+              title: 'Painel de Senhas',
+              component: PainelSenhasPageIsolated,
+              props: {}
+            })
+          } },
           { id: 'hospital-cemiterio', label: 'Hospital, Cemitério e Funerária', icon: '', onClick: () => {
             console.log('✅ HOSPITAL, CEMITÉRIO E FUNERÁRIA CLICADO! Abrindo janela...')
             openWindow({
@@ -1017,16 +1028,6 @@ function AppContent() {
                   type: 'config-senhas',
                   title: 'Configuração de Senhas',
                   component: ConfiguracaoSenhaPageIsolated,
-                  props: {}
-                })
-              } },
-              { id: 'painel-senhas-admin', label: 'Painel de Senhas (Admin)', icon: '', onClick: () => {
-                console.log('✅ Abrindo Painel Administrativo de Senhas...')
-                openWindow({
-                  id: 'painel-senhas-window',
-                  type: 'painel-senhas',
-                  title: 'Painel de Senhas',
-                  component: PainelSenhasPageIsolated,
                   props: {}
                 })
               } }
@@ -1227,7 +1228,16 @@ function AppContent() {
         label: 'Remessas',
         icon: '',
         submenu: [
-          { id: 'remessa-guia-seade', label: 'Guia SEADE', icon: '', onClick: () => (window as any).navigateToPage?.('remessa-guia-seade') },
+          { id: 'remessa-guia-seade', label: 'Remessa SEADE', icon: '', onClick: () => {
+            console.log('✅ Abrindo Remessa SEADE...')
+            openWindow({
+              id: 'remessa-seade-window',
+              type: 'remessa-seade',
+              title: 'Remessa SEADE',
+              component: RemessaSEADEPageIsolated,
+              props: {}
+            })
+          } },
           { id: 'remessa-arquivo-seade', label: 'Arquivo SEADE', icon: '', onClick: () => (window as any).navigateToPage?.('remessa-arquivo-seade') },
           { id: 'remessa-intranet', label: 'INTRANET', icon: '', onClick: () => (window as any).navigateToPage?.('remessa-intranet') }
         ]

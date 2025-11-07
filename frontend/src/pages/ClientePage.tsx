@@ -466,6 +466,8 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   
   const [cartaoHabilitado, setCartaoHabilitado] = useState(true)
   
+  const [funcionarios, setFuncionarios] = useState<any[]>([])
+  
   const [formData, setFormData] = useState({
     codigo: '0',
     nome: '',
@@ -521,6 +523,24 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     console.log(`🗑️ Janela fechada - Limpando dados temporários: "${persistKeyRef.current}"`)
     onClose()
   }
+
+  // Carregar funcionários cadastrados
+  useEffect(() => {
+    const carregarFuncionarios = () => {
+      const funcionariosSalvos = localStorage.getItem('funcionarios-cadastrados')
+      if (funcionariosSalvos) {
+        const funcList = JSON.parse(funcionariosSalvos)
+        setFuncionarios(funcList.filter((f: any) => f.emAtividade !== false))
+      }
+    }
+    
+    carregarFuncionarios()
+    
+    // Recarregar a cada 2 segundos para manter atualizado
+    const interval = setInterval(carregarFuncionarios, 2000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
   // Função para formatar telefone
   const formatTelefone = (value: string) => {
@@ -2427,6 +2447,11 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                     type="checkbox" 
                     checked={cartaoHabilitado}
                     onChange={(e) => {
+                      // Se desmarcar, não apagar o número se já foi gerado
+                      if (!e.target.checked && formData.numeroCartao !== '0' && formData.numeroCartao !== '') {
+                        // Não permitir desmarcar se número já foi gerado
+                        return
+                      }
                       setCartaoHabilitado(e.target.checked)
                       if (!e.target.checked) {
                         handleInputChange('numeroCartao', '0')
@@ -2441,7 +2466,7 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
                       width: '14px', 
                       height: '14px',
                       flexShrink: 0,
-                      cursor: 'pointer'
+                      cursor: formData.numeroCartao !== '0' && formData.numeroCartao !== '' ? 'not-allowed' : 'pointer'
                     }} 
                   />
                   <span style={{fontSize: '11px', color: theme.text, whiteSpace: 'nowrap', lineHeight: '24px'}}>Cartão</span>
@@ -2755,7 +2780,13 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
               <CidadeAutocompleteInput
                 value={formData.cidade}
                 onChange={(cidade) => handleInputWithLimit('cidade', cidade, 50)}
-                onUfChange={(uf) => handleInputChange('ufEndereco', uf)}
+                onUfChange={(uf) => {
+                  handleInputChange('ufEndereco', uf)
+                  // Preencher país como Brasil ao preencher cidade brasileira
+                  if (uf) {
+                    handleInputChange('paisEndereco', 'BR')
+                  }
+                }}
                 uf={formData.uf}
                 inputStyles={inputStyles}
                 maxLength={50}
@@ -2850,30 +2881,36 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
           <div style={rowStyles}>
             <div style={fieldStyles}>
               <label style={labelStyles}>Atendente</label>
-              <select
+              <CustomSelect
                 value={formData.atendente}
-                onChange={(e) => handleInputChange('atendente', e.target.value)}
-                style={selectStyles}
-              >
-                <option value="">Selecione</option>
-                <option value="ATENDENTE_1">Atendente 1</option>
-                <option value="ATENDENTE_2">Atendente 2</option>
-                <option value="ATENDENTE_3">Atendente 3</option>
-              </select>
+                onChange={(value) => handleInputChange('atendente', value)}
+                options={[
+                  { value: '', label: 'Selecione' },
+                  ...funcionarios.map((func) => ({
+                    value: func.codigo,
+                    label: `${func.nome}${func.cargo ? ` - ${func.cargo}` : ''}`
+                  }))
+                ]}
+                maxVisibleItems={5}
+              />
             </div>
 
             <div style={fieldStyles}>
               <label style={labelStyles}>Assinante do Cartão</label>
-              <select
+              <CustomSelect
                 value={formData.assinanteCartao}
-                onChange={(e) => handleInputChange('assinanteCartao', e.target.value)}
-                style={selectStyles}
-              >
-                <option value="">Selecione</option>
-                <option value="ASSINANTE_1">Assinante 1</option>
-                <option value="ASSINANTE_2">Assinante 2</option>
-                <option value="ASSINANTE_3">Assinante 3</option>
-              </select>
+                onChange={(value) => handleInputChange('assinanteCartao', value)}
+                options={[
+                  { value: '', label: 'Selecione' },
+                  ...funcionarios
+                    .filter((func) => func.assinante === true || func.assinante === 'true' || func.assinante === 'Sim')
+                    .map((func) => ({
+                      value: func.codigo,
+                      label: `${func.nome}${func.cargo ? ` - ${func.cargo}` : ''}`
+                    }))
+                ]}
+                maxVisibleItems={5}
+              />
             </div>
           </div>
 
