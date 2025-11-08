@@ -57,6 +57,12 @@ export const IndicesPageIsolated = createIsolatedPage(
   'Índices de Livros'
 )
 
+// 📦 Módulo: Cadastro de Índice
+export const CadastroIndicePageIsolated = createIsolatedPage(
+  () => import('../pages/CadastroIndicePage').then(m => ({ default: m.CadastroIndicePage })),
+  'Cadastro de Índices'
+)
+
 // 📦 Módulo: Índice X
 export const IndiceXPageIsolated = createIsolatedPage(
   () => import('../pages/IndiceXPage').then(m => ({ default: m.IndiceXPage })),
@@ -218,6 +224,7 @@ export const modules = {
   configuracaoSistema: ConfiguracaoSistemaPageIsolated,
   configuracaoMenu: ConfiguracaoMenuPageIsolated,
   cadastroLivros: CadastroLivrosPageIsolated,
+  cadastroIndice: CadastroIndicePageIsolated,
   tiposCadastro: TiposCadastroPageIsolated,
   protocoloLancamento: ProtocoloLancamentoPageIsolated,
   localizacaoCadastro: LocalizacaoCadastroPageIsolated,

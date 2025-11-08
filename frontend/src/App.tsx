@@ -32,6 +32,7 @@ import {
   OficiosMandadosPageIsolated,
   HospitalCemiterioPageIsolated,
   CadastroLivrosPageIsolated,
+  CadastroIndicePageIsolated,
   ProtocoloLancamentoPageIsolated,
   NaturezaPageIsolated,
   ServicoCartorioPageIsolated,
@@ -1036,23 +1037,6 @@ function AppContent() {
         ]
       },
       {
-        id: 'processos',
-        label: 'Processos',
-        icon: '',
-        submenu: [
-          { id: 'recepcao-arquivos', label: 'Recepção de Arquivos', icon: '', onClick: () => {
-            console.log('✅ Abrindo Recepção de Arquivos...')
-            openWindow({
-              id: 'recepcao-arquivos-window',
-              type: 'recepcao-arquivos',
-              title: 'Recepção de Arquivos',
-              component: RecepcaoArquivosPageIsolated,
-              props: {}
-            })
-          } }
-        ]
-      },
-      {
         id: 'atendimento',
         label: 'Atendimento',
         icon: '',
@@ -1174,6 +1158,16 @@ function AppContent() {
         label: 'Índice',
         icon: '',
         submenu: [
+          { id: 'cadastro-indice', label: 'Cadastro de Índice', icon: '', onClick: () => {
+            console.log('✅ Abrindo Cadastro de Índice...')
+            openWindow({
+              id: `cadastro-indice-${Date.now()}`,
+              type: 'cadastro-indice',
+              title: 'Cadastro de Índice',
+              component: CadastroIndicePageIsolated,
+              props: {}
+            })
+          }},
           { id: 'indices-principais', label: 'Índices (Nascimento, Casamento, Óbito, Proclamas)', icon: '', onClick: () => {
             console.log('✅ Abrindo Índices...')
             openWindow({
@@ -1185,19 +1179,7 @@ function AppContent() {
             })
             console.log('✅ Janela de Índices aberta!')
           }},
-          { id: 'indice-x', label: 'Índice X', icon: '', onClick: () => {
-            console.log('✅ Abrindo Índice X...')
-            openWindow({
-              id: `indice-x-${Date.now()}`,
-              type: 'indice-x',
-              title: 'Índice X',
-              component: IndiceXPageIsolated,
-              props: {}
-            })
-            console.log('✅ Janela de Índice X aberta!')
-          }},
-          { id: 'indice-livro', label: 'Livro E', icon: '', onClick: () => (window as any).navigateToPage?.('indice-livro') },
-          { id: 'indice-procuracao', label: 'Índice de Procuração', icon: '', onClick: () => (window as any).navigateToPage?.('indice-procuracao') }
+         
         ]
       },
       {
@@ -1235,6 +1217,16 @@ function AppContent() {
               type: 'remessa-seade',
               title: 'Remessa SEADE',
               component: RemessaSEADEPageIsolated,
+              props: {}
+            })
+          } },
+          { id: 'recepcao-arquivos', label: 'Recepção de Arquivos', icon: '', onClick: () => {
+            console.log('✅ Abrindo Recepção de Arquivos...')
+            openWindow({
+              id: 'recepcao-arquivos-window',
+              type: 'recepcao-arquivos',
+              title: 'Recepção de Arquivos',
+              component: RecepcaoArquivosPageIsolated,
               props: {}
             })
           } },

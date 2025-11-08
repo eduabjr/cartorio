@@ -35,7 +35,7 @@
 //
 // ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { CustomSelect } from '../components/CustomSelect'
 import { UF_OPTIONS, PAIS_OPTIONS } from '../constants/selectOptions'
@@ -170,6 +170,8 @@ interface ClientePageProps {
   resetToOriginalPosition?: boolean
 }
 
+const CLIENTE_RESULTADOS_STORAGE_KEY = 'cliente-pesquisa-estado'
+
 export function ClientePage({ onClose, resetToOriginalPosition }: ClientePageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   // const tjspApi = useTJSPApi()
@@ -228,9 +230,30 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const [isWebEnvironment, setIsWebEnvironment] = useState(false)
   
   // Estados para tela intermediária de resultados
-  const [showResultados, setShowResultados] = useState(false)
-  const [resultadosBusca, setResultadosBusca] = useState<any[]>([])
-  const [termoBusca, setTermoBusca] = useState('')
+  const persistedResultados = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return { showResultados: false, termoBusca: '', resultadosBusca: [] as any[] }
+    }
+    try {
+      const raw = localStorage.getItem(CLIENTE_RESULTADOS_STORAGE_KEY)
+      if (!raw) {
+        return { showResultados: false, termoBusca: '', resultadosBusca: [] as any[] }
+      }
+      const parsed = JSON.parse(raw)
+      return {
+        showResultados: !!parsed.showResultados,
+        termoBusca: typeof parsed.termoBusca === 'string' ? parsed.termoBusca : '',
+        resultadosBusca: Array.isArray(parsed.resultadosBusca) ? parsed.resultadosBusca : []
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar resultados persistidos de Cliente:', error)
+      return { showResultados: false, termoBusca: '', resultadosBusca: [] as any[] }
+    }
+  }, [])
+
+  const [showResultados, setShowResultados] = useState(persistedResultados.showResultados)
+  const [resultadosBusca, setResultadosBusca] = useState<any[]>(persistedResultados.resultadosBusca)
+  const [termoBusca, setTermoBusca] = useState(persistedResultados.termoBusca)
   
   // Detectar ambiente (web vs desktop)
   useEffect(() => {
@@ -521,6 +544,9 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
   const handleClose = () => {
     clearPersistedForm(persistKeyRef.current)
     console.log(`🗑️ Janela fechada - Limpando dados temporários: "${persistKeyRef.current}"`)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CLIENTE_RESULTADOS_STORAGE_KEY)
+    }
     onClose()
   }
 
@@ -541,6 +567,22 @@ export function ClientePage({ onClose, resetToOriginalPosition }: ClientePagePro
     
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    try {
+      const payload = JSON.stringify({
+        showResultados,
+        termoBusca,
+        resultadosBusca
+      })
+      localStorage.setItem(CLIENTE_RESULTADOS_STORAGE_KEY, payload)
+    } catch (error) {
+      console.error('❌ Erro ao persistir resultados de busca de Cliente:', error)
+    }
+  }, [showResultados, termoBusca, resultadosBusca])
 
   // Função para formatar telefone
   const formatTelefone = (value: string) => {

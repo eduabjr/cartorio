@@ -189,7 +189,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
         totalMs += diffMs
       }
     })
-
+        
     // Se está em atendimento agora, adicionar tempo da senha atual
     const senhaAtual = senhasDoGuiche.find(s => s.status === 'chamando' || s.status === 'atendendo')
     if (senhaAtual && senhaAtual.horaAtendimento) {
@@ -228,7 +228,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
     const senhasAusentes = senhasDoGuiche.filter(s => s.status === 'ausente')
     const senhasPreferenciaisAtendidas = senhasFinalizadas.filter(s => s.prioridade)
     const senhasComunsAtendidas = senhasFinalizadas.filter(s => !s.prioridade)
-
+        
     // Calcular tempo médio de atendimento
     let tempoMedioAtendimento = '0min'
     if (senhasFinalizadas.length > 0) {
@@ -376,7 +376,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
         novo.delete(servicoId)
       } else {
         novo.add(servicoId)
-      }
+    }
       return novo
     })
   }
@@ -516,7 +516,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
         <div class="stat-box">
             <div class="stat-value">${senhasAusentes.length}</div>
             <div class="stat-label">Total Ausentes</div>
-        </div>
+    </div>
         <div class="stat-box">
             <div class="stat-value" style="color: #ef4444;">${formatarTempo(tempoMaxEspera)}</div>
             <div class="stat-label">⏰ Tempo Máx. Espera</div>
@@ -577,7 +577,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
       rankingServicos.forEach(([nome, stats], index) => {
         const posicao = index + 1
         const medalha = posicao === 1 ? '🥇' : posicao === 2 ? '🥈' : posicao === 3 ? '🥉' : `${posicao}°`
-        html += `
+    html += `
             <div class="summary-item">
                 <span><strong>${medalha} ${nome}</strong></span>
                 <span>${stats.emitidas} senhas (${stats.atendidas} atendidas)</span>
@@ -596,15 +596,15 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
         const posicao = index + 1
         const medalha = posicao === 1 ? '🥇' : posicao === 2 ? '🥈' : posicao === 3 ? '🥉' : `${posicao}°`
         const totalSenhas = senhas.filter(s => s.guicheId === guiche.id).length
-        html += `
+      html += `
             <div class="summary-item">
                 <span><strong>${medalha} Guichê ${guiche.numero}</strong> - ${guiche.funcionarioNome || 'Não atribuído'}</span>
                 <span>${atendidas} de ${totalSenhas}</span>
             </div>
 `
-      })
+    })
 
-      html += `
+    html += `
         </div>
     </div>
 `
@@ -1530,7 +1530,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                     const estaExpandido = servicosExpandidos.has(servicoId)
                     
                     return (
-                      <div
+                          <div
                         key={servicoId}
                             style={{
                               backgroundColor: theme.background,
@@ -1590,7 +1590,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                   borderRadius: '4px',
                                   fontSize: '11px',
                                   fontWeight: '600'
-                                }}>
+                            }}>
                                   ⭐ {statsP.emitidas}P
                             </span>
                               )}
@@ -1670,7 +1670,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                                   backgroundColor: '#f0fdf4',
                                   border: '1px solid #10b981',
                                   borderRadius: '8px'
-                                }}>
+                  }}>
                                   <div style={{ fontSize: '12px', fontWeight: '600', color: '#065f46', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     📋 COMUM
                     </div>
@@ -3540,7 +3540,7 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px'
-                  }}
+                }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#10b981'
                     e.currentTarget.style.color = '#fff'
@@ -3549,9 +3549,9 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
                     e.currentTarget.style.backgroundColor = theme.background
                     e.currentTarget.style.color = '#10b981'
                   }}
-                >
+              >
                   📊 Relatório Completo em Excel
-                </button>
+              </button>
               <button
                   onClick={() => setMostrarRelatorioGuiche(null)}
                 style={{

@@ -35,6 +35,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
   const [mostrarDiagnostico, setMostrarDiagnostico] = useState(false)
   const [mostrarPopupChamarSenha, setMostrarPopupChamarSenha] = useState(false)
   const [configuracao, setConfiguracao] = useState<ConfiguracaoSenha | null>(null)
+  const [totalGuiches, setTotalGuiches] = useState(0)
 
   // Próxima senha da fila geral (para o botão telefone)
   const proximaSenhaFila = useMemo(() => {
@@ -363,6 +364,7 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
   const carregarDados = () => {
     if (VERBOSE_LOGS) console.log('📋 CONTROLADOR - carregarDados() chamado')
     const guiches = senhaService.getGuiches()
+    setTotalGuiches(guiches.length)
     const funcionarioLogado = localStorage.getItem('user')
     
     // Carregar configuração
@@ -718,6 +720,9 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
     return porcentagem
   }
 
+  const guicheDisponivel = !!meuGuiche
+  const semGuicheCadastrado = totalGuiches === 0
+
   return (
     <>
       <BasePage
@@ -734,7 +739,8 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
           height: '100%',
           backgroundColor: theme.background,
           padding: '16px',
-          gap: '12px'
+          gap: '12px',
+          position: 'relative'
         }}>
           
           {/* Diagnóstico - Mostrar se não houver guichê */}
@@ -747,30 +753,41 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               marginBottom: '8px'
             }}>
               <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#991b1b', marginBottom: '8px' }}>
-                ⚠️ Guichê não encontrado
+                {semGuicheCadastrado ? '⚠️ Nenhum guichê cadastrado' : '⚠️ Guichê não encontrado'}
               </div>
-              <div style={{ fontSize: '12px', color: '#7f1d1d', marginBottom: '8px' }}>
-                Você precisa estar logado e ter um guichê atribuído.
+              <div style={{ fontSize: '12px', color: '#7f1d1d', marginBottom: '8px', lineHeight: 1.4 }}>
+                {semGuicheCadastrado
+                  ? (
+                    <>
+                      Cadastre ao menos um guichê em <strong>Cadastros &gt; Funcionário &gt; Guichês</strong> e atribua a um usuário.
+                    </>
+                  )
+                  : (
+                    <>
+                      Você precisa estar logado e ter um guichê atribuído.
+                    </>
+                  )}
               </div>
               <button
                 onClick={corrigirSistema}
+                disabled={semGuicheCadastrado}
                 style={{
                   width: '100%',
                   padding: '10px',
-                  backgroundColor: '#10b981',
+                  backgroundColor: semGuicheCadastrado ? '#94a3b8' : '#10b981',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
-                  cursor: 'pointer',
+                  cursor: semGuicheCadastrado ? 'not-allowed' : 'pointer',
                   fontSize: '14px',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  opacity: semGuicheCadastrado ? 0.7 : 1
                 }}
               >
-                🔧 Corrigir Automaticamente
+                {semGuicheCadastrado ? 'Cadastre um guichê para continuar' : '🔧 Corrigir Automaticamente'}
               </button>
             </div>
           )}
-          
           {/* Chamar Senha Manual */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input
@@ -1004,6 +1021,56 @@ export function ControladorSenhaPage({ onClose }: ControladorSenhaPageProps) {
               </button>
             </div>
           </div>
+          
+          {!guicheDisponivel && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: '180px',
+                bottom: 0,
+                background: 'rgba(248, 250, 252, 0.85)',
+                backdropFilter: 'blur(2px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                zIndex: 5,
+                pointerEvents: 'auto'
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '12px',
+                  padding: '18px',
+                  maxWidth: '280px',
+                  textAlign: 'center',
+                  boxShadow: '0 10px 25px rgba(15, 23, 42, 0.15)',
+                  color: '#1f2937',
+                  fontSize: '13px',
+                  lineHeight: 1.5
+                }}
+              >
+                <strong style={{ display: 'block', marginBottom: '8px', color: '#ef4444', fontSize: '15px' }}>
+                  Recursos bloqueados
+                </strong>
+                {semGuicheCadastrado ? (
+                  <>
+                    Para utilizar o controlador de atendimento, cadastre pelo menos um guichê no sistema
+                    e atribua-o a um funcionário.
+                  </>
+                ) : (
+                  <>
+                    Para utilizar o controlador de atendimento, associe um guichê ao usuário logado
+                    ou utilize o botão <em>"Corrigir Automaticamente"</em> no painel acima.
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Modal de Info/Diagnóstico */}
           {mostrarDiagnostico && (

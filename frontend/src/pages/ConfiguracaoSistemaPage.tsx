@@ -228,7 +228,7 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
       setBuscandoCep(false)
     }
   }
-
+  
   const salvarConfigGerais = async () => {
     console.log('🔵 BOTÃO SALVAR CLICADO!')
     console.log('📊 Estado atual:', configGerais)

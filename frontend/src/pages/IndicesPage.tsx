@@ -8,9 +8,8 @@ interface IndicesPageProps {
   onClose: () => void
 }
 
-type MainTab = 'nascimento' | 'casamento' | 'obito' | 'proclamas'
+type MainTab = 'nascimento' | 'casamento' | 'obito' | 'livroE' | 'procuracao' | 'proclamas'
 type SubTab = 'cadastro' | 'imagens'
-
 export function IndicesPage({ onClose }: IndicesPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
@@ -21,8 +20,6 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
   
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('nascimento')
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('cadastro')
-  const [statusMessage, setStatusMessage] = useState('Pronto')
-
   // Estados para Nascimento
   const [nascimentoData, setNascimentoData] = useState({
     livro: '',
@@ -103,6 +100,32 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
     nomeMae: '',
     nomePai: ''
   })
+
+  // Estados para Índice Livro E
+  const [livroEData, setLivroEData] = useState({
+    livro: '',
+    folhas: '',
+    termo: '',
+    dataTermo: '',
+    cidade: 'SANTO ANDRÉ',
+    tipo: ''
+  })
+
+  useFormPersist('form-indice-livro-e-' + (livroEData.termo || 'novo'), livroEData, setLivroEData, activeMainTab === 'livroE', 500)
+
+  // Estados para Procuração
+  const [procuracaoData, setProcuracaoData] = useState({
+    livro: '',
+    folhas: '',
+    termo: '',
+    dataTermo: '',
+    cidade: 'SANTO ANDRÉ',
+    tipo: '',
+    outorgante: '',
+    outorgado: ''
+  })
+
+  useFormPersist('form-indice-procuracao-' + (procuracaoData.termo || 'novo'), procuracaoData, setProcuracaoData, activeMainTab === 'procuracao', 500)
 
   // Estados para Edital de Proclamas
   const [proclamasData, setProclamasData] = useState({
@@ -696,23 +719,202 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
     </div>
   )
 
-  const renderContent = () => {
-    if (activeSubTab === 'imagens') {
-      return (
-        <div style={{ 
-          flex: 1, 
-          backgroundColor: theme.background, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          color: theme.text
-        }}>
-          <p>Área de visualização de imagens</p>
+  const renderLivroE = () => (
+    <div style={{ padding: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 120px 160px 1fr 140px', gap: '12px', marginBottom: '16px' }}>
+        <div>
+          <label style={labelStyles}>Livro</label>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              style={inputStyles}
+              value={livroEData.livro}
+              onChange={(e) => setLivroEData({ ...livroEData, livro: e.target.value })}
+            />
+            <span style={searchIconStyles}>🔍</span>
+          </div>
         </div>
-      )
-    }
+        <div>
+          <label style={labelStyles}>Folha(s)</label>
+          <input
+            type="text"
+            style={inputStyles}
+            value={livroEData.folhas}
+            onChange={(e) => setLivroEData({ ...livroEData, folhas: e.target.value })}
+          />
+        </div>
+        <div>
+          <label style={labelStyles}>Termo</label>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              style={inputStyles}
+              value={livroEData.termo}
+              onChange={(e) => setLivroEData({ ...livroEData, termo: e.target.value })}
+            />
+            <span style={searchIconStyles}>🔍</span>
+          </div>
+        </div>
+        <div>
+          <label style={labelStyles}>Data Termo</label>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="date"
+              style={inputStyles}
+              value={livroEData.dataTermo}
+              onChange={(e) => setLivroEData({ ...livroEData, dataTermo: e.target.value })}
+            />
+            <span style={searchIconStyles}>🔍</span>
+          </div>
+        </div>
+        <div>
+          <label style={labelStyles}>Cidade (Registro)</label>
+          <select
+            style={inputStyles}
+            value={livroEData.cidade}
+            onChange={(e) => setLivroEData({ ...livroEData, cidade: e.target.value })}
+          >
+            <option value="SANTO ANDRÉ">SANTO ANDRÉ</option>
+            <option value="SÃO PAULO">SÃO PAULO</option>
+            <option value="CAMPINAS">CAMPINAS</option>
+          </select>
+        </div>
+        <div>
+          <label style={labelStyles}>Tipo</label>
+          <select
+            style={inputStyles}
+            value={livroEData.tipo}
+            onChange={(e) => setLivroEData({ ...livroEData, tipo: e.target.value })}
+          >
+            <option value="">Selecione</option>
+            <option value="Registro Geral">Registro Geral</option>
+            <option value="Atualização">Atualização</option>
+          </select>
+        </div>
+      </div>
 
-    // Renderizar formulário de cadastro
+      <div style={{
+        margin: '0 4px 16px 4px',
+        minHeight: '220px',
+        backgroundColor: '#ffffff',
+        border: `1px solid ${theme.border}`,
+        borderRadius: '4px'
+      }} />
+    </div>
+  )
+
+  const renderProcuracao = () => (
+    <div style={{ padding: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 120px 160px 1fr 140px', gap: '12px', marginBottom: '16px' }}>
+        <div>
+          <label style={labelStyles}>Livro</label>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              style={inputStyles}
+              value={procuracaoData.livro}
+              onChange={(e) => setProcuracaoData({ ...procuracaoData, livro: e.target.value })}
+            />
+            <span style={searchIconStyles}>🔍</span>
+          </div>
+        </div>
+        <div>
+          <label style={labelStyles}>Folha(s)</label>
+          <input
+            type="text"
+            style={inputStyles}
+            value={procuracaoData.folhas}
+            onChange={(e) => setProcuracaoData({ ...procuracaoData, folhas: e.target.value })}
+          />
+        </div>
+        <div>
+          <label style={labelStyles}>Termo</label>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              style={inputStyles}
+              value={procuracaoData.termo}
+              onChange={(e) => setProcuracaoData({ ...procuracaoData, termo: e.target.value })}
+            />
+            <span style={searchIconStyles}>🔍</span>
+          </div>
+        </div>
+        <div>
+          <label style={labelStyles}>Data Termo</label>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="date"
+              style={inputStyles}
+              value={procuracaoData.dataTermo}
+              onChange={(e) => setProcuracaoData({ ...procuracaoData, dataTermo: e.target.value })}
+            />
+            <span style={searchIconStyles}>🔍</span>
+          </div>
+        </div>
+        <div>
+          <label style={labelStyles}>Cidade (Registro)</label>
+          <select
+            style={inputStyles}
+            value={procuracaoData.cidade}
+            onChange={(e) => setProcuracaoData({ ...procuracaoData, cidade: e.target.value })}
+          >
+            <option value="SANTO ANDRÉ">SANTO ANDRÉ</option>
+            <option value="SÃO PAULO">SÃO PAULO</option>
+            <option value="CAMPINAS">CAMPINAS</option>
+          </select>
+        </div>
+        <div>
+          <label style={labelStyles}>Tipo</label>
+          <select
+            style={inputStyles}
+            value={procuracaoData.tipo}
+            onChange={(e) => setProcuracaoData({ ...procuracaoData, tipo: e.target.value })}
+          >
+            <option value="">Selecione</option>
+            <option value="Publica">Pública</option>
+            <option value="Particular">Particular</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div>
+          <label style={labelStyles}>Outorgante</label>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              style={inputStyles}
+              value={procuracaoData.outorgante}
+              onChange={(e) => setProcuracaoData({ ...procuracaoData, outorgante: e.target.value })}
+            />
+            <span style={searchIconStyles}>🔍</span>
+          </div>
+        </div>
+        <div>
+          <label style={labelStyles}>Outorgado</label>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              style={inputStyles}
+              value={procuracaoData.outorgado}
+              onChange={(e) => setProcuracaoData({ ...procuracaoData, outorgado: e.target.value })}
+            />
+            <span style={searchIconStyles}>🔍</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        margin: '0 4px 16px 4px',
+        minHeight: '200px',
+        backgroundColor: '#ffffff',
+        border: `1px solid ${theme.border}`,
+        borderRadius: '4px'
+      }} />
+    </div>
+  )
+
+  const renderForm = () => {
     switch (activeMainTab) {
       case 'nascimento':
         return renderNascimento()
@@ -720,6 +922,10 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
         return renderCasamento()
       case 'obito':
         return renderObito()
+      case 'livroE':
+        return renderLivroE()
+      case 'procuracao':
+        return renderProcuracao()
       case 'proclamas':
         return renderProclamas()
       default:
@@ -766,6 +972,12 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
             <button onClick={() => { setActiveMainTab('obito'); setActiveSubTab('cadastro') }} style={mainTabStyles(activeMainTab === 'obito')}>
               ⚰️ Óbito
             </button>
+            <button onClick={() => { setActiveMainTab('livroE'); setActiveSubTab('cadastro') }} style={mainTabStyles(activeMainTab === 'livroE')}>
+              📘 Livro E
+            </button>
+            <button onClick={() => { setActiveMainTab('procuracao'); setActiveSubTab('cadastro') }} style={mainTabStyles(activeMainTab === 'procuracao')}>
+              ✍️ Procuração
+            </button>
             <button onClick={() => { setActiveMainTab('proclamas'); setActiveSubTab('cadastro') }} style={mainTabStyles(activeMainTab === 'proclamas')}>
               📜 Edital de Proclamas
             </button>
@@ -777,25 +989,90 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
               Cadastro / Manutenção
             </button>
             <button onClick={() => setActiveSubTab('imagens')} style={subTabStyles(activeSubTab === 'imagens')}>
-              {activeMainTab === 'nascimento' || activeMainTab === 'obito' ? 'Imagens' : 'Imagem'}
+              Imagens
             </button>
           </div>
 
           {/* Área de Conteúdo */}
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-            {/* Formulário */}
-            <div style={{ flex: 1, overflowY: 'auto', backgroundColor: theme.background }}>
-              {renderContent()}
-              
-              {/* Área branca central para visualização */}
+            {/* Conteúdo principal */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: theme.background }}>
               {activeSubTab === 'cadastro' && (
+                <>
+                  {/* Cabeçalho cinza fixo (fora do scroll) */}
+                  <div style={{ backgroundColor: theme.surface, borderBottom: `1px solid ${theme.border}` }}>
+                    {renderForm()}
+                  </div>
+
+                  {/* Área rolável */}
+                  <div style={{ flex: 1, overflowY: 'auto', backgroundColor: theme.background }}>
+                    <div style={{ 
+                      margin: '16px', 
+                      minHeight: '200px', 
+                      backgroundColor: '#d9d9d9',
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      color: '#4a4a4a',
+                      textAlign: 'center'
+                    }}>
+                      <h2 style={{ margin: 0, fontSize: '28px', letterSpacing: '2px' }}>CIVITAS</h2>
+                      <p style={{ margin: 0, fontSize: '14px' }}>Nenhum cartão de assinatura carregado</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeSubTab === 'imagens' && (
                 <div style={{ 
-                  margin: '16px', 
-                  minHeight: '200px', 
-                  backgroundColor: '#ffffff', 
-                  border: `1px solid ${theme.border}`,
-                  borderRadius: '4px'
-                }}></div>
+                  flex: 1, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  backgroundColor: theme.background,
+                  backgroundImage: 'url("/assets/civitas-watermark.png")',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  backgroundSize: 'contain'
+                }}>
+                  <div style={{ 
+                    backgroundColor: theme.surface, 
+                    borderBottom: `1px solid ${theme.border}`,
+                    padding: '16px'
+                  }}>
+                    <h3 style={{ margin: 0, color: theme.text }}>Galeria de Imagens</h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: theme.textSecondary || theme.text }}>
+                      Nenhuma imagem carregada para este registro.
+                    </p>
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{
+                      width: '80%',
+                      maxWidth: '500px',
+                      minHeight: '260px',
+                      backgroundColor: '#d9d9d9',
+                      border: `1px dashed ${theme.border}`,
+                      borderRadius: '6px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
+                      color: '#4a4a4a',
+                      textAlign: 'center',
+                      padding: '24px'
+                    }}>
+                      <span style={{ fontSize: '48px' }}>🖼️</span>
+                      <p style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Área de Imagens</p>
+                      <p style={{ margin: 0, fontSize: '13px' }}>
+                        Arraste e solte arquivos aqui ou utilize as opções de digitalização para carregar documentos.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -844,16 +1121,6 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
             </button>
           </div>
 
-          {/* Status Bar */}
-          <div style={{ 
-            padding: '6px 16px', 
-            fontSize: '12px', 
-            backgroundColor: theme.surface,
-            borderTop: `1px solid ${theme.border}`,
-            color: theme.text
-          }}>
-            {statusMessage}
-          </div>
         </div>
         
         {/* Modal Component - DENTRO da janela */}

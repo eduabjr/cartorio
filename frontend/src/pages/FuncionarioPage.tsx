@@ -37,7 +37,7 @@
 //
 // ⚠️⚠️⚠️ QUALQUER MODIFICAÇÃO QUEBRARÁ O LAYOUT APROVADO ⚠️⚠️⚠️
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { CidadeAutocompleteInput } from '../components/CidadeAutocompleteInput'
 import { BasePage } from '../components/BasePage'
 import { funcionarioService, Funcionario } from '../services/FuncionarioService'
@@ -54,6 +54,8 @@ interface FuncionarioPageProps {
   onClose: () => void
   abaInicial?: 'cadastro' | 'guiches' // Permite abrir diretamente em uma aba específica
 }
+
+const FUNCIONARIO_RESULTADOS_STORAGE_KEY = 'funcionario-pesquisa-estado'
 
 export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: FuncionarioPageProps) {
   const { getTheme, currentTheme } = useAccessibility()
@@ -145,9 +147,30 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
-  const [showResultados, setShowResultados] = useState(false)
-  const [resultadosBusca, setResultadosBusca] = useState<any[]>([])
-  const [termoBusca, setTermoBusca] = useState('')
+  const persistedResultados = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return { showResultados: false, termoBusca: '', resultadosBusca: [] as any[] }
+    }
+    try {
+      const raw = localStorage.getItem(FUNCIONARIO_RESULTADOS_STORAGE_KEY)
+      if (!raw) {
+        return { showResultados: false, termoBusca: '', resultadosBusca: [] as any[] }
+      }
+      const parsed = JSON.parse(raw)
+      return {
+        showResultados: !!parsed.showResultados,
+        termoBusca: typeof parsed.termoBusca === 'string' ? parsed.termoBusca : '',
+        resultadosBusca: Array.isArray(parsed.resultadosBusca) ? parsed.resultadosBusca : []
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar resultados persistidos de Funcionário:', error)
+      return { showResultados: false, termoBusca: '', resultadosBusca: [] as any[] }
+    }
+  }, [])
+
+  const [showResultados, setShowResultados] = useState(persistedResultados.showResultados)
+  const [resultadosBusca, setResultadosBusca] = useState<any[]>(persistedResultados.resultadosBusca)
+  const [termoBusca, setTermoBusca] = useState(persistedResultados.termoBusca)
 
   // 🔒 PROTEÇÃO: Auto-salvar dados do formulário
   const persistKey = 'form-funcionario-' + (formData.codigo || 'novo')
@@ -158,6 +181,9 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
   const handleClose = () => {
     clearPersistedForm(persistKeyRef.current)
     console.log(`🗑️ Janela fechada - Limpando dados temporários: "${persistKeyRef.current}"`)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(FUNCIONARIO_RESULTADOS_STORAGE_KEY)
+    }
     onClose()
   }
 
@@ -196,6 +222,22 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
       }
     }
   }, [theme.background])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    try {
+      const payload = JSON.stringify({
+        showResultados,
+        termoBusca,
+        resultadosBusca
+      })
+      localStorage.setItem(FUNCIONARIO_RESULTADOS_STORAGE_KEY, payload)
+    } catch (error) {
+      console.error('❌ Erro ao persistir resultados de busca de Funcionário:', error)
+    }
+  }, [showResultados, termoBusca, resultadosBusca])
 
   // ✨ Hook de validação com regras globais
   const { 
