@@ -7,7 +7,7 @@ interface ConfiguracaoSistemaPageProps {
   onClose: () => void
 }
 
-type AbaAtiva = 'gerais' | 'bloqueio-horario'
+type AbaAtiva = 'gerais' | 'bloqueio-horario' | 'impressao-livros'
 
 interface ConfiguracoesGerais {
   senhaConfiguracao: string
@@ -17,6 +17,21 @@ interface ConfiguracoesGerais {
   autoLogoutWarningMinutes: number // Minutos antes de avisar
   autoLogoutWarningSeconds: number // Segundos antes de avisar (alternativa)
   autoLogoutWarningUnit: 'segundos' | 'minutos' // Unidade escolhida
+  nomeOficial: string
+  substitutos: string[]
+}
+
+interface ConfiguracoesImpressao {
+  logoCartorio: string
+  alturaLombada: number // em mm
+  larguraLombada: number // em mm
+  alturaLogo: number // em mm
+  alturaLetra: number // em mm
+  alturaNumero: number // em mm
+  alturaDatas: number // em mm
+  fonteLetra: number // em px
+  fonteNumero: number // em px
+  fonteDatas: number // em px
 }
 
 interface BloqueioHorario {
@@ -85,7 +100,9 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
       autoLogoutMinutes,
       autoLogoutWarningMinutes: 2, // Padrão: avisar 2 minutos antes
       autoLogoutWarningSeconds: 30, // Padrão: 30 segundos
-      autoLogoutWarningUnit: 'minutos' // Padrão: minutos
+      autoLogoutWarningUnit: 'minutos', // Padrão: minutos
+      nomeOficial: '',
+      substitutos: ['']
     }
   })
   
@@ -127,6 +144,39 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
     }
   })
   
+  // Estados para Configurações de Impressão
+  const [configImpressao, setConfigImpressao] = useState<ConfiguracoesImpressao>(() => {
+    const saved = localStorage.getItem('config-impressao-livros')
+    if (saved) {
+      const config = JSON.parse(saved)
+      // Adicionar valores padrão se não existirem
+      return {
+        logoCartorio: config.logoCartorio || '',
+        alturaLombada: config.alturaLombada ?? 10.5,
+        larguraLombada: config.larguraLombada ?? 5.5,
+        alturaLogo: config.alturaLogo ?? 3.5,
+        alturaLetra: config.alturaLetra ?? 2.5,
+        alturaNumero: config.alturaNumero ?? 2.5,
+        alturaDatas: config.alturaDatas ?? 2.5,
+        fonteLetra: config.fonteLetra ?? 72,
+        fonteNumero: config.fonteNumero ?? 96,
+        fonteDatas: config.fonteDatas ?? 28
+      }
+    }
+    return {
+      logoCartorio: '',
+      alturaLombada: 10.5, // altura padrão em mm
+      larguraLombada: 5.5,  // largura padrão em mm
+      alturaLogo: 3.5,
+      alturaLetra: 2.5,
+      alturaNumero: 2.5,
+      alturaDatas: 2.5,
+      fonteLetra: 72,
+      fonteNumero: 96,
+      fonteDatas: 28
+    }
+  })
+
   const [horarioAtual, setHorarioAtual] = useState(new Date())
   const [buscandoCep, setBuscandoCep] = useState(false)
   
@@ -230,13 +280,16 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
   }
   
   const salvarConfigGerais = async () => {
-    console.log('🔵 BOTÃO SALVAR CLICADO!')
-    console.log('📊 Estado atual:', configGerais)
+    console.log('🔵 FUNÇÃO salvarConfigGerais INICIADA!')
+    console.log('📊 Estado atual de configGerais:', configGerais)
+    console.log('👤 Oficial:', configGerais.nomeOficial)
+    console.log('👥 Substitutos:', configGerais.substitutos)
     
     try {
       // Salvar configurações gerais
       localStorage.setItem('config-gerais-sistema', JSON.stringify(configGerais))
-      console.log('✅ Salvo em config-gerais-sistema')
+      console.log('✅ Salvo em localStorage: config-gerais-sistema')
+      console.log('💾 Dados salvos:', JSON.parse(localStorage.getItem('config-gerais-sistema') || '{}'))
       
       // Salvar dados da empresa
       localStorage.setItem('dados-empresa', JSON.stringify(dadosEmpresa))
@@ -291,12 +344,29 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
       window.dispatchEvent(new CustomEvent('config-gerais-updated'))
       console.log('✅ Evento config-gerais-updated disparado')
       
-      await modal.alert(
-        `✅ Configurações salvas com sucesso!\n\n` +
-        `Auto-Logout: ${configGerais.autoLogoutEnabled ? 'ATIVADO ✅' : 'DESATIVADO ❌'}\n` +
+      // Preparar mensagem com os dados salvos
+      let mensagem = `✅ Configurações salvas com sucesso!\n\n`
+      
+      // Adicionar informações do oficial e substitutos
+      if (configGerais.nomeOficial) {
+        mensagem += `👤 Oficial: ${configGerais.nomeOficial}\n`
+      }
+      if (configGerais.substitutos.some(s => s.trim() !== '')) {
+        const substitutosPreenchidos = configGerais.substitutos.filter(s => s.trim() !== '')
+        mensagem += `👥 Substitutos: ${substitutosPreenchidos.length}\n`
+        substitutosPreenchidos.forEach((sub, i) => {
+          mensagem += `   ${i + 1}. ${sub}\n`
+        })
+        mensagem += '\n'
+      }
+      
+      mensagem += `Auto-Logout: ${configGerais.autoLogoutEnabled ? 'ATIVADO ✅' : 'DESATIVADO ❌'}\n` +
         `Tempo: ${configGerais.autoLogoutMinutes} minutos\n` +
         `Aviso: ${configGerais.autoLogoutWarningUnit === 'segundos' ? configGerais.autoLogoutWarningSeconds + 's' : configGerais.autoLogoutWarningMinutes + 'min'}\n\n` +
-        `${configGerais.autoLogoutEnabled ? '⏰ O timer começará após qualquer atividade!\n\nPara testar: Não toque no mouse/teclado e aguarde.' : 'O logout automático está desativado.'}`,
+        `${configGerais.autoLogoutEnabled ? '⏰ O timer começará após qualquer atividade!\n\nPara testar: Não toque no mouse/teclado e aguarde.' : 'O logout automático está desativado.'}`
+      
+      await modal.alert(
+        mensagem,
         'Configurações Salvas', 
         '✅'
       )
@@ -413,6 +483,27 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
             >
               🕐 Bloqueio por Horário
             </button>
+            <button
+              onClick={() => setAbaAtiva('impressao-livros')}
+              style={{
+                flex: 1,
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                border: 'none',
+                borderBottom: abaAtiva === 'impressao-livros' ? `3px solid ${headerColor}` : '3px solid transparent',
+                backgroundColor: abaAtiva === 'impressao-livros' ? (currentTheme === 'dark' ? '#2a2a2a' : '#f0f0f0') : 'transparent',
+                color: abaAtiva === 'impressao-livros' ? headerColor : theme.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              🖨️ Impressão de Livros
+            </button>
           </div>
 
           {/* Conteúdo das Abas */}
@@ -425,6 +516,150 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
             {/* ABA: Configurações Gerais */}
             {abaAtiva === 'gerais' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Seção: Oficial e Substitutos */}
+                <div style={{
+                  padding: '16px',
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: theme.surface
+                }}>
+                  <h3 style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: theme.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    👤 Oficial e Substitutos
+                  </h3>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Nome do Oficial */}
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: theme.textSecondary,
+                        marginBottom: '8px'
+                      }}>
+                        Nome do Oficial
+                      </label>
+                      <input
+                        type="text"
+                        value={configGerais.nomeOficial}
+                        onChange={(e) => setConfigGerais({ ...configGerais, nomeOficial: e.target.value })}
+                        placeholder="Digite o nome do oficial do cartório"
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          fontSize: '14px',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '4px',
+                          backgroundColor: theme.background,
+                          color: theme.text,
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    {/* Substitutos */}
+                    <div>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '8px'
+                      }}>
+                        <label style={{
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: theme.textSecondary
+                        }}>
+                          Substitutos
+                        </label>
+                        <button
+                          onClick={() => {
+                            const novosSubstitutos = [...configGerais.substitutos, '']
+                            setConfigGerais({ ...configGerais, substitutos: novosSubstitutos })
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            backgroundColor: headerColor,
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'opacity 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        >
+                          ➕ Adicionar Substituto
+                        </button>
+                      </div>
+
+                      {configGerais.substitutos.map((substituto, index) => (
+                        <div key={index} style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginBottom: '8px'
+                        }}>
+                          <input
+                            type="text"
+                            value={substituto}
+                            onChange={(e) => {
+                              const novosSubstitutos = [...configGerais.substitutos]
+                              novosSubstitutos[index] = e.target.value
+                              setConfigGerais({ ...configGerais, substitutos: novosSubstitutos })
+                            }}
+                            placeholder={`Nome do substituto ${index + 1}`}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              fontSize: '14px',
+                              border: `1px solid ${theme.border}`,
+                              borderRadius: '4px',
+                              backgroundColor: theme.background,
+                              color: theme.text,
+                              outline: 'none'
+                            }}
+                          />
+                          {configGerais.substitutos.length > 1 && (
+                            <button
+                              onClick={() => {
+                                const novosSubstitutos = configGerais.substitutos.filter((_, i) => i !== index)
+                                setConfigGerais({ ...configGerais, substitutos: novosSubstitutos })
+                              }}
+                              style={{
+                                padding: '10px 16px',
+                                fontSize: '14px',
+                                backgroundColor: '#ef4444',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Seção: Segurança de Configurações */}
                 <div style={{
                   padding: '16px',
@@ -1807,6 +2042,392 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                 )}
             </div>
             )}
+
+            {/* ABA: Impressão de Livros */}
+            {abaAtiva === 'impressao-livros' && (
+              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <div style={{
+                  padding: '16px',
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: theme.surface
+                }}>
+                  <h3 style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: theme.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    🖼️ Logo do Cartório
+                  </h3>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: theme.textSecondary,
+                        marginBottom: '8px'
+                      }}>
+                        Faça upload do logo que será usado nas lombadas e impressões
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onloadend = () => {
+                              const result = reader.result as string
+                              setConfigImpressao({ ...configImpressao, logoCartorio: result })
+                            }
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                        style={{
+                          padding: '10px',
+                          fontSize: '14px',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '4px',
+                          backgroundColor: theme.background,
+                          color: theme.text,
+                          width: '100%',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    </div>
+
+                    {configImpressao.logoCartorio && (
+                      <div style={{
+                        padding: '16px',
+                        border: `2px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        backgroundColor: theme.background,
+                        textAlign: 'center'
+                      }}>
+                        <p style={{
+                          margin: '0 0 12px 0',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: theme.textSecondary
+                        }}>
+                          Pré-visualização:
+                        </p>
+                        <img 
+                          src={configImpressao.logoCartorio} 
+                          alt="Logo do Cartório" 
+                          style={{
+                            maxWidth: '200px',
+                            maxHeight: '150px',
+                            objectFit: 'contain',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '4px',
+                            padding: '8px',
+                            backgroundColor: '#fff'
+                          }}
+                        />
+                        <button
+                          onClick={() => setConfigImpressao({ ...configImpressao, logoCartorio: '' })}
+                          style={{
+                            marginTop: '12px',
+                            padding: '8px 16px',
+                            fontSize: '13px',
+                            backgroundColor: '#ef4444',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        >
+                          🗑️ Remover Logo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dimensões da Lombada */}
+                <div style={{
+                  padding: '16px',
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: theme.surface,
+                  marginTop: '20px'
+                }}>
+                  <h3 style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: theme.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    📏 Dimensões da Lombada para Impressão
+                  </h3>
+                  
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr', 
+                    gap: '16px' 
+                  }}>
+                    {/* Altura */}
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: theme.textSecondary,
+                        marginBottom: '8px'
+                      }}>
+                        Altura (mm)
+                      </label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="500"
+                        step="0.1"
+                        value={configImpressao.alturaLombada}
+                        onChange={(e) => setConfigImpressao({ 
+                          ...configImpressao, 
+                          alturaLombada: parseFloat(e.target.value) || 10.5 
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          fontSize: '14px',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '4px',
+                          backgroundColor: theme.background,
+                          color: theme.text
+                        }}
+                      />
+                      <p style={{
+                        margin: '4px 0 0 0',
+                        fontSize: '11px',
+                        color: theme.textSecondary
+                      }}>
+                        Padrão: 10,5 mm
+                      </p>
+                    </div>
+
+                    {/* Largura */}
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: theme.textSecondary,
+                        marginBottom: '8px'
+                      }}>
+                        Largura (mm)
+                      </label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="500"
+                        step="0.1"
+                        value={configImpressao.larguraLombada}
+                        onChange={(e) => setConfigImpressao({ 
+                          ...configImpressao, 
+                          larguraLombada: parseFloat(e.target.value) || 5.5 
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          fontSize: '14px',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '4px',
+                          backgroundColor: theme.background,
+                          color: theme.text
+                        }}
+                      />
+                      <p style={{
+                        margin: '4px 0 0 0',
+                        fontSize: '11px',
+                        color: theme.textSecondary
+                      }}>
+                        Padrão: 5,5 mm
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Preview das dimensões */}
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    backgroundColor: theme.background,
+                    borderRadius: '4px',
+                    border: `1px solid ${theme.border}`
+                  }}>
+                    <p style={{
+                      margin: '0 0 8px 0',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: theme.text
+                    }}>
+                      📐 Tamanho configurado:
+                    </p>
+                    <p style={{
+                      margin: 0,
+                      fontSize: '14px',
+                      color: theme.textSecondary
+                    }}>
+                      {configImpressao.alturaLombada}mm (altura) × {configImpressao.larguraLombada}mm (largura)
+                    </p>
+                  </div>
+
+                  {/* Distribuição das seções */}
+                  <div style={{
+                    marginTop: '20px',
+                    padding: '16px',
+                    border: `1px dashed ${theme.border}`,
+                    borderRadius: '6px',
+                    backgroundColor: theme.background
+                  }}>
+                    <h4 style={{
+                      margin: '0 0 12px 0',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: theme.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      📊 Distribuição da Altura (mm)
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                      {[
+                        { label: 'Logo', key: 'alturaLogo', value: configImpressao.alturaLogo },
+                        { label: 'Letra', key: 'alturaLetra', value: configImpressao.alturaLetra },
+                        { label: 'Número', key: 'alturaNumero', value: configImpressao.alturaNumero },
+                        { label: 'Datas', key: 'alturaDatas', value: configImpressao.alturaDatas }
+                      ].map((item) => (
+                        <div key={item.key}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            color: theme.textSecondary,
+                            marginBottom: '6px'
+                          }}>
+                            {item.label}
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max={configImpressao.alturaLombada}
+                            step="0.1"
+                            value={item.value}
+                            onChange={(e) => {
+                              const valor = parseFloat(e.target.value) || item.value
+                              setConfigImpressao({
+                                ...configImpressao,
+                                [item.key]: valor
+                              })
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '8px',
+                              fontSize: '13px',
+                              border: `1px solid ${theme.border}`,
+                              borderRadius: '4px',
+                              backgroundColor: theme.surface,
+                              color: theme.text
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{
+                      margin: '12px 0 0 0',
+                      fontSize: '11px',
+                      color: theme.textSecondary
+                    }}>
+                      Dica: a soma deve ser aproximadamente igual à altura total da lombada.
+                    </p>
+                  </div>
+
+                  {/* Configuração de fontes */}
+                  <div style={{
+                    marginTop: '20px',
+                    padding: '16px',
+                    border: `1px dashed ${theme.border}`,
+                    borderRadius: '6px',
+                    backgroundColor: theme.background
+                  }}>
+                    <h4 style={{
+                      margin: '0 0 12px 0',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: theme.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      🔤 Tamanho das Fontes (px)
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                      {[
+                        { label: 'Letra', key: 'fonteLetra', value: configImpressao.fonteLetra },
+                        { label: 'Número', key: 'fonteNumero', value: configImpressao.fonteNumero },
+                        { label: 'Datas', key: 'fonteDatas', value: configImpressao.fonteDatas }
+                      ].map((item) => (
+                        <div key={item.key}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            color: theme.textSecondary,
+                            marginBottom: '6px'
+                          }}>
+                            {item.label}
+                          </label>
+                          <input
+                            type="number"
+                            min="8"
+                            max="200"
+                            step="1"
+                            value={item.value}
+                            onChange={(e) => {
+                              const valor = parseInt(e.target.value, 10) || item.value
+                              setConfigImpressao({
+                                ...configImpressao,
+                                [item.key]: valor
+                              })
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '8px',
+                              fontSize: '13px',
+                              border: `1px solid ${theme.border}`,
+                              borderRadius: '4px',
+                              backgroundColor: theme.surface,
+                              color: theme.text
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{
+                      margin: '12px 0 0 0',
+                      fontSize: '11px',
+                      color: theme.textSecondary
+                    }}>
+                      Ajuste os tamanhos das fontes para alinhar com a altura reservada em cada seção.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Rodapé com Botões */}
@@ -1822,10 +2443,34 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                console.log('🔵 BOTÃO SALVAR CLICADO! Aba ativa:', abaAtiva)
                 if (abaAtiva === 'gerais') {
+                  console.log('🟢 Chamando salvarConfigGerais...')
                   salvarConfigGerais()
-                } else {
+                } else if (abaAtiva === 'bloqueio-horario') {
+                  console.log('🟡 Chamando salvarConfigBloqueio...')
                   salvarConfigBloqueio()
+                } else if (abaAtiva === 'impressao-livros') {
+                  console.log('🖨️ Salvando configurações de impressão...')
+                  localStorage.setItem('config-impressao-livros', JSON.stringify(configImpressao))
+                  window.dispatchEvent(new CustomEvent('config-impressao-updated'))
+                  modal.alert(
+                    `✅ Configurações de impressão salvas com sucesso!\n\n` +
+                    `📐 Dimensões gerais:\n` +
+                    `• Altura total: ${configImpressao.alturaLombada} mm\n` +
+                    `• Largura total: ${configImpressao.larguraLombada} mm\n\n` +
+                    `📊 Distribuição das seções:\n` +
+                    `• Logo: ${configImpressao.alturaLogo} mm\n` +
+                    `• Letra: ${configImpressao.alturaLetra} mm\n` +
+                    `• Número: ${configImpressao.alturaNumero} mm\n` +
+                    `• Datas: ${configImpressao.alturaDatas} mm\n\n` +
+                    `🔤 Fontes:\n` +
+                    `• Letra: ${configImpressao.fonteLetra}px\n` +
+                    `• Número: ${configImpressao.fonteNumero}px\n` +
+                    `• Datas: ${configImpressao.fonteDatas}px`,
+                    'Configurações Salvas',
+                    '✅'
+                  )
                 }
               }}
               style={{

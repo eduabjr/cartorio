@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useModal } from '../hooks/useModal'
+import { exportToExcel } from '../utils/excelExport'
 
 type TipoIndice = 'nascimento' | 'casamento' | 'obito'
 
@@ -128,11 +129,11 @@ const obterFiltroNomeConfig = (tipo: TipoFiltroIndice): FiltroNomeConfig => {
       }
     case 'casamento':
       return {
-        nomeLabel: 'Nome do Nubente (1)',
-        nomePlaceholder: 'Nome do primeiro nubente',
+        nomeLabel: 'Nome do Contraente',
+        nomePlaceholder: 'Nome do contraente',
         mostrarNomePai: true,
-        nomePaiLabel: 'Nome do Nubente (2)',
-        nomePaiPlaceholder: 'Nome do segundo nubente',
+        nomePaiLabel: 'Nome da Contraente',
+        nomePaiPlaceholder: 'Nome da contraente',
         mostrarNomeMae: false,
         nomeMaeLabel: 'Nome da Mãe',
         nomeMaePlaceholder: 'Nome da mãe'
@@ -243,7 +244,9 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
   const [popupMensagem, setPopupMensagem] = useState<string | null>(null)
   const [consultaExecutada, setConsultaExecutada] = useState(false)
   const [mostrarPopupCausaMorte, setMostrarPopupCausaMorte] = useState(false)
-  const [causasMorteTemp, setCausasMorteTemp] = useState<string[]>(['', '', '', '', '', ''])
+  const [causasMorteTemp, setCausasMorteTemp] = useState<string[]>(['', '', '', '', ''])
+  const [campoOrdenacao, setCampoOrdenacao] = useState<string | null>(null)
+  const [direcaoOrdenacao, setDirecaoOrdenacao] = useState<'asc' | 'desc'>('asc')
 
   const filtroNomeConfig = useMemo(() => obterFiltroNomeConfig(filtro.tipo), [filtro.tipo])
 
@@ -252,9 +255,9 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
       case 'nascimento':
         return ['Código', 'Livro', 'Folha', 'Termo', 'Data Termo', 'Data Nasc.', 'Nome da Criança', 'Pai', 'Mãe', '']
       case 'casamento':
-        return ['Código', 'Livro', 'Folha', 'Termo', 'Data Cas.', 'Tipo', 'Contraente', 'Contraente 2', 'Regime', '']
+        return ['Código', 'Livro', 'Folha', 'Termo', 'Data Termo', 'Data Cas.', 'Tipo', 'O Contraente', 'A Contraente', '']
       case 'obito':
-        return ['Código', 'Livro', 'Folha', 'Termo', 'Data Óbito', 'Nome Falecido', 'Causa Morte', 'Pai', 'Mãe', '']
+        return ['Código', 'Livro', 'Folha', 'Termo', 'Data Termo', 'Data Óbito', 'Nome Falecido', 'Pai', 'Mãe', '']
       default:
         return ['Código', 'Livro', 'Folha', 'Termo', 'Data', 'Nome', '']
     }
@@ -267,26 +270,111 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
 
     const filtros = filtrosAplicados
 
-    return registros.filter((registro) => {
+    let resultado = registros.filter((registro) => {
+      // Se tipo estiver selecionado, filtrar por tipo
       if (filtros.tipo && registro.tipo !== filtros.tipo) return false
-      if (filtros.livro && registro.livro !== filtros.livro) return false
+      
+      // Filtros opcionais
+      if (filtros.livro && filtros.livro.trim() && registro.livro !== filtros.livro) return false
 
-      if (filtros.nome && !registro.nomePrincipal.toLowerCase().includes(filtros.nome.toLowerCase())) return false
-      if (filtros.nomePai && !(registro.nomePai || '').toLowerCase().includes(filtros.nomePai.toLowerCase())) return false
-      if (filtros.nomeMae && !(registro.nomeMae || '').toLowerCase().includes(filtros.nomeMae.toLowerCase())) return false
+      if (filtros.nome && filtros.nome.trim() && !registro.nomePrincipal.toLowerCase().includes(filtros.nome.toLowerCase())) return false
+      if (filtros.nomePai && filtros.nomePai.trim() && !(registro.nomePai || '').toLowerCase().includes(filtros.nomePai.toLowerCase())) return false
+      if (filtros.nomeMae && filtros.nomeMae.trim() && !(registro.nomeMae || '').toLowerCase().includes(filtros.nomeMae.toLowerCase())) return false
 
-      if (filtros.dataInicio && registro.data < filtros.dataInicio) return false
-      if (filtros.dataFim && registro.data > filtros.dataFim) return false
+      if (filtros.dataInicio && filtros.dataInicio.trim() && registro.data < filtros.dataInicio) return false
+      if (filtros.dataFim && filtros.dataFim.trim() && registro.data > filtros.dataFim) return false
 
-      if (filtros.termoInicial && registro.termo < filtros.termoInicial) return false
-      if (filtros.termoFinal && registro.termo > filtros.termoFinal) return false
+      if (filtros.termoInicial && filtros.termoInicial.trim() && registro.termo < filtros.termoInicial) return false
+      if (filtros.termoFinal && filtros.termoFinal.trim() && registro.termo > filtros.termoFinal) return false
 
-      if (filtros.folhaInicial && registro.folha < filtros.folhaInicial) return false
-      if (filtros.folhaFinal && registro.folha > filtros.folhaFinal) return false
+      if (filtros.folhaInicial && filtros.folhaInicial.trim() && registro.folha < filtros.folhaInicial) return false
+      if (filtros.folhaFinal && filtros.folhaFinal.trim() && registro.folha > filtros.folhaFinal) return false
 
       return true
     })
-  }, [consultaExecutada, filtrosAplicados, registros])
+
+    // Aplicar ordenação se houver campo selecionado
+    if (campoOrdenacao) {
+      resultado = [...resultado].sort((a, b) => {
+        let valorA: any
+        let valorB: any
+
+        switch (campoOrdenacao) {
+          case 'codigo':
+            valorA = a.codigoInterno
+            valorB = b.codigoInterno
+            break
+          case 'livro':
+            valorA = a.livro
+            valorB = b.livro
+            break
+          case 'folha':
+            valorA = a.folha
+            valorB = b.folha
+            break
+          case 'termo':
+            valorA = a.termo
+            valorB = b.termo
+            break
+          case 'dataTermo':
+            valorA = a.data
+            valorB = b.data
+            break
+          case 'dataNasc':
+            valorA = a.dataNascimento || ''
+            valorB = b.dataNascimento || ''
+            break
+          case 'dataCas':
+            valorA = a.dataCasamento || ''
+            valorB = b.dataCasamento || ''
+            break
+          case 'dataObito':
+            valorA = a.dataObito || ''
+            valorB = b.dataObito || ''
+            break
+          case 'nome':
+            valorA = a.nomePrincipal.toLowerCase()
+            valorB = b.nomePrincipal.toLowerCase()
+            break
+          case 'pai':
+            valorA = (a.nomePai || '').toLowerCase()
+            valorB = (b.nomePai || '').toLowerCase()
+            break
+          case 'mae':
+            valorA = (a.nomeMae || '').toLowerCase()
+            valorB = (b.nomeMae || '').toLowerCase()
+            break
+          case 'tipo':
+            valorA = a.tipoCasamento || ''
+            valorB = b.tipoCasamento || ''
+            break
+          case 'contraente1':
+            valorA = (a.contraente || '').toLowerCase()
+            valorB = (b.contraente || '').toLowerCase()
+            break
+          case 'contraente2':
+            valorA = (a.contraente2 || '').toLowerCase()
+            valorB = (b.contraente2 || '').toLowerCase()
+            break
+          default:
+            return 0
+        }
+
+        if (valorA < valorB) return direcaoOrdenacao === 'asc' ? -1 : 1
+        if (valorA > valorB) return direcaoOrdenacao === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
+    return resultado
+  }, [consultaExecutada, filtrosAplicados, registros, campoOrdenacao, direcaoOrdenacao])
+
+  const totalRegistrosPorTipo = useMemo(() => {
+    if (!filtrosAplicados.tipo) {
+      return registros.length
+    }
+    return registros.filter(reg => reg.tipo === filtrosAplicados.tipo).length
+  }, [registros, filtrosAplicados.tipo])
 
   useEffect(() => {
     try {
@@ -328,10 +416,6 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
         const atualizado: FiltroIndice = { ...prev, tipo: novoTipo as TipoIndice | '' }
         return sanitizarFiltroPorTipo(novoTipo, atualizado)
       })
-      setFiltrosAplicados((prev) => {
-        const atualizado: FiltroIndice = { ...prev, tipo: novoTipo as TipoIndice | '' }
-        return sanitizarFiltroPorTipo(novoTipo, atualizado)
-      })
       return
     }
 
@@ -339,6 +423,33 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
   }
 
   const aplicarFiltros = () => {
+    // Validar se o Tipo de Índice foi selecionado
+    if (!filtro.tipo) {
+      setPopupMensagem('⚠️ Selecione o Tipo de Índice antes de aplicar os filtros')
+      window.setTimeout(() => setPopupMensagem(''), 3500)
+      return
+    }
+
+    // Validar se pelo menos um campo adicional foi preenchido
+    const camposPreenchidos = [
+      filtro.livro,
+      filtro.dataInicio,
+      filtro.dataFim,
+      filtro.termoInicial,
+      filtro.termoFinal,
+      filtro.folhaInicial,
+      filtro.folhaFinal,
+      filtro.nome,
+      filtro.nomePai,
+      filtro.nomeMae
+    ].filter(campo => campo && campo.trim() !== '')
+
+    if (camposPreenchidos.length === 0) {
+      setPopupMensagem('⚠️ Preencha pelo menos um campo além do Tipo de Índice')
+      window.setTimeout(() => setPopupMensagem(''), 3500)
+      return
+    }
+
     const filtroSanitizado = sanitizarFiltroPorTipo(filtro.tipo, filtro)
     setFiltro(filtroSanitizado)
     setFiltrosAplicados(filtroSanitizado)
@@ -392,6 +503,106 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
   const handleRetornar = async () => {
     await modal.toast('Retornando...', 'info')
     onClose()
+  }
+
+  const handleOrdenar = (campo: string) => {
+    if (campoOrdenacao === campo) {
+      // Se já está ordenando por este campo, inverte a direção
+      setDirecaoOrdenacao(direcaoOrdenacao === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Se é um novo campo, ordena ascendente
+      setCampoOrdenacao(campo)
+      setDirecaoOrdenacao('asc')
+    }
+  }
+
+  const gerarRelatorioExcel = () => {
+    if (filteredRegistros.length === 0) {
+      modal.alert('Nenhum registro para exportar. Aplique os filtros primeiro.')
+      return
+    }
+
+    const tipoRelatorio = filtrosAplicados.tipo || 'Todos os Tipos'
+    let headers: string[] = []
+    let data: string[][] = []
+    
+    // Definir colunas e dados baseado no tipo
+    if (tipoRelatorio === 'nascimento') {
+      headers = ['Código', 'Livro', 'Folha', 'Termo', 'Data Termo', 'Data Nasc.', 'Nome da Criança', 'Nome do Pai', 'Nome da Mãe', 'Sexo', 'Gêmeos']
+      data = filteredRegistros.map((reg) => [
+        String(reg.codigoInterno ?? ''),
+        reg.livro || '',
+        reg.folha ? (reg.folhaVerso === 'V' ? `${reg.folha}v` : reg.folha) : '',
+        reg.termo || '',
+        reg.data ? new Date(reg.data).toLocaleDateString('pt-BR') : '',
+        reg.dataNascimento ? new Date(reg.dataNascimento).toLocaleDateString('pt-BR') : '',
+        reg.nomePrincipal || '',
+        reg.nomePai || '',
+        reg.nomeMae || '',
+        reg.sexo === 'masculino' ? 'M' : reg.sexo === 'feminino' ? 'F' : '',
+        reg.gemeos ? 'Sim' : 'Não'
+      ])
+    } else if (tipoRelatorio === 'casamento') {
+      headers = ['Código', 'Livro', 'Folha', 'Termo', 'Data Termo', 'Data Cas.', 'Tipo', 'O Contraente', 'Novo Nome', 'A Contraente', 'Novo Nome', 'Regime de Bens']
+      data = filteredRegistros.map((reg) => [
+        String(reg.codigoInterno ?? ''),
+        reg.livro || '',
+        reg.folha ? (reg.folhaVerso === 'V' ? `${reg.folha}v` : reg.folha) : '',
+        reg.termo || '',
+        reg.data ? new Date(reg.data).toLocaleDateString('pt-BR') : '',
+        reg.dataCasamento ? new Date(reg.dataCasamento).toLocaleDateString('pt-BR') : '',
+        reg.tipoCasamento === 'r' ? 'Religioso' : reg.tipoCasamento === 'c' ? 'Civil' : reg.tipoCasamento === 'u' ? 'União Estável' : '',
+        reg.contraente || '',
+        reg.novoNomeContraente || '',
+        reg.contraente2 || '',
+        reg.novoNomeContraente2 || '',
+        reg.regimeBens || ''
+      ])
+    } else if (tipoRelatorio === 'obito') {
+      headers = ['Código', 'Livro', 'Folha', 'Termo', 'Data Termo', 'Data Óbito', 'Nome do Falecido', 'Nome do Pai', 'Nome da Mãe', 'Causa de Morte']
+      data = filteredRegistros.map((reg) => [
+        String(reg.codigoInterno ?? ''),
+        reg.livro || '',
+        reg.folha ? (reg.folhaVerso === 'V' ? `${reg.folha}v` : reg.folha) : '',
+        reg.termo || '',
+        reg.data ? new Date(reg.data).toLocaleDateString('pt-BR') : '',
+        reg.dataObito ? new Date(reg.dataObito).toLocaleDateString('pt-BR') : '',
+        reg.nomePrincipal || '',
+        reg.nomePai || '',
+        reg.nomeMae || '',
+        reg.causaMorte?.replace(/;/g, ' | ') || ''
+      ])
+    } else {
+      headers = ['Código', 'Tipo', 'Livro', 'Folha', 'Termo', 'Data', 'Nome Principal', 'Pai', 'Mãe']
+      data = filteredRegistros.map((reg) => [
+        String(reg.codigoInterno ?? ''),
+        reg.tipo === 'nascimento' ? 'Nascimento' : reg.tipo === 'casamento' ? 'Casamento' : 'Óbito',
+        reg.livro || '',
+        reg.folha ? (reg.folhaVerso === 'V' ? `${reg.folha}v` : reg.folha) : '',
+        reg.termo || '',
+        reg.data ? new Date(reg.data).toLocaleDateString('pt-BR') : '',
+        reg.nomePrincipal || '',
+        reg.nomePai || '',
+        reg.nomeMae || ''
+      ])
+    }
+
+    const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')
+    const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const tipoFormatado = tipoRelatorio === 'nascimento' ? 'Nascimento' 
+      : tipoRelatorio === 'casamento' ? 'Casamento'
+      : tipoRelatorio === 'obito' ? 'Óbito'
+      : 'Todos'
+    const fileName = `Relatorio_Indices_${tipoFormatado}_${dataAtual}_${horaAtual.replace(':', 'h')}`
+
+    exportToExcel({
+      fileName,
+      sheetName: `Índices ${tipoFormatado}`,
+      headers,
+      data
+    })
+    
+    modal.toast(`✅ Relatório exportado com sucesso! ${filteredRegistros.length} registro(s)`, 'success')
   }
 
   const camposObrigatoriosPreenchidos = useMemo(() => {
@@ -608,9 +819,9 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
     const form = formByTab[activeTipoCadastro]
     if (form.causaMorte) {
       const causas = form.causaMorte.split(';').map(c => c.trim())
-      setCausasMorteTemp([...causas, ...Array(6 - causas.length).fill('')].slice(0, 6))
+      setCausasMorteTemp([...causas, ...Array(5 - causas.length).fill('')].slice(0, 5))
     } else {
-      setCausasMorteTemp(['', '', '', '', '', ''])
+      setCausasMorteTemp(['', '', '', '', ''])
     }
     setMostrarPopupCausaMorte(true)
   }
@@ -624,7 +835,7 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
 
   const cancelarCausasMorte = () => {
     setMostrarPopupCausaMorte(false)
-    setCausasMorteTemp(['', '', '', '', '', ''])
+    setCausasMorteTemp(['', '', '', '', ''])
   }
 
   const renderLabel = (texto: string, obrigatorio = false) => (
@@ -1015,7 +1226,7 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
 
   return (
     <BasePage
-      title="Cadastro de Índice"
+      title="Cadastro de Índice de Livro Antigo"
       onClose={onClose}
       width="1200px"
       height="780px"
@@ -1187,7 +1398,7 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
                       gap: '12px'
                     }}
                   >
@@ -1213,19 +1424,45 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
                       />
                     </div>
                     <div>
-                      <label style={labelStyle}>Termo Final</label>
+                      <label style={labelStyle}>Data Inicial</label>
                       <input
+                        type="date"
                         style={inputBaseStyle}
-                        value={filtro.termoFinal}
-                        onChange={(e) => handleChangeFiltro('termoFinal', e.target.value)}
+                        value={filtro.dataInicio}
+                        onChange={(e) => handleChangeFiltro('dataInicio', e.target.value)}
                       />
                     </div>
+                    <div>
+                      <label style={labelStyle}>Data Final</label>
+                      <input
+                        type="date"
+                        style={inputBaseStyle}
+                        value={filtro.dataFim}
+                        onChange={(e) => handleChangeFiltro('dataFim', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: '12px'
+                    }}
+                  >
                     <div>
                       <label style={labelStyle}>Termo Inicial</label>
                       <input
                         style={inputBaseStyle}
                         value={filtro.termoInicial}
                         onChange={(e) => handleChangeFiltro('termoInicial', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Termo Final</label>
+                      <input
+                        style={inputBaseStyle}
+                        value={filtro.termoFinal}
+                        onChange={(e) => handleChangeFiltro('termoFinal', e.target.value)}
                       />
                     </div>
                     <div>
@@ -1244,24 +1481,14 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
                         onChange={(e) => handleChangeFiltro('folhaFinal', e.target.value)}
                       />
                     </div>
-                    <div>
-                      <label style={labelStyle}>Data Inicial</label>
-                      <input
-                        type="date"
-                        style={inputBaseStyle}
-                        value={filtro.dataInicio}
-                        onChange={(e) => handleChangeFiltro('dataInicio', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Data Final</label>
-                      <input
-                        type="date"
-                        style={inputBaseStyle}
-                        value={filtro.dataFim}
-                        onChange={(e) => handleChangeFiltro('dataFim', e.target.value)}
-                      />
-                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: filtroNomeConfig.mostrarNomeMae ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
+                      gap: '12px'
+                    }}
+                  >
                     <div>
                       <label style={labelStyle}>{filtroNomeConfig.nomeLabel}</label>
                       <input
@@ -1323,6 +1550,23 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
                     >
                       Aplicar filtros
                     </button>
+                    <button
+                      onClick={gerarRelatorioExcel}
+                      disabled={!consultaExecutada || filteredRegistros.length === 0}
+                      style={{
+                        padding: '8px 18px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: consultaExecutada && filteredRegistros.length > 0 ? '#10b981' : '#9ca3af',
+                        color: '#fff',
+                        fontWeight: 600,
+                        cursor: consultaExecutada && filteredRegistros.length > 0 ? 'pointer' : 'not-allowed',
+                        boxShadow: consultaExecutada && filteredRegistros.length > 0 ? '0 2px 6px rgba(16, 185, 129, 0.2)' : 'none',
+                        opacity: consultaExecutada && filteredRegistros.length > 0 ? 1 : 0.6
+                      }}
+                    >
+                      📊 Relatório
+                    </button>
                   </div>
                 </div>
               )}
@@ -1330,7 +1574,7 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <strong style={{ color: theme.text }}>
-                Registros cadastrados ({consultaExecutada ? filteredRegistros.length : 0}/{registros.length})
+                Registros cadastrados ({consultaExecutada ? filteredRegistros.length : 0}/{totalRegistrosPorTipo})
               </strong>
               <span style={{ color: theme.textSecondary, fontSize: '12px' }}>
                 Os registros são mantidos apenas nesta sessão. Use a conferência para validar com a planilha oficial.
@@ -1339,32 +1583,69 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
             <div
               style={{
                 flex: '0 0 auto',
-                maxHeight: '240px',
+                maxHeight: mostrarFiltros ? '240px' : '450px',
                 overflowY: 'auto',
                 borderRadius: '8px',
                 border: `1px solid ${theme.border}`,
-                backgroundColor: theme.background
+                backgroundColor: theme.background,
+                transition: 'max-height 0.3s ease'
               }}
             >
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead style={{ position: 'sticky', top: 0, background: currentTheme === 'dark' ? '#1f2937' : '#f1f5f9', zIndex: 5 }}>
                   <tr>
-                    {obterColunasPorTipo(filtro.tipo || 'nascimento').map((col) => (
-                      <th
-                        key={col}
-                        style={{
-                          padding: '10px 8px',
-                          textAlign: col === '' ? 'right' : 'left',
-                          fontWeight: 700,
-                          color: theme.text,
-                          borderBottom: `1px solid ${theme.border}`,
-                          background: currentTheme === 'dark' ? '#1f2937' : '#f1f5f9',
-                          fontSize: '11px'
-                        }}
-                      >
-                        {col}
-                      </th>
-                    ))}
+                    {obterColunasPorTipo(filtro.tipo || 'nascimento').map((col, index) => {
+                      // Mapear nome da coluna para o campo de ordenação
+                      const campoMap: Record<string, string> = {
+                        'Código': 'codigo',
+                        'Livro': 'livro',
+                        'Folha': 'folha',
+                        'Termo': 'termo',
+                        'Data Termo': 'dataTermo',
+                        'Data Nasc.': 'dataNasc',
+                        'Data Cas.': 'dataCas',
+                        'Data Óbito': 'dataObito',
+                        'Nome da Criança': 'nome',
+                        'Nome Falecido': 'nome',
+                        'Pai': 'pai',
+                        'Mãe': 'mae',
+                        'Tipo': 'tipo',
+                        'O Contraente': 'contraente1',
+                        'A Contraente': 'contraente2'
+                      }
+                      
+                      const campo = campoMap[col]
+                      const isOrdenado = campoOrdenacao === campo
+                      const isClicavel = col !== ''
+                      
+                      return (
+                        <th
+                          key={col || `empty-${index}`}
+                          onClick={() => isClicavel && handleOrdenar(campo)}
+                          style={{
+                            padding: '10px 8px',
+                            textAlign: col === '' ? 'right' : 'left',
+                            fontWeight: 700,
+                            color: isOrdenado ? '#2563eb' : theme.text,
+                            borderBottom: `1px solid ${theme.border}`,
+                            background: currentTheme === 'dark' ? '#1f2937' : '#f1f5f9',
+                            fontSize: '11px',
+                            cursor: isClicavel ? 'pointer' : 'default',
+                            userSelect: 'none',
+                            transition: 'color 0.2s'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>{col}</span>
+                            {isClicavel && (
+                              <span style={{ fontSize: '10px', opacity: isOrdenado ? 1 : 0.3 }}>
+                                {isOrdenado ? (direcaoOrdenacao === 'asc' ? '▲' : '▼') : '⬍'}
+                              </span>
+                            )}
+                          </div>
+                        </th>
+                      )
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -1385,10 +1666,15 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
                       const selecionado = registroSelecionadoId === registro.id
                       
                       const renderCelulas = () => {
+                        // Formatar folha: se for V (verso), mostrar como "8v", senão apenas o número
+                        const folhaFormatada = registro.folha 
+                          ? (registro.folhaVerso === 'V' ? `${registro.folha}v` : registro.folha)
+                          : '--'
+                        
                         const cells = [
                           <td key="codigo" style={{ padding: '8px' }}>{registro.codigoInterno ?? '--'}</td>,
-                          <td key="livro" style={{ padding: '8px' }}>{registro.livro || '--'}</td>,
-                          <td key="folha" style={{ padding: '8px' }}>{registro.folha || '--'}{registro.folhaVerso ? ` (${registro.folhaVerso})` : ''}</td>,
+                          <td key="livro" style={{ padding: '8px', maxWidth: '60px' }}>{registro.livro || '--'}</td>,
+                          <td key="folha" style={{ padding: '8px' }}>{folhaFormatada}</td>,
                           <td key="termo" style={{ padding: '8px' }}>{registro.termo || '--'}</td>
                         ]
 
@@ -1402,17 +1688,17 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
                           )
                         } else if (registro.tipo === 'casamento') {
                           cells.push(
+                            <td key="dataTermo" style={{ padding: '8px' }}>{registro.data ? new Date(registro.data).toLocaleDateString() : '--'}</td>,
                             <td key="dataCas" style={{ padding: '8px' }}>{registro.dataCasamento ? new Date(registro.dataCasamento).toLocaleDateString() : '--'}</td>,
-                            <td key="tipo" style={{ padding: '8px' }}>{registro.tipoCasamento || '--'}</td>,
+                            <td key="tipo" style={{ padding: '8px', textAlign: 'center' }}>{registro.tipoCasamento?.toUpperCase() || '--'}</td>,
                             <td key="contraente1" style={{ padding: '8px' }}>{registro.contraente || '--'}</td>,
-                            <td key="contraente2" style={{ padding: '8px' }}>{registro.contraente2 || '--'}</td>,
-                            <td key="regime" style={{ padding: '8px', fontSize: '10px' }}>{registro.regimeBens?.replace('comunhao_', 'C.').replace('separacao_', 'S.').replace('participacao_', 'P.') || '--'}</td>
+                            <td key="contraente2" style={{ padding: '8px' }}>{registro.contraente2 || '--'}</td>
                           )
                         } else if (registro.tipo === 'obito') {
                           cells.push(
+                            <td key="dataTermo" style={{ padding: '8px' }}>{registro.data ? new Date(registro.data).toLocaleDateString() : '--'}</td>,
                             <td key="dataObito" style={{ padding: '8px' }}>{registro.dataObito ? new Date(registro.dataObito).toLocaleDateString() : '--'}</td>,
                             <td key="nome" style={{ padding: '8px' }}>{registro.nomePrincipal || '--'}</td>,
-                            <td key="causa" style={{ padding: '8px', fontSize: '10px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={registro.causaMorte || ''}>{registro.causaMorte || '--'}</td>,
                             <td key="pai" style={{ padding: '8px' }}>{registro.nomePai || '--'}</td>,
                             <td key="mae" style={{ padding: '8px' }}>{registro.nomeMae || '--'}</td>
                           )
@@ -1488,6 +1774,25 @@ export function CadastroIndicePage({ onClose }: { onClose: () => void }) {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'consulta' && (
+          <div style={actionButtonsContainerStyle}>
+            <button
+              onClick={() => handleRetornar()}
+              onMouseEnter={() => setHoveredButton('retornar-consulta')}
+              onMouseLeave={() => {
+                setHoveredButton(null)
+                setActiveButton(null)
+              }}
+              onMouseDown={() => setActiveButton('retornar-consulta')}
+              onMouseUp={() => setActiveButton(null)}
+              style={getActionButtonStyles('retornar-consulta', false)}
+            >
+              <span style={{ fontSize: '16px' }}>↩️</span>
+              <span>Retornar</span>
+            </button>
           </div>
         )}
 

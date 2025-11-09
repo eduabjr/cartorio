@@ -1320,16 +1320,13 @@ export function FuncionarioPage({ onClose, abaInicial = 'cadastro' }: Funcionari
                   <input
                     type="text"
                     value={formData.codigo}
-                    readOnly
+                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                     placeholder="0"
                     style={{
                       ...inputStyles, 
                       flex: 1, 
                       minWidth: '50px',
-                      paddingRight: '28px',
-                      backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#e0e0e0',
-                      color: currentTheme === 'dark' ? '#666' : '#999',
-                      cursor: 'default'
+                      paddingRight: '28px'
                     }}
                   />
                   <button

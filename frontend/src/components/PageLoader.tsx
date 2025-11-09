@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, ComponentType } from 'react'
+import React, { Suspense, lazy, ComponentType, useMemo, useCallback } from 'react'
 import { ErrorBoundary } from './ErrorBoundary'
 
 /**
@@ -45,10 +45,18 @@ const LoadingFallback = ({ moduleName }: { moduleName: string }) => (
 )
 
 export function PageLoader({ component: Component, moduleName, props = {} }: PageLoaderProps) {
+  const memoizedProps = useMemo(() => props, [props])
+
+  const handleClose = useCallback(() => {
+    if (memoizedProps && typeof memoizedProps.onClose === 'function') {
+      memoizedProps.onClose()
+    }
+  }, [memoizedProps])
+
   return (
-    <ErrorBoundary moduleName={moduleName}>
+    <ErrorBoundary moduleName={moduleName} onClose={handleClose}>
       <Suspense fallback={<LoadingFallback moduleName={moduleName} />}>
-        <Component {...props} />
+        <Component {...memoizedProps} />
       </Suspense>
     </ErrorBoundary>
   )

@@ -103,8 +103,21 @@ class CartorioSeadeService {
   async buscarPorNumeroSeade(numeroSeade: string): Promise<CartorioSeadeAPI | null> {
     try {
       console.log('🔍 Buscando cartório por número SEADE:', numeroSeade)
+      
+      // Buscar no localStorage primeiro
+      const cartoriosSalvos = localStorage.getItem('cartorios-seade')
+      if (cartoriosSalvos) {
+        const cartorios = JSON.parse(cartoriosSalvos)
+        const cartorioEncontrado = cartorios.find((c: any) => c.numeroSeade === numeroSeade)
+        if (cartorioEncontrado) {
+          console.log('✅ Cartório encontrado no localStorage:', cartorioEncontrado)
+          return cartorioEncontrado
+        }
+      }
+      
+      // Se não encontrou no localStorage, tentar API
       const response = await axios.get(`${this.baseURL}/seade/${numeroSeade}`)
-      console.log('✅ Cartório encontrado:', response.data)
+      console.log('✅ Cartório encontrado na API:', response.data)
       return response.data
     } catch (error) {
       console.error('❌ Erro ao buscar cartório por número SEADE:', error)
@@ -118,8 +131,21 @@ class CartorioSeadeService {
   async buscarPorNumeroCnj(numeroCnj: string): Promise<CartorioSeadeAPI | null> {
     try {
       console.log('🔍 Buscando cartório por número CNJ:', numeroCnj)
+      
+      // Buscar no localStorage primeiro
+      const cartoriosSalvos = localStorage.getItem('cartorios-seade')
+      if (cartoriosSalvos) {
+        const cartorios = JSON.parse(cartoriosSalvos)
+        const cartorioEncontrado = cartorios.find((c: any) => c.numeroCnj === numeroCnj)
+        if (cartorioEncontrado) {
+          console.log('✅ Cartório encontrado no localStorage:', cartorioEncontrado)
+          return cartorioEncontrado
+        }
+      }
+      
+      // Se não encontrou no localStorage, tentar API
       const response = await axios.get(`${this.baseURL}/cnj/${numeroCnj}`)
-      console.log('✅ Cartório encontrado:', response.data)
+      console.log('✅ Cartório encontrado na API:', response.data)
       return response.data
     } catch (error) {
       console.error('❌ Erro ao buscar cartório por número CNJ:', error)

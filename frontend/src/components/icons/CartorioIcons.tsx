@@ -53,7 +53,11 @@ export const MenuIcon: React.FC<CartorioIconProps> = (props) => (
 );
 
 export const IndexIcon: React.FC<CartorioIconProps> = (props) => (
-  <Icon name="list" {...props} />
+  <Icon name="book" {...props} />
+);
+
+export const OldBookIcon: React.FC<CartorioIconProps> = (props) => (
+  <Icon name="library" {...props} />
 );
 
 export const CloseIcon: React.FC<CartorioIconProps> = (props) => (

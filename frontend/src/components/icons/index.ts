@@ -57,5 +57,6 @@ export {
   CalculatorIcon,
   TrashIcon,
   MenuIcon,
-  IndexIcon
+  IndexIcon,
+  OldBookIcon
 } from './CartorioIcons';

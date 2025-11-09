@@ -9,11 +9,13 @@ import {
   PrintIcon, 
   UploadIcon,
   SettingsIcon,
-  IndexIcon
+  IndexIcon,
+  OldBookIcon
 } from './icons'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useWindowManager } from '../contexts/WindowContext'
 import { IndicesPage } from '../pages/IndicesPage'
+import { IndiceXPageIsolated } from '../modules'
 
 /**
  * TOOLBAR
@@ -51,12 +53,23 @@ export function Toolbar() {
     })
   }
 
+  const handleOpenIndiceAntigo = () => {
+    openWindow({
+      id: `indice-antigo-${Date.now()}`,
+      type: 'indice-antigo',
+      title: 'Cadastro de Índice de Livro Antigo',
+      component: IndiceXPageIsolated,
+      props: {}
+    })
+  }
+
   const toolbarItems = [
     { icon: UserIcon, label: 'Clientes', shortcut: 'F2' },
     { icon: DocumentIcon, label: 'Documentos', shortcut: 'F3' },
     { icon: RegistryIcon, label: 'Registros', shortcut: 'F4' },
     { icon: CertificateIcon, label: 'Certidões', shortcut: 'F5' },
     { icon: IndexIcon, label: 'Índices', shortcut: 'F8', onClick: handleOpenIndices },
+    { icon: OldBookIcon, label: 'Índice Antigo', shortcut: 'F9', onClick: handleOpenIndiceAntigo },
     { icon: BuildingIcon, label: 'Imóveis', shortcut: 'F6' },
     { icon: SearchIcon, label: 'Consulta', shortcut: 'F7' },
     { icon: PrintIcon, label: 'Imprimir', shortcut: 'Ctrl+P' },

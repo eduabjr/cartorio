@@ -23,11 +23,19 @@ export default defineConfig({
     host: true,
     strictPort: true,
     hmr: {
-      overlay: false,
+      overlay: true, // Mostrar erros na tela
+      protocol: 'ws',
+      timeout: 30000,
     },
     watch: {
       usePolling: true,
-      interval: 1000,
+      interval: 500, // Verificar mudanças mais rápido
+    },
+    // Desabilitar cache em desenvolvimento
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
     },
     // 🔧 PROXY DESABILITADO - Sistema funcionando apenas com frontend (localStorage)
     // Descomente as linhas abaixo quando o backend estiver rodando
@@ -118,7 +126,10 @@ export default defineConfig({
       'lucide-react',
     ],
     exclude: ['@vite/client', '@vite/env'],
+    force: false, // Mudar para true se precisar forçar re-otimização
   },
+  // Desabilitar cache de módulos em desenvolvimento
+  cacheDir: process.env.NODE_ENV === 'development' ? undefined : 'node_modules/.vite',
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
   }

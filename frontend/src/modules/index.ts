@@ -201,6 +201,12 @@ export const RemessaSEADEPageIsolated = createIsolatedPage(
   'Remessa SEADE'
 )
 
+// 📦 Módulo: Lombadas de Livros
+export const LombadasPageIsolated = createIsolatedPage(
+  () => import('../pages/LombadasPage').then(m => ({ default: m.default })),
+  'Criação de Lombadas de Livros'
+)
+
 /**
  * 📋 Mapa de todos os módulos disponíveis
  * 
@@ -238,7 +244,8 @@ export const modules = {
   feriados: FeriadosPageIsolated,
   controleDigitalizacao: ControleDigitalizacaoPageIsolated,
   hospitalCemiterio: HospitalCemiterioPageIsolated,
-  remessaSEADE: RemessaSEADEPageIsolated
+  remessaSEADE: RemessaSEADEPageIsolated,
+  lombadas: LombadasPageIsolated
 } as const
 
 export type ModuleName = keyof typeof modules

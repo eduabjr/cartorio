@@ -951,7 +951,7 @@ export function IndicesPage({ onClose }: IndicesPageProps) {
   return (
     <>
       <BasePage
-        title="Índices"
+        title="Consulta de Índices Recentes"
         onClose={onClose}
         width="1200px"
         height="700px"

@@ -44,7 +44,8 @@ import {
   ControladorSenhaPageIsolated,
   PainelSenhasPageIsolated,
   GerenciamentoGuichesPageIsolated,
-  RemessaSEADEPageIsolated
+  RemessaSEADEPageIsolated,
+  LombadasPageIsolated
 } from './modules'
 // Rotas públicas (não precisam de isolamento, carregadas diretamente)
 import { TelaSenhaPublicaPage } from './pages/TelaSenhaPublicaPage'
@@ -788,7 +789,7 @@ function AppContent() {
             } },
             { 
               id: 'funcionario', 
-              label: 'Funcionário', 
+              label: 'Funcionário e Guichê', 
               icon: '', 
               adminOnly: true,
               onClick: () => {
@@ -873,61 +874,22 @@ function AppContent() {
             label: 'Abertura de Livros',
             icon: '',
             submenu: [
-              {
-                id: 'casamento-livro',
-                label: 'Casamento',
-                icon: '',
-                submenu: [
-                  { id: 'casamento-abertura', label: 'Abertura', icon: '', onClick: () => (window as any).navigateToPage?.('casamento-abertura') },
-                  { id: 'casamento-encerramento', label: 'Encerramento', icon: '', onClick: () => (window as any).navigateToPage?.('casamento-encerramento') }
-                ]
-              },
-              {
-                id: 'edital-proclamas-livro',
-                label: 'Edital de Proclamas',
-                icon: '',
-                submenu: [
-                  { id: 'edital-proclamas-abertura', label: 'Abertura', icon: '', onClick: () => (window as any).navigateToPage?.('edital-proclamas-abertura') },
-                  { id: 'edital-proclamas-encerramento', label: 'Encerramento', icon: '', onClick: () => (window as any).navigateToPage?.('edital-proclamas-encerramento') }
-                ]
-              },
-              {
-                id: 'livro-e-livro',
-                label: 'Livro E',
-                icon: '',
-                submenu: [
-                  { id: 'livro-e-abertura', label: 'Abertura', icon: '', onClick: () => (window as any).navigateToPage?.('livro-e-abertura') },
-                  { id: 'livro-e-encerramento', label: 'Encerramento', icon: '', onClick: () => (window as any).navigateToPage?.('livro-e-encerramento') }
-                ]
-              },
-              {
-                id: 'nascimento-livro',
-                label: 'Nascimento',
-                icon: '',
-                submenu: [
-                  { id: 'nascimento-abertura', label: 'Abertura', icon: '', onClick: () => (window as any).navigateToPage?.('nascimento-abertura') },
-                  { id: 'nascimento-encerramento', label: 'Encerramento', icon: '', onClick: () => (window as any).navigateToPage?.('nascimento-encerramento') }
-                ]
-              },
-              {
-                id: 'remissivo-livro',
-                label: 'Remissivo',
-                icon: '',
-                submenu: [
-                  { id: 'remissivo-abertura', label: 'Abertura', icon: '', onClick: () => (window as any).navigateToPage?.('remissivo-abertura') },
-                  { id: 'remissivo-encerramento', label: 'Encerramento', icon: '', onClick: () => (window as any).navigateToPage?.('remissivo-encerramento') }
-                ]
-              },
-              {
-                id: 'obito-livro',
-                label: 'Óbito',
-                icon: '',
-                submenu: [
-                  { id: 'obito-abertura', label: 'Abertura', icon: '', onClick: () => (window as any).navigateToPage?.('obito-abertura') },
-                  { id: 'obito-encerramento', label: 'Encerramento', icon: '', onClick: () => (window as any).navigateToPage?.('obito-encerramento') }
-                ]
-              },
-              { id: 'lombada-livro', label: 'Lombada de Livro', icon: '', onClick: () => (window as any).navigateToPage?.('lombada-livro') }
+              { 
+                id: 'lombadas', 
+                label: 'Lombada', 
+                icon: '📚', 
+                onClick: () => {
+                  console.log('✅ LOMBADAS CLICADO! Abrindo janela...')
+                  openWindow({
+                    id: 'lombadas-window',
+                    type: 'lombadas',
+                    title: 'Criação de Lombadas de Livros',
+                    component: LombadasPageIsolated,
+                    props: {}
+                  })
+                  console.log('✅ Janela de Lombadas aberta!')
+                }
+              }
             ]
           },
           {
@@ -1158,22 +1120,22 @@ function AppContent() {
         label: 'Índice',
         icon: '',
         submenu: [
-          { id: 'cadastro-indice', label: 'Cadastro de Índice', icon: '', onClick: () => {
-            console.log('✅ Abrindo Cadastro de Índice...')
+          { id: 'cadastro-indice', label: 'Cadastro de Índice de Livro Antigo', icon: '', onClick: () => {
+            console.log('✅ Abrindo Cadastro de Índice de Livro Antigo...')
             openWindow({
               id: `cadastro-indice-${Date.now()}`,
               type: 'cadastro-indice',
-              title: 'Cadastro de Índice',
+              title: 'Cadastro de Índice de Livro Antigo',
               component: CadastroIndicePageIsolated,
               props: {}
             })
           }},
-          { id: 'indices-principais', label: 'Índices (Nascimento, Casamento, Óbito, Proclamas)', icon: '', onClick: () => {
-            console.log('✅ Abrindo Índices...')
+          { id: 'indices-principais', label: 'Consulta de Índices Recentes', icon: '', onClick: () => {
+            console.log('✅ Abrindo Consulta de Índices Recentes...')
             openWindow({
               id: `indices-${Date.now()}`,
               type: 'indices',
-              title: 'Índices - Nascimento, Casamento, Óbito, Proclamas',
+              title: 'Consulta de Índices Recentes',
               component: IndicesPageIsolated,
               props: {}
             })

@@ -276,15 +276,35 @@ export function BasePage({
     resize: resizable ? 'both' as const : 'none' as const
   }
 
-  const headerStyles = {
-    backgroundColor: headerColor || theme.primary,
-    color: 'white',
-    padding: '1px 8px',
+  const { currentTheme } = theme
+  const headerBackground = headerColor || (currentTheme === 'dark' ? theme.primary : theme.secondary)
+
+  const headerStyles: React.CSSProperties = {
+    backgroundColor: headerBackground,
+    color: '#fff',
+    padding: '3px 12px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     cursor: draggable ? 'grab' : 'default',
-    minHeight: '22px'
+    minHeight: '24px',
+    borderBottom: currentTheme === 'dark' ? `1px solid ${theme.border}` : '1px solid rgba(255,255,255,0.25)'
+  }
+
+  const headerTitleStyles: React.CSSProperties = {
+    margin: 0,
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#fff'
+  }
+
+  const headerContainerStyles: React.CSSProperties = {
+    padding: '4px 10px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    cursor: draggable ? 'grab' : 'default',
+    minHeight: '24px'
   }
 
   const contentStyles = {
@@ -301,7 +321,7 @@ export function BasePage({
   const closeButtonStyles = {
     background: 'none',
     border: 'none',
-    color: 'white',
+    color: '#fff',
     fontSize: '16px',
     cursor: 'pointer',
     padding: '2px',
@@ -328,7 +348,7 @@ export function BasePage({
       >
         {/* Header */}
         <div style={headerStyles} data-draggable-header>
-          <h3 style={{ margin: 0, fontSize: '11px', fontWeight: '600', lineHeight: '1' }}>
+          <h3 style={headerTitleStyles}>
             {title}
           </h3>
           <button
@@ -339,7 +359,7 @@ export function BasePage({
             }}
             style={closeButtonStyles}
             onMouseOver={(e) => {
-              (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+              (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.2)'
             }}
             onMouseOut={(e) => {
               (e.target as HTMLButtonElement).style.backgroundColor = 'transparent'

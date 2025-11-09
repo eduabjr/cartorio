@@ -4,6 +4,7 @@ interface ErrorBoundaryProps {
   children: ReactNode
   fallback?: ReactNode
   moduleName?: string
+  onClose?: () => void
 }
 
 interface ErrorBoundaryState {
@@ -72,6 +73,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       errorInfo: null,
       mostrarDetalhes: false
     })
+
+    if (this.props.onClose) {
+      this.props.onClose()
+    }
   }
 
   toggleDetalhes = () => {
@@ -157,7 +162,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 e.currentTarget.style.transform = 'translateY(0)'
               }}
             >
-              ✕ Fechar
+              ✕ Fechar janela
             </button>
           </div>
 

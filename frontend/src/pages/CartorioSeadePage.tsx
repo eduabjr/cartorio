@@ -195,8 +195,8 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           endereco: cart.endereco || '',
           numero: cart.numero || '',
           bairro: cart.bairro || '',
-          cidade: '',
-          uf: '',
+          cidade: cart.cidade || '',
+          uf: cart.uf || '',
           site: '',
           email: cart.email || '',
           responsavel: cart.responsavel || '',
@@ -286,8 +286,11 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
 
   // Função para buscar por número SEADE
   const handleBuscarSeade = async () => {
-    const numeroSeade = await modal.prompt('Digite o número SEADE:', '', 'Buscar por SEADE', '🔍')
-    if (!numeroSeade) return
+    const numeroSeade = formData.numeroSeade
+    if (!numeroSeade || numeroSeade === '0') {
+      await modal.alert('Digite o número SEADE antes de buscar!', 'Aviso', '⚠️')
+      return
+    }
     
     try {
       const cartorio = await cartorioSeadeService.buscarPorNumeroSeade(numeroSeade)
@@ -300,7 +303,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           cnpj: cartorio.cnpj,
           cep: cartorio.cep,
           endereco: cartorio.endereco,
-          numero: '',
+          numero: cartorio.numero,
           bairro: cartorio.bairro,
           cidade: cartorio.cidade,
           uf: cartorio.uf,
@@ -310,6 +313,8 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           telefone: cartorio.telefone,
           cpf: cartorio.cpf
         })
+        
+        persistKeyRef.current = 'form-cartorio-seade-' + cartorio.codigo
         await modal.alert('Cartório encontrado!', 'Sucesso', '✅')
       } else {
         await modal.alert('Cartório não encontrado!', 'Não Encontrado', '❌')
@@ -322,8 +327,11 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
 
   // Função para buscar por número CNJ
   const handleBuscarCnj = async () => {
-    const numeroCnj = await modal.prompt('Digite o número CNJ:', '', 'Buscar por CNJ', '🔍')
-    if (!numeroCnj) return
+    const numeroCnj = formData.numeroCnj
+    if (!numeroCnj || numeroCnj === '0') {
+      await modal.alert('Digite o número CNJ antes de buscar!', 'Aviso', '⚠️')
+      return
+    }
     
     try {
       const cartorio = await cartorioSeadeService.buscarPorNumeroCnj(numeroCnj)
@@ -336,7 +344,7 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           cnpj: cartorio.cnpj,
           cep: cartorio.cep,
           endereco: cartorio.endereco,
-          numero: '',
+          numero: cartorio.numero,
           bairro: cartorio.bairro,
           cidade: cartorio.cidade,
           uf: cartorio.uf,
@@ -346,6 +354,8 @@ export function CartorioSeadePage({ onClose }: CartorioSeadePageProps) {
           telefone: cartorio.telefone,
           cpf: cartorio.cpf
         })
+        
+        persistKeyRef.current = 'form-cartorio-seade-' + cartorio.codigo
         await modal.alert('Cartório encontrado!', 'Sucesso', '✅')
       } else {
         await modal.alert('Cartório não encontrado!', 'Não Encontrado', '❌')

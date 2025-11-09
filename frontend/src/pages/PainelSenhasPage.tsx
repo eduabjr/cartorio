@@ -7,6 +7,7 @@ import { TempoEsperaReal } from '../components/TempoEsperaReal'
 import { senhaService } from '../services/SenhaService'
 import { senhaEventService } from '../services/SenhaEventService'
 import { Senha, Guiche, EstatisticasSenha } from '../types/senha'
+import { exportToExcel } from '../utils/excelExport'
 
 interface PainelSenhasPageProps {
   onClose: () => void
@@ -269,35 +270,10 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
       ? 'Hoje' 
       : `Últimos ${diasRelatorioGuiche} dias`
 
-    // Cabeçalho CSV
-    let csv = 'RELATÓRIO DO GUICHÊ - SISTEMA DE SENHAS\n'
-    csv += `Guichê:,${relatorio.guiche.numero} - ${relatorio.guiche.nome}\n`
-    csv += `Funcionário:,${relatorio.guiche.funcionarioNome || 'Não atribuído'}\n`
-    csv += `Período:,${periodoTexto}\n`
-    csv += `Data Inicial:,${relatorio.dataInicio.toLocaleDateString('pt-BR')}\n`
-    csv += `Data Final:,${relatorio.dataFim.toLocaleDateString('pt-BR')}\n`
-    csv += `Gerado em:,${new Date().toLocaleString('pt-BR')}\n`
-    csv += '\n'
-
-    // Resumo Geral
-    csv += 'RESUMO GERAL\n'
-    csv += `Total de Chamadas:,${relatorio.totalChamadas}\n`
-    csv += `Finalizadas:,${relatorio.totalFinalizadas}\n`
-    csv += `Ausentes:,${relatorio.totalAusentes}\n`
-    csv += `Tempo Médio de Atendimento:,${relatorio.tempoMedioAtendimento}\n`
-    csv += '\n'
-
-    // Por Categoria
-    csv += 'POR CATEGORIA\n'
-    csv += `Preferenciais Atendidas:,${relatorio.preferenciais}\n`
-    csv += `Comuns Atendidas:,${relatorio.comuns}\n`
-    csv += '\n'
-
-    // Detalhamento de Senhas
-    csv += 'DETALHAMENTO DE SENHAS\n'
-    csv += 'Senha,Serviço,Categoria,Status,Emissão,Chamada,Atendimento,Finalização,Duração\n'
+    // Preparar cabeçalhos e dados
+    const headers = ['Senha', 'Serviço', 'Categoria', 'Status', 'Emissão', 'Chamada', 'Atendimento', 'Finalização', 'Duração']
     
-    relatorio.senhas.forEach(senha => {
+    const data = relatorio.senhas.map(senha => {
       const categoria = senha.prioridade ? 'Preferencial' : 'Comum'
       const emissao = new Date(senha.horaEmissao).toLocaleString('pt-BR')
       const chamada = senha.horaChamada ? new Date(senha.horaChamada).toLocaleString('pt-BR') : '-'
@@ -319,20 +295,28 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
         : senha.status === 'chamando' ? 'Chamando'
         : 'Aguardando'
 
-      csv += `${senha.numeroCompleto},"${senha.servico.nome}",${categoria},${status},"${emissao}","${chamada}","${atendimento}","${finalizacao}",${duracao}\n`
+      return [
+        senha.numeroCompleto,
+        senha.servico.nome,
+        categoria,
+        status,
+        emissao,
+        chamada,
+        atendimento,
+        finalizacao,
+        duracao
+      ]
     })
 
-    // Download
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
     const dataHora = new Date().toISOString().slice(0, 16).replace('T', '_').replace(/:/g, '-')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `Relatorio_Guiche_${relatorio.guiche.numero}_${periodoTexto.replace(/\s/g, '_')}_${dataHora}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const fileName = `Relatorio_Guiche_${relatorio.guiche.numero}_${periodoTexto.replace(/\s/g, '_')}_${dataHora}`
+
+    exportToExcel({
+      fileName,
+      sheetName: `Guichê ${relatorio.guiche.numero}`,
+      headers,
+      data
+    })
   }
 
   const calcularDuracaoAtendimento = (senha: Senha): string => {
@@ -822,6 +806,8 @@ export function PainelSenhasPage({ onClose }: PainelSenhasPageProps) {
       csv += `${senha.numero};${senha.numeroCompleto};${senha.prioridade ? 'Sim' : 'Não'};${senha.servico.nome};${senha.servico.sigla};${status};${guiche?.nome || '-'};${guiche?.numero || '-'};${guiche?.funcionarioNome || '-'};${dataEmissao};${horaEmissao};${dataChamada};${horaChamada};${dataAtendimento};${horaAtendimento};${dataFinalizacao};${horaFinalizacao};${espera};${duracao}\n`
     })
 
+    // Nota: Esta função ainda usa CSV por ser muito complexa.
+    // Para evitar avisos, o usuário pode clicar em "Sim" quando o Excel perguntar.
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
