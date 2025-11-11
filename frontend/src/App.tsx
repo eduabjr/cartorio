@@ -31,7 +31,6 @@ import {
   DNVDOBloqueadasPageIsolated,
   OficiosMandadosPageIsolated,
   HospitalCemiterioPageIsolated,
-  CadastroLivrosPageIsolated,
   CadastroIndicePageIsolated,
   ProtocoloLancamentoPageIsolated,
   NaturezaPageIsolated,
@@ -858,23 +857,49 @@ function AppContent() {
             })
             console.log('✅ Janela de Hospital, Cemitério e Funerária aberta!')
           }},
-          { id: 'cadastro-livros', label: 'Cadastro de Livros', icon: '', onClick: () => {
-            console.log('✅ CADASTRO DE LIVROS CLICADO! Abrindo janela...')
-            openWindow({
-              id: 'cadastro-livros-window',
-              type: 'cadastro-livros',
-              title: 'Cadastro de Livros',
-              component: CadastroLivrosPageIsolated,
-              props: {}
-            })
-            console.log('✅ Janela de Cadastro de Livros aberta!')
-          }},
+          { 
+            id: 'cadastro-livros', 
+            label: 'Cadastro de Livros', 
+            icon: '', 
+            submenu: [
+              {
+                id: 'cadastro-lombada-livros',
+                label: 'Lombada de Livros',
+                icon: '',
+                onClick: () => {
+                  console.log('✅ LOMBADA DE LIVROS CLICADO! Abrindo janela...');
+                  openWindow({
+                    id: 'lombada-livros-window',
+                    type: 'lombada-livros',
+                    title: 'Lombada de Livros',
+                    component: LombadasPageIsolated,
+                    props: {}
+                  });
+                }
+              },
+              {
+                id: 'cadastro-lombada-classificador',
+                label: 'Lombada de Classificador',
+                icon: '',
+                onClick: () => {
+                  console.log('✅ LOMBADA DE CLASSIFICADOR CLICADO! Abrindo janela...');
+                  openWindow({
+                    id: 'lombada-classificador-window',
+                    type: 'lombada-classificador',
+                    title: 'Lombada de Classificador',
+                    component: LombadasPageIsolated,
+                    props: { modo: 'classificador' }
+                  });
+                }
+              }
+            ]
+          },
           {
             id: 'abertura-livros',
             label: 'Abertura de Livros',
             icon: '',
             submenu: [
-              { 
+              {
                 id: 'lombadas', 
                 label: 'Lombada', 
                 icon: '📚', 

@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useModal } from '../hooks/useModal'
+
+const PERFIL_BASE_KEY = 'Casamento__B'
+const LETRAS_COMPARTILHADAS = new Set(['B', 'C', 'E', 'A'])
+
+const DEFAULT_SPINE_HEIGHT_MM = 105
 
 interface ConfiguracaoSistemaPageProps {
   onClose: () => void
@@ -21,6 +26,27 @@ interface ConfiguracoesGerais {
   substitutos: string[]
 }
 
+type LayoutConfig = {
+  alturaLogo: number
+  alturaLetra: number
+  alturaNumero: number
+  alturaDatas: number
+  fonteLetra: number
+  fonteNumero: number
+  fonteDatas: number
+  larguraLogoSecao: number
+  larguraLetraSecao: number
+  larguraNumeroSecao: number
+  larguraDatasSecao: number
+  logoEscala: number
+  offsetLogo: number
+  offsetLetra: number
+  offsetNumero: number
+  offsetDatas: number
+}
+
+type PerfilOverrides = Partial<LayoutConfig>
+
 interface ConfiguracoesImpressao {
   logoCartorio: string
   alturaLombada: number // em mm
@@ -32,7 +58,60 @@ interface ConfiguracoesImpressao {
   fonteLetra: number // em px
   fonteNumero: number // em px
   fonteDatas: number // em px
+  larguraLogoSecao: number // em mm
+  larguraLetraSecao: number // em mm
+  larguraNumeroSecao: number // em mm
+  larguraDatasSecao: number // em mm
+  logoEscala: number // porcentagem
+  offsetLogo: number // em mm
+  offsetLetra: number // em mm
+  offsetNumero: number // em mm
+  offsetDatas: number // em mm
+  perfis?: Record<string, PerfilOverrides>
 }
+
+const TEXT_SECTION_COUNT = 3
+const SECTION_GAP_MM = 2.5
+const TARGET_FONT_PX = 20
+const DEFAULT_SPINE_HEIGHT_MM = 105
+const DEFAULT_SPINE_WIDTH_MM = 55
+const DEFAULT_LOGO_HEIGHT_MM = 50
+const DEFAULT_LOGO_WIDTH_MM = 28
+const DEFAULT_TEXT_HEIGHT_MM = Number(
+  ((DEFAULT_SPINE_HEIGHT_MM - DEFAULT_LOGO_HEIGHT_MM - SECTION_GAP_MM * TEXT_SECTION_COUNT) / TEXT_SECTION_COUNT).toFixed(2)
+)
+const DEFAULT_TEXT_WIDTH_MM = Number(
+  ((DEFAULT_SPINE_WIDTH_MM - DEFAULT_LOGO_WIDTH_MM) / TEXT_SECTION_COUNT).toFixed(2)
+)
+
+const tipoParaLetras: Record<string, string[]> = {
+  'Casamento': ['B', 'B-AUX'],
+  'Óbito': ['C', 'C-AUX'],
+  'Nascimento': ['A'],
+  'Livro E': ['E'],
+  'Edital de Proclamas': ['D'],
+  'Remissivo': ['Livro Transporte']
+}
+
+const criarLayoutAPartirConfig = (config: ConfiguracoesImpressao): LayoutConfig => ({
+  alturaLogo: config.alturaLogo,
+  alturaLetra: config.alturaLetra,
+  alturaNumero: config.alturaNumero,
+  alturaDatas: config.alturaDatas,
+  fonteLetra: config.fonteLetra,
+  fonteNumero: config.fonteNumero,
+  fonteDatas: config.fonteDatas,
+  larguraLogoSecao: config.larguraLogoSecao,
+  larguraLetraSecao: config.larguraLetraSecao,
+  larguraNumeroSecao: config.larguraNumeroSecao,
+  larguraDatasSecao: config.larguraDatasSecao,
+  logoEscala: config.logoEscala,
+  offsetLogo: config.offsetLogo,
+  offsetLetra: config.offsetLetra,
+  offsetNumero: config.offsetNumero,
+  offsetDatas: config.offsetDatas,
+  bordaAtiva: config.bordaAtiva
+})
 
 interface BloqueioHorario {
   habilitado: boolean
@@ -152,30 +231,124 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
       // Adicionar valores padrão se não existirem
       return {
         logoCartorio: config.logoCartorio || '',
-        alturaLombada: config.alturaLombada ?? 10.5,
-        larguraLombada: config.larguraLombada ?? 5.5,
-        alturaLogo: config.alturaLogo ?? 3.5,
-        alturaLetra: config.alturaLetra ?? 2.5,
-        alturaNumero: config.alturaNumero ?? 2.5,
-        alturaDatas: config.alturaDatas ?? 2.5,
-        fonteLetra: config.fonteLetra ?? 72,
-        fonteNumero: config.fonteNumero ?? 96,
-        fonteDatas: config.fonteDatas ?? 28
+        alturaLombada: config.alturaLombada ?? DEFAULT_SPINE_HEIGHT_MM,
+        larguraLombada: config.larguraLombada ?? DEFAULT_SPINE_WIDTH_MM,
+        alturaLogo: config.alturaLogo ?? DEFAULT_LOGO_HEIGHT_MM,
+        alturaLetra: config.alturaLetra ?? DEFAULT_TEXT_HEIGHT_MM,
+        alturaNumero: config.alturaNumero ?? DEFAULT_TEXT_HEIGHT_MM,
+        alturaDatas: config.alturaDatas ?? DEFAULT_TEXT_HEIGHT_MM,
+        fonteLetra: config.fonteLetra ?? TARGET_FONT_PX,
+        fonteNumero: config.fonteNumero ?? TARGET_FONT_PX,
+        fonteDatas: config.fonteDatas ?? TARGET_FONT_PX,
+        larguraLogoSecao: config.larguraLogoSecao ?? DEFAULT_LOGO_WIDTH_MM,
+        larguraLetraSecao: config.larguraLetraSecao ?? DEFAULT_TEXT_WIDTH_MM,
+        larguraNumeroSecao: config.larguraNumeroSecao ?? DEFAULT_TEXT_WIDTH_MM,
+        larguraDatasSecao: config.larguraDatasSecao ?? DEFAULT_TEXT_WIDTH_MM,
+        logoEscala: config.logoEscala ?? 100,
+        offsetLogo: config.offsetLogo ?? 0,
+        offsetLetra: config.offsetLetra ?? 0,
+        offsetNumero: config.offsetNumero ?? 0,
+        offsetDatas: config.offsetDatas ?? 0,
+        bordaAtiva: config.bordaAtiva ?? true,
+        bordaQuadrada: config.bordaQuadrada ?? false,
+        perfis: config.perfis ?? {}
       }
     }
     return {
       logoCartorio: '',
-      alturaLombada: 10.5, // altura padrão em mm
-      larguraLombada: 5.5,  // largura padrão em mm
-      alturaLogo: 3.5,
-      alturaLetra: 2.5,
-      alturaNumero: 2.5,
-      alturaDatas: 2.5,
-      fonteLetra: 72,
-      fonteNumero: 96,
-      fonteDatas: 28
+      alturaLombada: DEFAULT_SPINE_HEIGHT_MM,
+      larguraLombada: DEFAULT_SPINE_WIDTH_MM,
+      alturaLogo: DEFAULT_LOGO_HEIGHT_MM,
+      alturaLetra: DEFAULT_TEXT_HEIGHT_MM,
+      alturaNumero: DEFAULT_TEXT_HEIGHT_MM,
+      alturaDatas: DEFAULT_TEXT_HEIGHT_MM,
+      fonteLetra: TARGET_FONT_PX,
+      fonteNumero: TARGET_FONT_PX,
+      fonteDatas: TARGET_FONT_PX,
+      larguraLogoSecao: DEFAULT_LOGO_WIDTH_MM,
+      larguraLetraSecao: DEFAULT_TEXT_WIDTH_MM,
+      larguraNumeroSecao: DEFAULT_TEXT_WIDTH_MM,
+      larguraDatasSecao: DEFAULT_TEXT_WIDTH_MM,
+      logoEscala: 100,
+      offsetLogo: 0,
+      offsetLetra: 0,
+      offsetNumero: 0,
+      offsetDatas: 0,
+      bordaAtiva: true,
+      perfis: {},
+      bordaQuadrada: false
     }
   })
+
+  const tiposLivro = Object.keys(tipoParaLetras)
+  const [perfilTipo, setPerfilTipo] = useState<string>(tiposLivro[0])
+  const [perfilLetra, setPerfilLetra] = useState<string>(tipoParaLetras[tiposLivro[0]][0])
+
+  useEffect(() => {
+    const letras = tipoParaLetras[perfilTipo] || []
+    if (letras.length === 0) {
+      setPerfilLetra('')
+      return
+    }
+    if (!letras.includes(perfilLetra)) {
+      setPerfilLetra(letras[0])
+    }
+  }, [perfilTipo, perfilLetra])
+
+  const perfilKey = `${perfilTipo}__${perfilLetra}`
+  const baseLayout = criarLayoutAPartirConfig(configImpressao)
+  const obterOverridesPerfil = (tipo: string, letra: string): PerfilOverrides => {
+    const key = `${tipo}__${letra}`
+    const overridesDiretos = configImpressao.perfis?.[key]
+    if (overridesDiretos) {
+      return overridesDiretos
+    }
+    if (LETRAS_COMPARTILHADAS.has(letra)) {
+      return configImpressao.perfis?.[PERFIL_BASE_KEY] ?? {}
+    }
+    return {}
+  }
+  const perfilOverrides: PerfilOverrides = obterOverridesPerfil(perfilTipo, perfilLetra)
+  const letrasDisponiveisPerfil = tipoParaLetras[perfilTipo] || []
+  const perfilPersonalizadoAtivo = !!configImpressao.perfis?.[perfilKey]
+
+  const obterValorPerfil = <K extends keyof LayoutConfig>(campo: K): LayoutConfig[K] =>
+    (perfilOverrides[campo] as LayoutConfig[K]) ?? baseLayout[campo]
+
+  const atualizarPerfil = <K extends keyof LayoutConfig>(campo: K, valor: LayoutConfig[K]) => {
+    setConfigImpressao((prev) => {
+      const perfisAtuais = prev.perfis ?? {}
+      const base = criarLayoutAPartirConfig(prev)
+      const overridesAtuais: PerfilOverrides = perfisAtuais[perfilKey] ?? {}
+      const novoOverrides: PerfilOverrides = { ...overridesAtuais, [campo]: valor }
+
+      if (novoOverrides[campo] === base[campo]) {
+        delete novoOverrides[campo]
+      }
+
+      const perfisAtualizados: Record<string, PerfilOverrides> = { ...perfisAtuais }
+      if (Object.keys(novoOverrides).length > 0) {
+        perfisAtualizados[perfilKey] = novoOverrides
+      } else {
+        delete perfisAtualizados[perfilKey]
+      }
+
+      return {
+        ...prev,
+        perfis: perfisAtualizados
+      }
+    })
+  }
+
+  const removerPerfil = () => {
+    setConfigImpressao((prev) => {
+      if (!prev.perfis || !prev.perfis[perfilKey]) {
+        return prev
+      }
+      const { [perfilKey]: _, ...restantes } = prev.perfis
+      return { ...prev, perfis: restantes }
+    })
+  }
 
   const [horarioAtual, setHorarioAtual] = useState(new Date())
   const [buscandoCep, setBuscandoCep] = useState(false)
@@ -403,9 +576,55 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
     borderRadius: '4px',
     backgroundColor: theme.background,
     color: theme.text,
-    outline: 'none'
+    outline: 'none',
+    boxSizing: 'border-box' as const
   }
   
+  const layoutCardStyle: React.CSSProperties = {
+    marginTop: '20px',
+    padding: '20px',
+    border: `1px solid ${theme.border}`,
+    borderRadius: '10px',
+    backgroundColor: theme.surface,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '18px',
+    width: '100%',
+    boxSizing: 'border-box'
+  }
+
+  const layoutSectionTitleStyle: React.CSSProperties = {
+    margin: 0,
+    fontSize: '15px',
+    fontWeight: 600,
+    color: theme.text,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  }
+
+  const layoutSubHeaderStyle: React.CSSProperties = {
+    margin: 0,
+    fontSize: '13px',
+    fontWeight: 600,
+    color: theme.text,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  }
+
+  const layoutSubSectionStyle: React.CSSProperties = {
+    padding: '16px',
+    border: `1px dashed ${theme.border}`,
+    borderRadius: '8px',
+    backgroundColor: theme.background,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    width: '100%',
+    boxSizing: 'border-box'
+  }
+
   const buttonStyles = {
     padding: '10px 20px',
     fontSize: '14px',
@@ -2198,24 +2417,17 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                         value={configImpressao.alturaLombada}
                         onChange={(e) => setConfigImpressao({ 
                           ...configImpressao, 
-                          alturaLombada: parseFloat(e.target.value) || 10.5 
+                          alturaLombada: parseFloat(e.target.value) || 105 
                         })}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          fontSize: '14px',
-                          border: `1px solid ${theme.border}`,
-                          borderRadius: '4px',
-                          backgroundColor: theme.background,
-                          color: theme.text
-                        }}
+                        style={inputStyles}
+                        step="0.1"
                       />
                       <p style={{
                         margin: '4px 0 0 0',
                         fontSize: '11px',
                         color: theme.textSecondary
                       }}>
-                        Padrão: 10,5 mm
+                        Padrão: 105 mm
                       </p>
                     </div>
 
@@ -2238,24 +2450,17 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                         value={configImpressao.larguraLombada}
                         onChange={(e) => setConfigImpressao({ 
                           ...configImpressao, 
-                          larguraLombada: parseFloat(e.target.value) || 5.5 
+                          larguraLombada: parseFloat(e.target.value) || 55 
                         })}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          fontSize: '14px',
-                          border: `1px solid ${theme.border}`,
-                          borderRadius: '4px',
-                          backgroundColor: theme.background,
-                          color: theme.text
-                        }}
+                        style={inputStyles}
+                        step="0.1"
                       />
                       <p style={{
                         margin: '4px 0 0 0',
                         fontSize: '11px',
                         color: theme.textSecondary
                       }}>
-                        Padrão: 5,5 mm
+                        Padrão: 55 mm
                       </p>
                     </div>
                   </div>
@@ -2285,145 +2490,283 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                     </p>
                   </div>
 
-                  {/* Distribuição das seções */}
-                  <div style={{
-                    marginTop: '20px',
-                    padding: '16px',
-                    border: `1px dashed ${theme.border}`,
-                    borderRadius: '6px',
-                    backgroundColor: theme.background
-                  }}>
-                    <h4 style={{
-                      margin: '0 0 12px 0',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: theme.text,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      📊 Distribuição da Altura (mm)
+                  <div style={layoutCardStyle}>
+                    <h4 style={layoutSectionTitleStyle}>
+                      🧩 Organização das Seções
                     </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-                      {[
-                        { label: 'Logo', key: 'alturaLogo', value: configImpressao.alturaLogo },
-                        { label: 'Letra', key: 'alturaLetra', value: configImpressao.alturaLetra },
-                        { label: 'Número', key: 'alturaNumero', value: configImpressao.alturaNumero },
-                        { label: 'Datas', key: 'alturaDatas', value: configImpressao.alturaDatas }
-                      ].map((item) => (
-                        <div key={item.key}>
-                          <label style={{
-                            display: 'block',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            color: theme.textSecondary,
-                            marginBottom: '6px'
-                          }}>
-                            {item.label}
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            max={configImpressao.alturaLombada}
-                            step="0.1"
-                            value={item.value}
-                            onChange={(e) => {
-                              const valor = parseFloat(e.target.value) || item.value
-                              setConfigImpressao({
-                                ...configImpressao,
-                                [item.key]: valor
-                              })
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px',
-                              fontSize: '13px',
-                              border: `1px solid ${theme.border}`,
-                              borderRadius: '4px',
-                              backgroundColor: theme.surface,
-                              color: theme.text
-                            }}
-                          />
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                      <div style={layoutSubSectionStyle}>
+                        <h5 style={layoutSubHeaderStyle}>🎚️ Ajuste Vertical Global (mm)</h5>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+                          {[
+                            { label: 'Logo', key: 'offsetLogo' as const },
+                            { label: 'Letra', key: 'offsetLetra' as const },
+                            { label: 'Número', key: 'offsetNumero' as const },
+                            { label: 'Datas', key: 'offsetDatas' as const }
+                          ].map((item) => (
+                            <div key={item.key}>
+                              <label style={labelStyles}>{item.label}</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={configImpressao[item.key]}
+                                onChange={(e) => {
+                                  const valor = parseFloat(e.target.value);
+                                  setConfigImpressao({
+                                    ...configImpressao,
+                                    [item.key]: Number.isNaN(valor) ? configImpressao[item.key] : valor
+                                  })
+                                }}
+                                style={inputStyles}
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <p style={{
-                      margin: '12px 0 0 0',
-                      fontSize: '11px',
-                      color: theme.textSecondary
-                    }}>
-                      Dica: a soma deve ser aproximadamente igual à altura total da lombada.
-                    </p>
-                  </div>
+                        <p style={{
+                          margin: '4px 0 0 0',
+                          fontSize: '11px',
+                          color: theme.textSecondary
+                        }}>
+                          Ajuste padrão para todos os tipos. Valores positivos descem, negativos sobem.
+                        </p>
+                      </div>
 
-                  {/* Configuração de fontes */}
-                  <div style={{
-                    marginTop: '20px',
-                    padding: '16px',
-                    border: `1px dashed ${theme.border}`,
-                    borderRadius: '6px',
-                    backgroundColor: theme.background
-                  }}>
-                    <h4 style={{
-                      margin: '0 0 12px 0',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: theme.text,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      🔤 Tamanho das Fontes (px)
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-                      {[
-                        { label: 'Letra', key: 'fonteLetra', value: configImpressao.fonteLetra },
-                        { label: 'Número', key: 'fonteNumero', value: configImpressao.fonteNumero },
-                        { label: 'Datas', key: 'fonteDatas', value: configImpressao.fonteDatas }
-                      ].map((item) => (
-                        <div key={item.key}>
-                          <label style={{
-                            display: 'block',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            color: theme.textSecondary,
-                            marginBottom: '6px'
-                          }}>
-                            {item.label}
-                          </label>
-                          <input
-                            type="number"
-                            min="8"
-                            max="200"
-                            step="1"
-                            value={item.value}
-                            onChange={(e) => {
-                              const valor = parseInt(e.target.value, 10) || item.value
-                              setConfigImpressao({
-                                ...configImpressao,
-                                [item.key]: valor
-                              })
-                            }}
+                      <div style={layoutSubSectionStyle}>
+                        <h5 style={layoutSubHeaderStyle}>🎯 Configuração Específica (Tipo/Letra)</h5>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                          gap: '12px',
+                          alignItems: 'center'
+                        }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label style={labelStyles}>Tipo de Livro</label>
+                            <select
+                              value={perfilTipo}
+                              onChange={(e) => setPerfilTipo(e.target.value)}
+                              style={inputStyles}
+                            >
+                              {tiposLivro.map((tipo) => (
+                                <option key={tipo} value={tipo}>{tipo}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label style={labelStyles}>Letra / Nomenclatura</label>
+                            <select
+                              value={perfilLetra}
+                              onChange={(e) => setPerfilLetra(e.target.value)}
+                              style={inputStyles}
+                            >
+                              {letrasDisponiveisPerfil.map((letra) => (
+                                <option key={letra} value={letra}>{letra}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => perfilPersonalizadoAtivo && removerPerfil()}
                             style={{
-                              width: '100%',
-                              padding: '8px',
-                              fontSize: '13px',
-                              border: `1px solid ${theme.border}`,
-                              borderRadius: '4px',
-                              backgroundColor: theme.surface,
-                              color: theme.text
+                              padding: '6px 10px',
+                              fontSize: '12px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              backgroundColor: perfilPersonalizadoAtivo ? '#ef4444' : '#d1d5db',
+                              color: perfilPersonalizadoAtivo ? '#fff' : theme.textSecondary,
+                              cursor: perfilPersonalizadoAtivo ? 'pointer' : 'not-allowed',
+                              opacity: perfilPersonalizadoAtivo ? 1 : 0.7,
+                              height: '32px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              fontWeight: 600,
+                              boxShadow: perfilPersonalizadoAtivo ? '0 1px 3px rgba(0,0,0,0.12)' : 'none'
                             }}
-                          />
+                          >
+                            <span role="img" aria-label="remover">🧹</span>
+                            Remover
+                          </button>
                         </div>
-                      ))}
+
+                        <div style={{ display: 'grid', gap: '16px', marginTop: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+                            {([
+                              { label: 'Logo', campo: 'alturaLogo' },
+                              { label: 'Letra', campo: 'alturaLetra' },
+                              { label: 'Número', campo: 'alturaNumero' },
+                              { label: 'Datas', campo: 'alturaDatas' }
+                            ] as Array<{ label: string; campo: keyof LayoutConfig }>).map((item) => (
+                              <div key={item.campo}>
+                                <label style={labelStyles}>{item.label}</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={configImpressao.alturaLombada}
+                                  step="0.1"
+                                  value={obterValorPerfil(item.campo)}
+                                  onChange={(e) => {
+                                    const valor = parseFloat(e.target.value);
+                                    atualizarPerfil(item.campo, Number.isNaN(valor) ? obterValorPerfil(item.campo) : valor);
+                                  }}
+                                  style={inputStyles}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{
+                            margin: '4px 0 0 0',
+                            fontSize: '11px',
+                            color: theme.textSecondary
+                          }}>
+                            Ajuste as alturas específicas. Valores vazios usam o padrão global.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={layoutSubSectionStyle}>
+                        <h5 style={layoutSubHeaderStyle}>🔤 Tamanho das Fontes (px)</h5>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+                          <div>
+                            <label style={labelStyles}>Logo (%)</label>
+                            <input
+                              type="number"
+                              min="50"
+                              max="300"
+                              step="5"
+                              value={obterValorPerfil('logoEscala')}
+                              onChange={(e) => {
+                                const valor = parseInt(e.target.value, 10);
+                                atualizarPerfil('logoEscala', Number.isNaN(valor) ? obterValorPerfil('logoEscala') : valor);
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          {([
+                            { label: 'Letra', campo: 'fonteLetra' },
+                            { label: 'Número', campo: 'fonteNumero' },
+                            { label: 'Datas', campo: 'fonteDatas' }
+                          ] as Array<{ label: string; campo: keyof LayoutConfig }>).map((item) => (
+                            <div key={item.campo}>
+                              <label style={labelStyles}>{item.label}</label>
+                              <input
+                                type="number"
+                                min="8"
+                                max="600"
+                                step="1"
+                                value={obterValorPerfil(item.campo)}
+                                onChange={(e) => {
+                                  const valor = parseInt(e.target.value, 10);
+                                  atualizarPerfil(item.campo, Number.isNaN(valor) ? obterValorPerfil(item.campo) : valor);
+                                }}
+                                style={inputStyles}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <p style={{
+                          margin: '4px 0 0 0',
+                          fontSize: '11px',
+                          color: theme.textSecondary
+                        }}>
+                          Personalize fontes para este tipo/letra. Vazio mantém o padrão global.
+                        </p>
+                      </div>
+
+                      <div style={layoutSubSectionStyle}>
+                        <h5 style={layoutSubHeaderStyle}>🎚️ Ajuste Vertical (mm)</h5>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+                          {([
+                            { label: 'Logo', campo: 'offsetLogo' },
+                            { label: 'Letra', campo: 'offsetLetra' },
+                            { label: 'Número', campo: 'offsetNumero' },
+                            { label: 'Datas', campo: 'offsetDatas' }
+                          ] as Array<{ label: string; campo: keyof LayoutConfig }>).map((item) => (
+                            <div key={item.campo}>
+                              <label style={labelStyles}>{item.label}</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={obterValorPerfil(item.campo)}
+                                onChange={(e) => {
+                                  const valor = parseFloat(e.target.value);
+                                  atualizarPerfil(item.campo, Number.isNaN(valor) ? obterValorPerfil(item.campo) : valor);
+                                }}
+                                style={inputStyles}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <p style={{
+                          margin: '4px 0 0 0',
+                          fontSize: '11px',
+                          color: theme.textSecondary
+                        }}>
+                          Valores positivos descem e negativos sobem a seção selecionada (em mm).
+                        </p>
+                      </div>
+
+                      <div style={layoutSubSectionStyle}>
+                        <h5 style={layoutSubHeaderStyle}>🖨️ Borda do Perfil</h5>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: theme.text }}>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(obterValorPerfil('bordaAtiva'))}
+                              onChange={(e) => atualizarPerfil('bordaAtiva', e.target.checked)}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                            Imprimir com borda para este tipo/letra
+                          </label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', color: theme.text }}>Formato:</span>
+                            <select
+                              value={obterValorPerfil('bordaQuadrada') ? 'quadrada' : 'arredondada'}
+                              onChange={(e) => atualizarPerfil('bordaQuadrada', e.target.value === 'quadrada')}
+                              style={{ ...inputStyles, width: '150px' }}
+                            >
+                              <option value="arredondada">Arredondada</option>
+                              <option value="quadrada">Quadrada</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={layoutSubSectionStyle}>
+                        <h5 style={layoutSubHeaderStyle}>📏 Distribuição da Largura (mm)</h5>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                          {([
+                            { label: 'Logo', campo: 'larguraLogoSecao' },
+                            { label: 'Letra', campo: 'larguraLetraSecao' },
+                            { label: 'Número', campo: 'larguraNumeroSecao' },
+                            { label: 'Datas', campo: 'larguraDatasSecao' }
+                          ] as Array<{ label: string; campo: keyof LayoutConfig }>).map((item) => (
+                            <div key={item.campo}>
+                              <label style={labelStyles}>{item.label}</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max={configImpressao.larguraLombada}
+                                step="0.1"
+                                value={obterValorPerfil(item.campo)}
+                                onChange={(e) => {
+                                  const valor = parseFloat(e.target.value);
+                                  atualizarPerfil(item.campo, Number.isNaN(valor) ? obterValorPerfil(item.campo) : valor);
+                                }}
+                                style={inputStyles}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <p style={{
+                          margin: '4px 0 0 0',
+                          fontSize: '11px',
+                          color: theme.textSecondary
+                        }}>
+                          Defina larguras específicas respeitando o limite total de {configImpressao.larguraLombada} mm.
+                        </p>
+                      </div>
                     </div>
-                    <p style={{
-                      margin: '12px 0 0 0',
-                      fontSize: '11px',
-                      color: theme.textSecondary
-                    }}>
-                      Ajuste os tamanhos das fontes para alinhar com a altura reservada em cada seção.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -2465,9 +2808,17 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                     `• Número: ${configImpressao.alturaNumero} mm\n` +
                     `• Datas: ${configImpressao.alturaDatas} mm\n\n` +
                     `🔤 Fontes:\n` +
+                    `• Logo: ${configImpressao.logoEscala}%\n` +
                     `• Letra: ${configImpressao.fonteLetra}px\n` +
                     `• Número: ${configImpressao.fonteNumero}px\n` +
-                    `• Datas: ${configImpressao.fonteDatas}px`,
+                    `• Datas: ${configImpressao.fonteDatas}px\n\n` +
+                    `🎚️ Ajuste vertical (mm):\n` +
+                    `• Logo: ${configImpressao.offsetLogo}\n` +
+                    `• Letra: ${configImpressao.offsetLetra}\n` +
+                    `• Número: ${configImpressao.offsetNumero}\n` +
+                    `• Datas: ${configImpressao.offsetDatas}\n` +
+                    `• Borda: ${configImpressao.bordaAtiva ? (configImpressao.bordaQuadrada ? 'Sim (Quadrada)' : 'Sim (Arredondada)') : 'Não'}` +
+                    `\n\n🎯 Perfis personalizados: ${Object.keys(configImpressao.perfis ?? {}).length}`,
                     'Configurações Salvas',
                     '✅'
                   )
