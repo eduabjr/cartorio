@@ -5,6 +5,15 @@ import { useModal } from '../hooks/useModal'
 import { senhaService } from '../services/SenhaService'
 import { ServicoSenha, ConfiguracaoSenha, TipoServico, CategoriaSenha, TipoAudio, CategoriaServico, FormatoSenha, LayoutPainelPublico, GeneroVoz } from '../types/senha'
 
+type ConfigLogoSenhas = {
+  habilitado: boolean
+  escalaPercentual: number
+  offsetVerticalMm: number
+  posicao: 'left' | 'center' | 'right'
+}
+
+const MM_TO_PX = 3.78
+
 interface ConfiguracaoSenhaPageProps {
   onClose: () => void
 }
@@ -37,7 +46,68 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
   const [cadastrarEmC, setCadastrarEmC] = useState(false)
   const [adicionarLetraPCAutomaticamente, setAdicionarLetraPCAutomaticamente] = useState(false)
   const [configuracaoSomAlterada, setConfiguracaoSomAlterada] = useState(false)
+  const [logoCartorio, setLogoCartorio] = useState<string>('')
+  const [logoConfigSenhas, setLogoConfigSenhas] = useState<ConfigLogoSenhas>({
+    habilitado: true,
+    escalaPercentual: 60,
+    offsetVerticalMm: 0,
+    posicao: 'center'
+  })
   
+  const normalizarConfigLogo = (valor?: Partial<ConfigLogoSenhas> | null): ConfigLogoSenhas => ({
+    habilitado: valor?.habilitado !== false,
+    escalaPercentual: Math.min(Math.max(Number(valor?.escalaPercentual) || 60, 10), 200),
+    offsetVerticalMm: Math.min(Math.max(Number(valor?.offsetVerticalMm) || 0, -100), 100),
+    posicao: valor?.posicao === 'left' || valor?.posicao === 'right' ? valor.posicao : 'center'
+  })
+
+  const carregarLogoCartorio = () => {
+    try {
+      const saved = localStorage.getItem('config-impressao-livros')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        setLogoCartorio(parsed?.logoCartorio || '')
+        return
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar logoCartorio:', error)
+    }
+    setLogoCartorio('')
+  }
+
+  const carregarLogoConfig = () => {
+    try {
+      const saved = localStorage.getItem('config-logo-senhas')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        setLogoConfigSenhas(normalizarConfigLogo(parsed))
+        return
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar config-logo-senhas:', error)
+    }
+    setLogoConfigSenhas(normalizarConfigLogo())
+  }
+
+  const persistirLogoConfig = (config: ConfigLogoSenhas) => {
+    try {
+      localStorage.setItem('config-logo-senhas', JSON.stringify(config))
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('config-logo-senhas-updated', { detail: config }))
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar config-logo-senhas:', error)
+    }
+  }
+
+  const atualizarLogoConfig = (updates: Partial<ConfigLogoSenhas>) => {
+    setLogoConfigSenhas((prev) => {
+      const atualizado = normalizarConfigLogo({ ...prev, ...updates })
+      persistirLogoConfig(atualizado)
+      return atualizado
+    })
+  }
+
   // Usar useRef para salvar configuração original (não causa re-render)
   const configuracaoOriginalRef = useRef<{ tipoAudio?: TipoAudio, tipoSom?: string, volumeSom?: number } | null>(null)
 
@@ -57,6 +127,41 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
     }
   }, [configuracao])
   
+  useEffect(() => {
+    carregarLogoCartorio()
+    carregarLogoConfig()
+
+    const handleLogoConfigUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<ConfigLogoSenhas | undefined>).detail
+      if (detail) {
+        setLogoConfigSenhas(normalizarConfigLogo(detail))
+      } else {
+        carregarLogoConfig()
+      }
+    }
+
+    const handleImpressaoUpdated = () => carregarLogoCartorio()
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'config-logo-senhas') {
+        carregarLogoConfig()
+      }
+      if (event.key === 'config-impressao-livros') {
+        carregarLogoCartorio()
+      }
+    }
+
+    window.addEventListener('config-logo-senhas-updated', handleLogoConfigUpdated as EventListener)
+    window.addEventListener('config-impressao-updated', handleImpressaoUpdated as EventListener)
+    window.addEventListener('storage', handleStorage)
+
+    return () => {
+      window.removeEventListener('config-logo-senhas-updated', handleLogoConfigUpdated as EventListener)
+      window.removeEventListener('config-impressao-updated', handleImpressaoUpdated as EventListener)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
+
   // Verificar alterações sempre que configuração mudar
   useEffect(() => {
     if (configuracao && configuracaoOriginalRef.current) {
@@ -2348,6 +2453,127 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
             {abaAtiva === 'impressao' && configuracao && (
               <div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: '12px'
+                  }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '600', color: theme.text }}>
+                      🖼️ Logo nas Senhas
+                    </h4>
+                    <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: theme.textSecondary, lineHeight: 1.4 }}>
+                      Ajuste como o logo aparece na impressão das senhas. As mudanças são refletidas imediatamente no preview abaixo.
+                    </p>
+
+                    {!logoCartorio ? (
+                      <div style={{
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: `1px dashed ${theme.border}`,
+                        backgroundColor: theme.background,
+                        color: theme.textSecondary,
+                        fontSize: '12px'
+                      }}>
+                        Nenhum logo encontrado. Faça o upload em <strong>Configuração do Sistema → Configurações Gerais → Logo do Cartório</strong>.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <label style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          color: theme.text
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={logoConfigSenhas.habilitado}
+                            onChange={(e) => atualizarLogoConfig({ habilitado: e.target.checked })}
+                            style={{ width: '18px', height: '18px' }}
+                          />
+                          Exibir logo nas senhas impressas
+                        </label>
+
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                          gap: '16px',
+                          opacity: logoConfigSenhas.habilitado ? 1 : 0.5,
+                          pointerEvents: logoConfigSenhas.habilitado ? 'auto' : 'none'
+                        }}>
+                          <div>
+                            <label style={{ fontSize: '12px', color: theme.textSecondary, display: 'block', marginBottom: '8px' }}>
+                              Tamanho do logo (%)
+                            </label>
+                            <input
+                              type="range"
+                              min={20}
+                              max={150}
+                              step={5}
+                              value={logoConfigSenhas.escalaPercentual}
+                              onChange={(e) => atualizarLogoConfig({ escalaPercentual: Number(e.target.value) })}
+                              style={{ width: '100%' }}
+                            />
+                            <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
+                              {logoConfigSenhas.escalaPercentual}% da largura disponível
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '12px', color: theme.textSecondary, display: 'block', marginBottom: '8px' }}>
+                              Ajuste vertical (mm)
+                            </label>
+                            <input
+                              type="number"
+                              value={logoConfigSenhas.offsetVerticalMm}
+                              onChange={(e) => atualizarLogoConfig({ offsetVerticalMm: Number(e.target.value) || 0 })}
+                              style={{
+                                padding: '8px 12px',
+                                fontSize: '13px',
+                                border: `1px solid ${theme.border}`,
+                                borderRadius: '6px',
+                                backgroundColor: theme.background,
+                                color: theme.text,
+                                maxWidth: '120px'
+                              }}
+                            />
+                            <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
+                              Valores negativos movem o logo para cima.
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '12px', color: theme.textSecondary, display: 'block', marginBottom: '8px' }}>
+                              Posição na página
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {(['left', 'center', 'right'] as const).map((posicao) => (
+                                <button
+                                  key={posicao}
+                                  onClick={() => atualizarLogoConfig({ posicao })}
+                                  style={{
+                                    flex: 1,
+                                    padding: '10px 12px',
+                                    borderRadius: '6px',
+                                    border: `2px solid ${logoConfigSenhas.posicao === posicao ? headerColor : theme.border}`,
+                                    backgroundColor: logoConfigSenhas.posicao === posicao ? headerColor : theme.surface,
+                                    color: logoConfigSenhas.posicao === posicao ? '#fff' : theme.text,
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  {posicao === 'left' ? '⬅️ Esquerda' : posicao === 'center' ? '↔️ Central' : '➡️ Direita'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   
                   {/* Título da Impressão */}
                   <div style={{
@@ -3006,6 +3232,25 @@ export function ConfiguracaoSenhaPage({ onClose }: ConfiguracaoSenhaPageProps) {
                       maxWidth: '300px',
                       margin: '0 auto'
                     }}>
+                      {logoCartorio && logoConfigSenhas.habilitado && (
+                        <div style={{
+                          textAlign: logoConfigSenhas.posicao,
+                          marginBottom: '12px',
+                          minHeight: '40px'
+                        }}>
+                          <img
+                            src={logoCartorio}
+                            alt="Logo do cartório"
+                            style={{
+                              width: `${logoConfigSenhas.escalaPercentual}%`,
+                              maxWidth: '240px',
+                              maxHeight: '80px',
+                              objectFit: 'contain',
+                              transform: `translateY(${logoConfigSenhas.offsetVerticalMm * MM_TO_PX}px)`
+                            }}
+                          />
+                        </div>
+                      )}
                       <div style={{ textAlign: configuracao.impressaoTituloAlinhamento, fontWeight: 'bold', fontSize: `${configuracao.impressaoTituloTamanhoFonte || 16}px` }}>
                         {configuracao.impressaoTitulo}
                       </div>

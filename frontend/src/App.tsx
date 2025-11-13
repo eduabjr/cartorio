@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { DEFAULT_TOOLBAR_ORDER, TOOLBAR_ITEM_MAP, TOOLBAR_ITEMS, ToolbarItemDefinition } from './config/toolbarItems'
 import { MaternidadePage } from './pages/MaternidadePage'
 import { ConfiguracoesPage } from './pages/ConfiguracoesPage'
 import { AccessibilitySettingsPage } from './pages/AccessibilitySettingsPage'
@@ -693,6 +694,28 @@ function AppContent() {
     const accessibilityTheme = accessibility.getTheme()
     const isDark = accessibility.currentTheme === 'dark'
     
+    const [toolbarConfigVersion, setToolbarConfigVersion] = useState(0)
+
+    useEffect(() => {
+      const handleToolbarConfigUpdated = () => {
+        setToolbarConfigVersion((prev) => prev + 1)
+      }
+
+      const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'toolbar-config') {
+          setToolbarConfigVersion((prev) => prev + 1)
+        }
+      }
+
+      window.addEventListener('toolbar-config-updated', handleToolbarConfigUpdated)
+      window.addEventListener('storage', handleStorageChange)
+
+      return () => {
+        window.removeEventListener('toolbar-config-updated', handleToolbarConfigUpdated)
+        window.removeEventListener('storage', handleStorageChange)
+      }
+    }, [])
+
     
     // Aguardar o tema estar carregado
     if (!accessibility.isThemeLoaded || !accessibilityTheme || !accessibility.currentTheme) {
@@ -768,363 +791,364 @@ function AppContent() {
     }
 
     // Configuração do Menu Textual (Menu 1) - TODOS OS SUBMENUS ORIGINAIS RESTAURADOS
-    const rawTextualMenuItems = [
-      {
-        id: 'cadastros',
-        label: 'Cadastros',
-        icon: '',
-        submenu: [
-            { id: 'cliente', label: 'Cliente', icon: '', onClick: () => {
-              console.log('✅ CLIENTE CLICADO! Abrindo janela...')
-              const windowId = 'cliente-window'
-              openWindow({
-                id: windowId,
-                type: 'cliente',
-                title: 'Cliente',
-                component: ClientePageIsolated,
-                props: {}
-              })
-              console.log('✅ Janela de Cliente aberta!')
-            } },
-            { 
-              id: 'funcionario', 
-              label: 'Funcionário e Guichê', 
-              icon: '', 
-              adminOnly: true,
-              onClick: () => {
-              console.log('✅ FUNCIONÁRIO CLICADO! Abrindo janela...')
-              const windowId = 'funcionario-window'
-              openWindow({
-                id: windowId,
-                type: 'funcionario',
-                title: 'Funcionário',
-                component: FuncionarioPageIsolated,
-                props: {}
-              })
-              console.log('✅ Janela de Funcionário aberta!')
-            } },
-            { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => {
-              console.log('✅ CARTÓRIO SEADE CLICADO! Abrindo janela...')
-              openWindow({
-                id: 'cartorio-seade-window',
-                type: 'cartorio-seade',
-                title: 'Cadastro de Cartório (SEADE)',
-                component: CartorioSeadePageIsolated,
-                props: {}
-              })
-              console.log('✅ Janela de Cartório SEADE aberta!')
-            } },
-          { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => {
-            console.log('✅ DNV E DO BLOQUEADAS CLICADO! Abrindo janela...')
-            openWindow({
-              id: 'dnv-do-bloqueadas-window',
-              type: 'dnv-do-bloqueadas',
-              title: 'Cadastro de Declaração Bloqueada',
-              component: DNVDOBloqueadasPageIsolated,
-              props: {}
-            })
-            console.log('✅ Janela de DNV e DO Bloqueadas aberta!')
-          } },
-          { id: 'oficios-mandados', label: 'Ofícios e Mandados', icon: '', onClick: () => {
-            console.log('✅ OFÍCIOS E MANDADOS CLICADO! Abrindo janela...')
-            openWindow({
-              id: 'oficios-mandados-window',
-              type: 'oficios-mandados',
-              title: 'Controle de Ofícios e Mandados',
-              component: OficiosMandadosPageIsolated,
-              props: {}
-            })
-            console.log('✅ Janela de Ofícios e Mandados aberta!')
-          } },
-          { id: 'painel-senhas-admin', label: 'Painel de Senhas (Admin)', icon: '', adminOnly: true, onClick: () => {
-            console.log('✅ Abrindo Painel Administrativo de Senhas...')
-            openWindow({
-              id: 'painel-senhas-admin-window',
-              type: 'painel-senhas-admin',
-              title: 'Painel de Senhas',
-              component: PainelSenhasPageIsolated,
-              props: {}
-            })
-          } },
-          { id: 'hospital-cemiterio', label: 'Hospital, Cemitério e Funerária', icon: '', onClick: () => {
-            console.log('✅ HOSPITAL, CEMITÉRIO E FUNERÁRIA CLICADO! Abrindo janela...')
-            openWindow({
-              id: 'hospital-cemiterio-window',
-              type: 'hospital-cemiterio',
-              title: 'Cadastro de Hospitais, Cemitérios e Funerárias',
-              component: HospitalCemiterioPageIsolated,
-              props: {}
-            })
-            console.log('✅ Janela de Hospital, Cemitério e Funerária aberta!')
-          }},
-          { 
-            id: 'cadastro-livros', 
-            label: 'Cadastro de Livros', 
-            icon: '', 
-            submenu: [
-              {
-                id: 'cadastro-lombada-livros',
-                label: 'Lombada de Livros',
-                icon: '',
-                onClick: () => {
-                  console.log('✅ LOMBADA DE LIVROS CLICADO! Abrindo janela...');
-                  openWindow({
-                    id: 'lombada-livros-window',
-                    type: 'lombada-livros',
-                    title: 'Lombada de Livros',
-                    component: LombadasPageIsolated,
-                    props: {}
-                  });
-                }
-              },
-              {
-                id: 'cadastro-lombada-classificador',
-                label: 'Lombada de Classificador',
-                icon: '',
-                onClick: () => {
-                  console.log('✅ LOMBADA DE CLASSIFICADOR CLICADO! Abrindo janela...');
-                  openWindow({
-                    id: 'lombada-classificador-window',
-                    type: 'lombada-classificador',
-                    title: 'Lombada de Classificador',
-                    component: LombadasPageIsolated,
-                    props: { modo: 'classificador' }
-                  });
-                }
-              }
-            ]
-          },
-          {
-            id: 'abertura-livros',
-            label: 'Abertura de Livros',
-            icon: '',
-            submenu: [
-              {
-                id: 'lombadas', 
-                label: 'Lombada', 
-                icon: '📚', 
-                onClick: () => {
-                  console.log('✅ LOMBADAS CLICADO! Abrindo janela...')
-                  openWindow({
-                    id: 'lombadas-window',
-                    type: 'lombadas',
-                    title: 'Criação de Lombadas de Livros',
-                    component: LombadasPageIsolated,
-                    props: {}
-                  })
-                  console.log('✅ Janela de Lombadas aberta!')
-                }
-              }
-            ]
-          },
-          {
-            id: 'controle-certidoes',
-            label: 'Controle de Certidões',
-            icon: '',
-            submenu: [
-              { id: 'compra-certidoes', label: 'Compra de Certidões', icon: '', onClick: () => (window as any).navigateToPage?.('compra-certidoes') },
-              { id: 'consumo-certidoes', label: 'Consumo de Certidões', icon: '', onClick: () => (window as any).navigateToPage?.('consumo-certidoes') },
-              { id: 'perda-cancelamento-certidoes', label: 'Perda/Cancelamento de Certidões', icon: '', onClick: () => (window as any).navigateToPage?.('perda-cancelamento-certidoes') },
-              { id: 'relatorio-estoque-certidoes', label: 'Relatório de Estoque de Certidões', icon: '', onClick: () => (window as any).navigateToPage?.('relatorio-estoque-certidoes') },
-              { id: 'estorno-certidao-utilizada', label: 'Estorno de Certidão Utilizada', icon: '', onClick: () => (window as any).navigateToPage?.('estorno-certidao-utilizada') },
-              { id: 'consulta-certidoes-utilizadas', label: 'Consulta de Certidões Utilizadas', icon: '', onClick: () => (window as any).navigateToPage?.('consulta-certidoes-utilizadas') },
-              { id: 'manutencao-certidoes-utilizadas', label: 'Manutenção de Certidões Utilizadas', icon: '', onClick: () => (window as any).navigateToPage?.('manutencao-certidoes-utilizadas') }
-            ]
-          },
-          { 
-            id: 'configuracao-sistema', 
-            label: 'Configurações do Sistema', 
-            icon: '', 
-            adminOnly: true,
-            submenu: [
-              { id: 'config-sistema-feriados', label: 'Feriados', icon: '', onClick: () => {
-                console.log('✅ Abrindo Cadastro de Feriados...')
-                openWindow({
-                  id: 'feriados-window',
-                  type: 'feriados',
-                  title: 'Cadastro de Feriado',
-                  component: FeriadosPageIsolated,
-                  props: {}
-                })
-              }},
-              { id: 'config-sistema-ibge', label: 'IBGE', icon: '', onClick: () => {
-                console.log('🔍 Clique em IBGE - chamando navigateToPage')
-                navigateToPage('config-sistema-ibge')
-              }},
-              { id: 'config-sistema-cep', label: 'CEP', icon: '', onClick: () => {
-                console.log('🔍 Clique em CEP - chamando navigateToPage')
-                navigateToPage('config-sistema-cep')
-              }},
-              { id: 'cadastros-localizacao', label: 'Localização (Cidade e País)', icon: '', onClick: () => {
-                console.log('✅ Abrindo Cadastro de Localização...')
-                openWindow({
-                  id: 'localizacao-cadastro-window',
-                  type: 'localizacao-cadastro',
-                  title: 'Cadastro de Localização',
-                  component: LocalizacaoCadastroPageIsolated,
-                  props: {}
-                })
-              } },
-              { id: 'cadastros-tipos', label: 'Digitalização (Ato e Documento)', icon: '', onClick: () => {
-                console.log('✅ Abrindo Cadastro de Digitalização...')
-                openWindow({
-                  id: 'tipos-cadastro-window',
-                  type: 'tipos-cadastro',
-                  title: 'Cadastro de Digitalização',
-                  component: TiposCadastroPageIsolated,
-                  props: {}
-                })
-              } },
-              { id: 'servicos-cartorio', label: 'Serviços e Tabela de Custas', icon: '', onClick: () => {
-                console.log('✅ SERVIÇOS CARTÓRIO CLICADO! Abrindo janela...')
-                const windowId = 'servicos-cartorio-window'
+    const rawTextualMenuItems = useMemo(() => {
+      return [
+        {
+          id: 'cadastros',
+          label: 'Cadastros',
+          icon: '',
+          submenu: [
+              { id: 'cliente', label: 'Cliente', icon: '', onClick: () => {
+                console.log('✅ CLIENTE CLICADO! Abrindo janela...')
+                const windowId = 'cliente-window'
                 openWindow({
                   id: windowId,
-                  type: 'servicos-cartorio',
-                  title: 'Serviços de Cartório',
-                  component: ServicoCartorioPageIsolated,
+                  type: 'cliente',
+                  title: 'Cliente',
+                  component: ClientePageIsolated,
                   props: {}
                 })
-                console.log('✅ Janela de Serviços de Cartório aberta!')
+                console.log('✅ Janela de Cliente aberta!')
               } },
-              { id: 'config-menus', label: 'Configuração de Menus', icon: '', onClick: () => {
-                console.log('✅ Abrindo Configuração de Menus...')
+              { 
+                id: 'funcionario', 
+                label: 'Funcionário e Guichê', 
+                icon: '', 
+                adminOnly: true,
+                onClick: () => {
+                console.log('✅ FUNCIONÁRIO CLICADO! Abrindo janela...')
+                const windowId = 'funcionario-window'
                 openWindow({
-                  id: 'config-menus-window',
-                  type: 'config-menus',
-                  title: 'Configuração de Menus',
-                  component: ConfiguracaoMenuPageIsolated,
-                  props: {},
-                  defaultSize: { width: 1000, height: 700 },
-                  defaultPosition: { x: 100, y: 100 }
-                })
-              } },
-              { id: 'config-sistema-gerais', label: 'Configurações Gerais', icon: '', onClick: () => {
-                console.log('✅ Abrindo Configurações Gerais do Sistema...')
-                openWindow({
-                  id: 'config-sistema-gerais-window',
-                  type: 'config-sistema-gerais',
-                  title: 'Configurações do Sistema',
-                  component: ConfiguracaoSistemaPageIsolated,
+                  id: windowId,
+                  type: 'funcionario',
+                  title: 'Funcionário',
+                  component: FuncionarioPageIsolated,
                   props: {}
                 })
+                console.log('✅ Janela de Funcionário aberta!')
               } },
-              { id: 'config-senhas', label: 'Configuração de Senhas', icon: '', onClick: () => {
-                console.log('✅ Abrindo Configuração de Senhas...')
+              { id: 'cartorio-seade', label: 'Cartório (SEADE)', icon: '', onClick: () => {
+                console.log('✅ CARTÓRIO SEADE CLICADO! Abrindo janela...')
                 openWindow({
-                  id: 'config-senhas-window',
-                  type: 'config-senhas',
-                  title: 'Configuração de Senhas',
-                  component: ConfiguracaoSenhaPageIsolated,
+                  id: 'cartorio-seade-window',
+                  type: 'cartorio-seade',
+                  title: 'Cadastro de Cartório (SEADE)',
+                  component: CartorioSeadePageIsolated,
                   props: {}
                 })
-              } }
-            ]
-          }
-        ]
-      },
-      {
-        id: 'atendimento',
-        label: 'Atendimento',
-        icon: '',
-        submenu: [
-          { id: 'novo-atendimento', label: 'Novo Atendimento', icon: '', onClick: () => (window as any).navigateToPage?.('novo-atendimento') },
-          { id: 'consulta-atendimento', label: 'Consulta', icon: '', onClick: () => (window as any).navigateToPage?.('consulta-atendimento') }
-        ]
-      },
-      {
-        id: 'livro-e-menu',
-        label: 'Livro E',
-        icon: '',
-        submenu: [
-          { id: 'certificacao-eletronica', label: 'Certificação Eletrônica', icon: '', onClick: () => (window as any).navigateToPage?.('certificacao-eletronica') },
-          { id: 'termo-uniao-estavel', label: 'Termo de União Estável', icon: '', onClick: () => (window as any).navigateToPage?.('termo-uniao-estavel') }
-        ]
-      },
-      {
-        id: 'protocolos',
-        label: 'Protocolos',
-        icon: '',
-        submenu: [
-          { id: 'protocolo-lancamento', label: 'Lançamento', icon: '', onClick: () => {
-            console.log('✅ PROTOCOLO LANÇAMENTO CLICADO! Abrindo janela...')
-            openWindow({
-              id: 'protocolo-lancamento',
-              title: 'Lançamento de Protocolos',
-              component: ProtocoloLancamentoPageIsolated,
-              position: { x: 100, y: 100 }
-            })
-            console.log('✅ Janela de Lançamento de Protocolos aberta!')
-          }},
-          { id: 'protocolo-baixa', label: 'Baixa', icon: '', onClick: () => (window as any).navigateToPage?.('protocolo-baixa') },
-          { id: 'protocolo-cancelamento', label: 'Cancelamento', icon: '', onClick: () => {
-            console.log('✅ Abrindo Cancelamento de Protocolos...')
-            openWindow({
-              id: 'protocolo-cancelamento-window',
-              type: 'protocolo-cancelamento',
-              title: 'Cancelamento de Protocolos',
-              component: ProtocoloCancelamentoPageIsolated,
-              props: {}
-            })
-          } }
-        ]
-      },
-      {
-        id: 'lavratura',
-        label: 'Lavratura',
-        icon: '',
-        submenu: [
-          { id: 'lavratura-casamento', label: 'Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-casamento') },
-          { id: 'lavratura-nascimento', label: 'Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-nascimento') },
-          { id: 'lavratura-obito', label: 'Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-obito') },
-          {
-            id: 'livro-e',
-            label: 'Livro E',
-            icon: '',
-            submenu: [
-          { id: 'lavratura-ausencia', label: 'Ausência', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-ausencia') },
-          { id: 'lavratura-emancipacao', label: 'Emancipação', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-emancipacao') },
-          { id: 'lavratura-interdicao', label: 'Interdição', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-interdicao') },
-          { id: 'lavratura-opcao-nacionalidade', label: 'Opção de Nacionalidade', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-opcao-nacionalidade') },
-          { id: 'lavratura-registro-sentenca', label: 'Registro de Sentença', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-registro-sentenca') },
-          { id: 'lavratura-registro-uniao-estavel', label: 'Registro de União Estável', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-registro-uniao-estavel') },
-          { id: 'lavratura-traslado-casamento', label: 'Traslado de Assento de Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-casamento') },
-          { id: 'lavratura-traslado-nascimento', label: 'Traslado de Assento de Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-nascimento') },
-          { id: 'lavratura-traslado-obito', label: 'Traslado de Assento de Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-obito') }
-        ]
-          }
-        ]
-      },
-      {
-        id: 'livro-comercial',
-        label: 'Livro Comercial',
-        icon: '',
-        submenu: [
-          { id: 'livro-autenticacao', label: 'Livro de Autenticação', icon: '', onClick: () => (window as any).navigateToPage?.('livro-autenticacao') },
-          { id: 'autenticacao', label: 'Autenticação', icon: '', onClick: () => (window as any).navigateToPage?.('autenticacao') }
-        ]
-      },
-      {
-        id: 'certidoes',
-        label: 'Certidões',
-        icon: '',
-        submenu: [
-          { id: 'certidao-nascimento', label: '2ª Via de Certidão de Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-nascimento') },
-          { id: 'certidao-casamento', label: '2ª Via de Certidão de Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-casamento') },
-          { id: 'certidao-obito', label: '2ª Via de Certidão de Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-obito') },
-          { id: 'certidao-negativa', label: 'Certidão Negativa', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-negativa') },
-          {
-            id: 'inteiro-teor',
-            label: 'Inteiro Teor',
-            icon: '',
-            submenu: [
-              { id: 'certidao-digitada', label: 'Certidão Digitada', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-digitada') },
-              { id: 'certidao-reprografica', label: 'Certidão Reprografica', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-reprografica') }
-            ]
-          },
-          {
-            id: 'livro-e-certidoes',
-            label: 'Livro E',
+                console.log('✅ Janela de Cartório SEADE aberta!')
+              } },
+            { id: 'dnv-bloqueadas', label: 'DNV e DO Bloqueadas', icon: '', onClick: () => {
+              console.log('✅ DNV E DO BLOQUEADAS CLICADO! Abrindo janela...')
+              openWindow({
+                id: 'dnv-do-bloqueadas-window',
+                type: 'dnv-do-bloqueadas',
+                title: 'Cadastro de Declaração Bloqueada',
+                component: DNVDOBloqueadasPageIsolated,
+                props: {}
+              })
+              console.log('✅ Janela de DNV e DO Bloqueadas aberta!')
+            } },
+            { id: 'oficios-mandados', label: 'Ofícios e Mandados', icon: '', onClick: () => {
+              console.log('✅ OFÍCIOS E MANDADOS CLICADO! Abrindo janela...')
+              openWindow({
+                id: 'oficios-mandados-window',
+                type: 'oficios-mandados',
+                title: 'Controle de Ofícios e Mandados',
+                component: OficiosMandadosPageIsolated,
+                props: {}
+              })
+              console.log('✅ Janela de Ofícios e Mandados aberta!')
+            } },
+            { id: 'painel-senhas-admin', label: 'Painel de Senhas (Admin)', icon: '', adminOnly: true, onClick: () => {
+              console.log('✅ Abrindo Painel Administrativo de Senhas...')
+              openWindow({
+                id: 'painel-senhas-admin-window',
+                type: 'painel-senhas-admin',
+                title: 'Painel de Senhas',
+                component: PainelSenhasPageIsolated,
+                props: {}
+              })
+            } },
+            { id: 'hospital-cemiterio', label: 'Hospital, Cemitério e Funerária', icon: '', onClick: () => {
+              console.log('✅ HOSPITAL, CEMITÉRIO E FUNERÁRIA CLICADO! Abrindo janela...')
+              openWindow({
+                id: 'hospital-cemiterio-window',
+                type: 'hospital-cemiterio',
+                title: 'Cadastro de Hospitais, Cemitérios e Funerárias',
+                component: HospitalCemiterioPageIsolated,
+                props: {}
+              })
+              console.log('✅ Janela de Hospital, Cemitério e Funerária aberta!')
+            }},
+            { 
+              id: 'cadastro-livros', 
+              label: 'Cadastro de Livros', 
+              icon: '', 
+              submenu: [
+                {
+                  id: 'cadastro-lombada-livros',
+                  label: 'Lombada de Livros',
+                  icon: '',
+                  onClick: () => {
+                    console.log('✅ LOMBADA DE LIVROS CLICADO! Abrindo janela...');
+                    openWindow({
+                      id: 'lombada-livros-window',
+                      type: 'lombada-livros',
+                      title: 'Lombada de Livros',
+                      component: LombadasPageIsolated,
+                      props: {}
+                    });
+                  }
+                },
+                {
+                  id: 'cadastro-lombada-classificador',
+                  label: 'Lombada de Classificador',
+                  icon: '',
+                  onClick: () => {
+                    console.log('✅ LOMBADA DE CLASSIFICADOR CLICADO! Abrindo janela...');
+                    openWindow({
+                      id: 'lombada-classificador-window',
+                      type: 'lombada-classificador',
+                      title: 'Lombada de Classificador',
+                      component: LombadasPageIsolated,
+                      props: { modo: 'classificador' }
+                    });
+                  }
+                }
+              ]
+            },
+            {
+              id: 'abertura-livros',
+              label: 'Abertura de Livros',
+              icon: '',
+              submenu: [
+                {
+                  id: 'lombadas', 
+                  label: 'Lombada', 
+                  icon: '📚', 
+                  onClick: () => {
+                    console.log('✅ LOMBADAS CLICADO! Abrindo janela...')
+                    openWindow({
+                      id: 'lombadas-window',
+                      type: 'lombadas',
+                      title: 'Criação de Lombadas de Livros',
+                      component: LombadasPageIsolated,
+                      props: {}
+                    })
+                    console.log('✅ Janela de Lombadas aberta!')
+                  }
+                }
+              ]
+            },
+            {
+              id: 'controle-certidoes',
+              label: 'Controle de Certidões',
+              icon: '',
+              submenu: [
+                { id: 'compra-certidoes', label: 'Compra de Certidões', icon: '', onClick: () => (window as any).navigateToPage?.('compra-certidoes') },
+                { id: 'consumo-certidoes', label: 'Consumo de Certidões', icon: '', onClick: () => (window as any).navigateToPage?.('consumo-certidoes') },
+                { id: 'perda-cancelamento-certidoes', label: 'Perda/Cancelamento de Certidões', icon: '', onClick: () => (window as any).navigateToPage?.('perda-cancelamento-certidoes') },
+                { id: 'relatorio-estoque-certidoes', label: 'Relatório de Estoque de Certidões', icon: '', onClick: () => (window as any).navigateToPage?.('relatorio-estoque-certidoes') },
+                { id: 'estorno-certidao-utilizada', label: 'Estorno de Certidão Utilizada', icon: '', onClick: () => (window as any).navigateToPage?.('estorno-certidao-utilizada') },
+                { id: 'consulta-certidoes-utilizadas', label: 'Consulta de Certidões Utilizadas', icon: '', onClick: () => (window as any).navigateToPage?.('consulta-certidoes-utilizadas') },
+                { id: 'manutencao-certidoes-utilizadas', label: 'Manutenção de Certidões Utilizadas', icon: '', onClick: () => (window as any).navigateToPage?.('manutencao-certidoes-utilizadas') }
+              ]
+            },
+            { 
+              id: 'configuracao-sistema', 
+              label: 'Configurações do Sistema', 
+              icon: '', 
+              adminOnly: true,
+              submenu: [
+                { id: 'config-sistema-feriados', label: 'Feriados', icon: '', onClick: () => {
+                  console.log('✅ Abrindo Cadastro de Feriados...')
+                  openWindow({
+                    id: 'feriados-window',
+                    type: 'feriados',
+                    title: 'Cadastro de Feriado',
+                    component: FeriadosPageIsolated,
+                    props: {}
+                  })
+                }},
+                { id: 'config-sistema-ibge', label: 'IBGE', icon: '', onClick: () => {
+                  console.log('🔍 Clique em IBGE - chamando navigateToPage')
+                  navigateToPage('config-sistema-ibge')
+                }},
+                { id: 'config-sistema-cep', label: 'CEP', icon: '', onClick: () => {
+                  console.log('🔍 Clique em CEP - chamando navigateToPage')
+                  navigateToPage('config-sistema-cep')
+                }},
+                { id: 'cadastros-localizacao', label: 'Localização (Cidade e País)', icon: '', onClick: () => {
+                  console.log('✅ Abrindo Cadastro de Localização...')
+                  openWindow({
+                    id: 'localizacao-cadastro-window',
+                    type: 'localizacao-cadastro',
+                    title: 'Cadastro de Localização',
+                    component: LocalizacaoCadastroPageIsolated,
+                    props: {}
+                  })
+                } },
+                { id: 'cadastros-tipos', label: 'Digitalização (Ato e Documento)', icon: '', onClick: () => {
+                  console.log('✅ Abrindo Cadastro de Digitalização...')
+                  openWindow({
+                    id: 'tipos-cadastro-window',
+                    type: 'tipos-cadastro',
+                    title: 'Cadastro de Digitalização',
+                    component: TiposCadastroPageIsolated,
+                    props: {}
+                  })
+                } },
+                { id: 'servicos-cartorio', label: 'Serviços e Tabela de Custas', icon: '', onClick: () => {
+                  console.log('✅ SERVIÇOS CARTÓRIO CLICADO! Abrindo janela...')
+                  const windowId = 'servicos-cartorio-window'
+                  openWindow({
+                    id: windowId,
+                    type: 'servicos-cartorio',
+                    title: 'Serviços de Cartório',
+                    component: ServicoCartorioPageIsolated,
+                    props: {}
+                  })
+                  console.log('✅ Janela de Serviços de Cartório aberta!')
+                } },
+                { id: 'config-menus', label: 'Configuração de Menus', icon: '', onClick: () => {
+                  console.log('✅ Abrindo Configuração de Menus...')
+                  openWindow({
+                    id: 'config-menus-window',
+                    type: 'config-menus',
+                    title: 'Configuração de Menus',
+                    component: ConfiguracaoMenuPageIsolated,
+                    props: {},
+                    defaultSize: { width: 1000, height: 700 },
+                    defaultPosition: { x: 100, y: 100 }
+                  })
+                } },
+                { id: 'config-sistema-gerais', label: 'Configurações Gerais', icon: '', onClick: () => {
+                  console.log('✅ Abrindo Configurações Gerais do Sistema...')
+                  openWindow({
+                    id: 'config-sistema-gerais-window',
+                    type: 'config-sistema-gerais',
+                    title: 'Configurações do Sistema',
+                    component: ConfiguracaoSistemaPageIsolated,
+                    props: {}
+                  })
+                } },
+                { id: 'config-senhas', label: 'Configuração de Senhas', icon: '', onClick: () => {
+                  console.log('✅ Abrindo Configuração de Senhas...')
+                  openWindow({
+                    id: 'config-senhas-window',
+                    type: 'config-senhas',
+                    title: 'Configuração de Senhas',
+                    component: ConfiguracaoSenhaPageIsolated,
+                    props: {}
+                  })
+                } }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'atendimento',
+          label: 'Atendimento',
+          icon: '',
+          submenu: [
+            { id: 'novo-atendimento', label: 'Novo Atendimento', icon: '', onClick: () => (window as any).navigateToPage?.('novo-atendimento') },
+            { id: 'consulta-atendimento', label: 'Consulta', icon: '', onClick: () => (window as any).navigateToPage?.('consulta-atendimento') }
+          ]
+        },
+        {
+          id: 'livro-e-menu',
+          label: 'Livro E',
+          icon: '',
+          submenu: [
+            { id: 'certificacao-eletronica', label: 'Certificação Eletrônica', icon: '', onClick: () => (window as any).navigateToPage?.('certificacao-eletronica') },
+            { id: 'termo-uniao-estavel', label: 'Termo de União Estável', icon: '', onClick: () => (window as any).navigateToPage?.('termo-uniao-estavel') }
+          ]
+        },
+        {
+          id: 'protocolos',
+          label: 'Protocolos',
+          icon: '',
+          submenu: [
+            { id: 'protocolo-lancamento', label: 'Lançamento', icon: '', onClick: () => {
+              console.log('✅ PROTOCOLO LANÇAMENTO CLICADO! Abrindo janela...')
+              openWindow({
+                id: 'protocolo-lancamento',
+                title: 'Lançamento de Protocolos',
+                component: ProtocoloLancamentoPageIsolated,
+                position: { x: 100, y: 100 }
+              })
+              console.log('✅ Janela de Lançamento de Protocolos aberta!')
+            }},
+            { id: 'protocolo-baixa', label: 'Baixa', icon: '', onClick: () => (window as any).navigateToPage?.('protocolo-baixa') },
+            { id: 'protocolo-cancelamento', label: 'Cancelamento', icon: '', onClick: () => {
+              console.log('✅ Abrindo Cancelamento de Protocolos...')
+              openWindow({
+                id: 'protocolo-cancelamento-window',
+                type: 'protocolo-cancelamento',
+                title: 'Cancelamento de Protocolos',
+                component: ProtocoloCancelamentoPageIsolated,
+                props: {}
+              })
+            } }
+          ]
+        },
+        {
+          id: 'lavratura',
+          label: 'Lavratura',
+          icon: '',
+          submenu: [
+            { id: 'lavratura-casamento', label: 'Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-casamento') },
+            { id: 'lavratura-nascimento', label: 'Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-nascimento') },
+            { id: 'lavratura-obito', label: 'Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-obito') },
+            {
+              id: 'livro-e',
+              label: 'Livro E',
+              icon: '',
+              submenu: [
+            { id: 'lavratura-ausencia', label: 'Ausência', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-ausencia') },
+            { id: 'lavratura-emancipacao', label: 'Emancipação', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-emancipacao') },
+            { id: 'lavratura-interdicao', label: 'Interdição', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-interdicao') },
+            { id: 'lavratura-opcao-nacionalidade', label: 'Opção de Nacionalidade', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-opcao-nacionalidade') },
+            { id: 'lavratura-registro-sentenca', label: 'Registro de Sentença', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-registro-sentenca') },
+            { id: 'lavratura-registro-uniao-estavel', label: 'Registro de União Estável', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-registro-uniao-estavel') },
+            { id: 'lavratura-traslado-casamento', label: 'Traslado de Assento de Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-casamento') },
+            { id: 'lavratura-traslado-nascimento', label: 'Traslado de Assento de Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-nascimento') },
+            { id: 'lavratura-traslado-obito', label: 'Traslado de Assento de Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('lavratura-traslado-obito') }
+          ]
+            }
+          ]
+        },
+        {
+          id: 'livro-comercial',
+          label: 'Livro Comercial',
+          icon: '',
+          submenu: [
+            { id: 'livro-autenticacao', label: 'Livro de Autenticação', icon: '', onClick: () => (window as any).navigateToPage?.('livro-autenticacao') },
+            { id: 'autenticacao', label: 'Autenticação', icon: '', onClick: () => (window as any).navigateToPage?.('autenticacao') }
+          ]
+        },
+        {
+          id: 'certidoes',
+          label: 'Certidões',
+          icon: '',
+          submenu: [
+            { id: 'certidao-nascimento', label: '2ª Via de Certidão de Nascimento', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-nascimento') },
+            { id: 'certidao-casamento', label: '2ª Via de Certidão de Casamento', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-casamento') },
+            { id: 'certidao-obito', label: '2ª Via de Certidão de Óbito', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-obito') },
+            { id: 'certidao-negativa', label: 'Certidão Negativa', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-negativa') },
+            {
+              id: 'inteiro-teor',
+              label: 'Inteiro Teor',
+              icon: '',
+              submenu: [
+                { id: 'certidao-digitada', label: 'Certidão Digitada', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-digitada') },
+                { id: 'certidao-reprografica', label: 'Certidão Reprografica', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-reprografica') }
+              ]
+            },
+            {
+              id: 'livro-e-certidoes',
+              label: 'Livro E',
         icon: '',
         submenu: [
           { id: 'certidao-2-via-ausencia', label: '2ª Via de Ausência', icon: '', onClick: () => (window as any).navigateToPage?.('certidao-2-via-ausencia') },
@@ -1384,14 +1408,12 @@ function AppContent() {
               ]
           }
         ]
-      },
+      }
     ]
-
-    // Aplicar filtro de configuração de menus e permissões
-    const textualMenuItems = filterMenusByConfig(rawTextualMenuItems)
-
+    }, [openWindow])
     // Configuração do Menu de Ícones (Menu 2) - Ícones de acesso rápido
-    const rawIconMenuItems = [
+    const rawIconMenuItems = useMemo(
+      () => [
         { id: 'cadastro-cliente', label: 'Cadastro de Cliente', icon: '👤', onClick: () => {
           console.log('✅ ÍCONE CADASTRO CLIENTE CLICADO! Abrindo janela...')
           const windowId = 'cliente-window'
@@ -1404,44 +1426,135 @@ function AppContent() {
           })
           console.log('✅ Janela de Cliente aberta!')
         } },
-      { id: 'firmas', label: 'Firmas', icon: '✍️', onClick: () => {
-        console.log('✅ FIRMAS CLICADO! Abrindo janela...')
-        openWindow({
-          id: 'firmas-window',
-          type: 'firmas',
-          title: 'Firmas',
-          component: FirmasPageIsolated,
-          props: {}
+        { id: 'firmas', label: 'Firmas', icon: '✍️', onClick: () => {
+          console.log('✅ FIRMAS CLICADO! Abrindo janela...')
+          openWindow({
+            id: 'firmas-window',
+            type: 'firmas',
+            title: 'Firmas',
+            component: FirmasPageIsolated,
+            props: {}
+          })
+          console.log('✅ Janela de Firmas aberta!')
+        } },
+        { id: 'nascimento', label: 'Nascimento', icon: '👶', onClick: () => (window as any).navigateToPage?.('nascimento') },
+        { id: 'casamento', label: 'Casamento', icon: '💍', onClick: () => (window as any).navigateToPage?.('casamento') },
+        { id: 'obito', label: 'Óbito', icon: '⚰️', onClick: () => (window as any).navigateToPage?.('obito') },
+        { id: 'livro', label: 'Livro e', icon: '📖', onClick: () => (window as any).navigateToPage?.('livro') },
+        { id: 'digitalizacao', label: 'Digitalização', icon: <ScannerIcon size={28} />, onClick: () => {
+          console.log('🖨️ Abrindo Controle de Digitalização...')
+          openWindow({
+            id: 'controle-digitalizacao-window',
+            type: 'controle-digitalizacao',
+            title: 'Controle de Digitalização de Imagens',
+            component: ControleDigitalizacaoPageIsolated,
+            props: {}
+          })
+        } },
+        { id: 'indices', label: 'Índices', icon: '📊', onClick: () => {
+          console.log('📊 Abrindo Índices...')
+          openWindow({
+            id: `indices-${Date.now()}`,
+            type: 'indices',
+            title: 'Índices - Nascimento, Casamento, Óbito, Proclamas',
+            component: IndicesPageIsolated,
+            props: {}
+          })
+        } },
+        { id: 'login', label: 'Logoff', icon: '🔐', onClick: () => console.log('Logoff clicado') },
+        { id: 'logout', label: 'Sair', icon: '🚪', onClick: handleLogout }
+      ],
+      [handleLogout, openWindow]
+    )
+
+    // Configuração do Menu Textual (Menu 1) - TODOS OS SUBMENUS ORIGINAIS RESTAURADOS
+    const buildToolbarMenuItems = (items: any[]): ToolbarItemDefinition[] => {
+      const seen = new Set<string>()
+      const result: ToolbarItemDefinition[] = []
+
+      const traverse = (item: any) => {
+        if (!item || typeof item.id !== 'string' || seen.has(item.id)) {
+          return
+        }
+        seen.add(item.id)
+        result.push({
+          id: item.id,
+          label: item.label || item.id,
+          icon: typeof item.icon === 'string' && item.icon ? item.icon : '📁',
+          description: item.description || 'Atalho do sistema',
+          locked: item.locked ?? false,
+          onClick: item.onClick
         })
-        console.log('✅ Janela de Firmas aberta!')
-      } },
-      { id: 'nascimento', label: 'Nascimento', icon: '👶', onClick: () => (window as any).navigateToPage?.('nascimento') },
-      { id: 'casamento', label: 'Casamento', icon: '💍', onClick: () => (window as any).navigateToPage?.('casamento') },
-      { id: 'obito', label: 'Óbito', icon: '⚰️', onClick: () => (window as any).navigateToPage?.('obito') },
-      { id: 'livro', label: 'Livro e', icon: '📖', onClick: () => (window as any).navigateToPage?.('livro') },
-      { id: 'digitalizacao', label: 'Digitalização', icon: <ScannerIcon size={28} />, onClick: () => {
-        console.log('🖨️ Abrindo Controle de Digitalização...')
-        openWindow({
-          id: 'controle-digitalizacao-window',
-          type: 'controle-digitalizacao',
-          title: 'Controle de Digitalização de Imagens',
-          component: ControleDigitalizacaoPageIsolated,
-          props: {}
+        if (Array.isArray(item.submenu)) {
+          item.submenu.forEach(traverse)
+        }
+      }
+
+      items.forEach(traverse)
+      return result
+    }
+
+    const toolbarMenuCandidates = useMemo(() => {
+      return buildToolbarMenuItems([...rawTextualMenuItems, ...rawIconMenuItems])
+    }, [rawTextualMenuItems, rawIconMenuItems])
+
+    useEffect(() => {
+      if (typeof window !== 'undefined') {
+        (window as any).__RAW_MENU_ITEMS__ = toolbarMenuCandidates
+        window.dispatchEvent(new CustomEvent('toolbar-raw-menu-updated'))
+      }
+    }, [toolbarMenuCandidates])
+
+    const toolbarConfigOrder = useMemo(() => {
+      try {
+        const saved = localStorage.getItem('toolbar-config')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed)) {
+            const unique = Array.from(new Set(parsed.filter((id: unknown) => typeof id === 'string'))) as string[]
+            if (unique.length > 0) {
+              const ordered = unique.filter((id) => TOOLBAR_ITEM_MAP[id] || id === 'login' || id === 'logout')
+              TOOLBAR_ITEMS.forEach((item) => {
+                if (item.locked && !ordered.includes(item.id)) {
+                  ordered.push(item.id)
+                }
+              })
+              return ordered
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erro ao ler configuração do toolbar:', error)
+      }
+
+      return [...DEFAULT_TOOLBAR_ORDER]
+    }, [toolbarConfigVersion])
+
+    const applyToolbarConfig = useCallback(
+      (icons: any[]) => {
+        if (!icons || icons.length === 0) return icons
+        const iconMap = new Map(icons.map((icon) => [icon.id, icon]))
+        const result: any[] = []
+
+        toolbarConfigOrder.forEach((id) => {
+          if (iconMap.has(id)) {
+            result.push(iconMap.get(id))
+            iconMap.delete(id)
+          }
         })
-      } },
-      { id: 'indices', label: 'Índices', icon: '📊', onClick: () => {
-        console.log('📊 Abrindo Índices...')
-        openWindow({
-          id: `indices-${Date.now()}`,
-          type: 'indices',
-          title: 'Índices - Nascimento, Casamento, Óbito, Proclamas',
-          component: IndicesPageIsolated,
-          props: {}
+
+        TOOLBAR_ITEMS.forEach((item) => {
+          if (item.locked && iconMap.has(item.id)) {
+            result.push(iconMap.get(item.id))
+            iconMap.delete(item.id)
+          }
         })
-      } },
-      { id: 'login', label: 'Logoff', icon: '🔐', onClick: () => console.log('Logoff clicado') },
-      { id: 'logout', label: 'Sair', icon: '🚪', onClick: handleLogout }
-    ]
+
+        result.push(...iconMap.values())
+        return result
+      },
+      [toolbarConfigOrder]
+    )
 
     // Mapeamento entre IDs dos ícones da toolbar e IDs dos menus
     const toolbarToMenuMapping: { [key: string]: string } = {
@@ -1507,7 +1620,13 @@ function AppContent() {
 
     // Aplicar filtro de configuração de menus aos ícones
     console.log(`🔄 Recalculando menu de ícones (versão: ${menuConfigVersion})`)
-    const iconMenuItems = filterToolbarIcons(rawIconMenuItems)
+    const filteredIconMenuItems = filterToolbarIcons(rawIconMenuItems)
+    const iconMenuItems = applyToolbarConfig(filteredIconMenuItems)
+
+    const textualMenuItems = useMemo(
+      () => filterMenusByConfig(rawTextualMenuItems),
+      [rawTextualMenuItems, menuConfigVersion]
+    )
 
     return (
       <div style={{

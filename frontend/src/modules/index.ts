@@ -58,16 +58,8 @@ export const IndicesPageIsolated = createIsolatedPage(
 )
 
 // 📦 Módulo: Cadastro de Índice
-export const CadastroIndicePageIsolated = createIsolatedPage(
-  () => import('../pages/CadastroIndicePage').then(m => ({ default: m.CadastroIndicePage })),
-  'Cadastro de Índices'
-)
-
-// 📦 Módulo: Índice X
-export const IndiceXPageIsolated = createIsolatedPage(
-  () => import('../pages/IndiceXPage').then(m => ({ default: m.IndiceXPage })),
-  'Índice X'
-)
+export const CadastroIndicePageIsolated = () =>
+  import('../pages/CadastroIndicePage').then(m => ({ default: m.CadastroIndicePage }))
 
 // 📦 Módulo: Cartório SEADE
 export const CartorioSeadePageIsolated = createIsolatedPage(
@@ -221,7 +213,6 @@ export const modules = {
   firmas: FirmasPageIsolated,
   natureza: NaturezaPageIsolated,
   indices: IndicesPageIsolated,
-  indicex: IndiceXPageIsolated,
   cartorioSeade: CartorioSeadePageIsolated,
   configuracaoSenha: ConfiguracaoSenhaPageIsolated,
   controladorSenha: ControladorSenhaPageIsolated,

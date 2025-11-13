@@ -57,7 +57,7 @@ export const IndexIcon: React.FC<CartorioIconProps> = (props) => (
 );
 
 export const OldBookIcon: React.FC<CartorioIconProps> = (props) => (
-  <Icon name="library" {...props} />
+  <Icon name="book-plus" {...props} />
 );
 
 export const CloseIcon: React.FC<CartorioIconProps> = (props) => (

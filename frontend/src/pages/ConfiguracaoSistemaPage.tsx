@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { BasePage } from '../components/BasePage'
 import { useAccessibility } from '../hooks/useAccessibility'
 import { useModal } from '../hooks/useModal'
@@ -6,7 +6,168 @@ import { useModal } from '../hooks/useModal'
 const PERFIL_BASE_KEY = 'Casamento__B'
 const LETRAS_COMPARTILHADAS = new Set(['B', 'C', 'E', 'A'])
 
-const DEFAULT_SPINE_HEIGHT_MM = 105
+const DEFAULT_PROFILE_OVERRIDES: Record<string, PerfilOverrides> = {
+  'Casamento__B': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 90,
+    fonteNumero: 90,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Edital de Proclamas__D': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 90,
+    fonteNumero: 90,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Nascimento__A': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 90,
+    fonteNumero: 90,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Livro E__E': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 90,
+    fonteNumero: 90,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Casamento__B-AUX': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 55,
+    fonteNumero: 55,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Óbito__C-AUX': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 55,
+    fonteNumero: 55,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Remissivo__Livro de Transporte': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 55,
+    fonteNumero: 55,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Óbito__C-AUX': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 55,
+    fonteNumero: 55,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  }
+}
 
 interface ConfiguracaoSistemaPageProps {
   onClose: () => void
@@ -90,7 +251,7 @@ const tipoParaLetras: Record<string, string[]> = {
   'Nascimento': ['A'],
   'Livro E': ['E'],
   'Edital de Proclamas': ['D'],
-  'Remissivo': ['Livro Transporte']
+  'Remissivo': ['Livro de Transporte']
 }
 
 const criarLayoutAPartirConfig = (config: ConfiguracoesImpressao): LayoutConfig => ({
@@ -251,7 +412,10 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
         offsetDatas: config.offsetDatas ?? 0,
         bordaAtiva: config.bordaAtiva ?? true,
         bordaQuadrada: config.bordaQuadrada ?? false,
-        perfis: config.perfis ?? {}
+        perfis: {
+          ...DEFAULT_PROFILE_OVERRIDES,
+          ...(config.perfis ?? {})
+        }
       }
     }
     return {
@@ -275,10 +439,18 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
       offsetNumero: 0,
       offsetDatas: 0,
       bordaAtiva: true,
-      perfis: {},
+      perfis: { ...DEFAULT_PROFILE_OVERRIDES },
       bordaQuadrada: false
     }
   })
+  const persistConfigImpressao = useCallback((config: ConfiguracoesImpressao) => {
+    try {
+      localStorage.setItem('config-impressao-livros', JSON.stringify(config))
+      window.dispatchEvent(new CustomEvent('config-impressao-updated'))
+    } catch (error) {
+      console.error('❌ Erro ao salvar config-impressao-livros automaticamente:', error)
+    }
+  }, [])
 
   const tiposLivro = Object.keys(tipoParaLetras)
   const [perfilTipo, setPerfilTipo] = useState<string>(tiposLivro[0])
@@ -299,12 +471,16 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
   const baseLayout = criarLayoutAPartirConfig(configImpressao)
   const obterOverridesPerfil = (tipo: string, letra: string): PerfilOverrides => {
     const key = `${tipo}__${letra}`
+    const defaultOverrides = DEFAULT_PROFILE_OVERRIDES[key]
     const overridesDiretos = configImpressao.perfis?.[key]
-    if (overridesDiretos) {
+    if (overridesDiretos && Object.keys(overridesDiretos).length > 0) {
       return overridesDiretos
     }
+    if (defaultOverrides) {
+      return defaultOverrides
+    }
     if (LETRAS_COMPARTILHADAS.has(letra)) {
-      return configImpressao.perfis?.[PERFIL_BASE_KEY] ?? {}
+      return configImpressao.perfis?.[PERFIL_BASE_KEY] ?? DEFAULT_PROFILE_OVERRIDES[PERFIL_BASE_KEY] ?? {}
     }
     return {}
   }
@@ -333,10 +509,12 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
         delete perfisAtualizados[perfilKey]
       }
 
-      return {
+      const atualizado = {
         ...prev,
         perfis: perfisAtualizados
       }
+      persistConfigImpressao(atualizado)
+      return atualizado
     })
   }
 
@@ -346,7 +524,9 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
         return prev
       }
       const { [perfilKey]: _, ...restantes } = prev.perfis
-      return { ...prev, perfis: restantes }
+      const atualizado = { ...prev, perfis: restantes }
+      persistConfigImpressao(atualizado)
+      return atualizado
     })
   }
 
@@ -876,6 +1056,115 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                         </div>
                       ))}
                     </div>
+                  </div>
+                </div>
+
+                {/* Seção: Logo do Cartório */}
+                <div style={{
+                  padding: '16px',
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: theme.surface
+                }}>
+                  <h3 style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: theme.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    🖼️ Logo do Cartório
+                  </h3>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: theme.textSecondary,
+                        marginBottom: '8px'
+                      }}>
+                        Faça upload do logo que será usado nas lombadas e impressões
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onloadend = () => {
+                              const result = reader.result as string
+                              setConfigImpressao({ ...configImpressao, logoCartorio: result })
+                            }
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                        style={{
+                          padding: '10px',
+                          fontSize: '14px',
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: '4px',
+                          backgroundColor: theme.background,
+                          color: theme.text,
+                          width: '100%',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    </div>
+
+                    {configImpressao.logoCartorio && (
+                      <div style={{
+                        padding: '16px',
+                        border: `2px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        backgroundColor: theme.background,
+                        textAlign: 'center'
+                      }}>
+                        <p style={{
+                          margin: '0 0 12px 0',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: theme.textSecondary
+                        }}>
+                          Pré-visualização:
+                        </p>
+                        <img
+                          src={configImpressao.logoCartorio}
+                          alt="Logo do Cartório"
+                          style={{
+                            maxWidth: '200px',
+                            maxHeight: '150px',
+                            objectFit: 'contain',
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: '4px',
+                            padding: '8px',
+                            backgroundColor: '#fff'
+                          }}
+                        />
+                        <button
+                          onClick={() => setConfigImpressao({ ...configImpressao, logoCartorio: '' })}
+                          style={{
+                            marginTop: '12px',
+                            padding: '8px 16px',
+                            fontSize: '13px',
+                            backgroundColor: '#ef4444',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        >
+                          🗑️ Remover Logo
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2261,117 +2550,9 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                 )}
             </div>
             )}
-
             {/* ABA: Impressão de Livros */}
             {abaAtiva === 'impressao-livros' && (
               <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <div style={{
-                  padding: '16px',
-                  border: `2px solid ${theme.border}`,
-                  borderRadius: '8px',
-                  backgroundColor: theme.surface
-                }}>
-                  <h3 style={{
-                    margin: '0 0 16px 0',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: theme.text,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    🖼️ Logo do Cartório
-                  </h3>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div>
-                      <label style={{
-                        display: 'block',
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        color: theme.textSecondary,
-                        marginBottom: '8px'
-                      }}>
-                        Faça upload do logo que será usado nas lombadas e impressões
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            const reader = new FileReader()
-                            reader.onloadend = () => {
-                              const result = reader.result as string
-                              setConfigImpressao({ ...configImpressao, logoCartorio: result })
-                            }
-                            reader.readAsDataURL(file)
-                          }
-                        }}
-                        style={{
-                          padding: '10px',
-                          fontSize: '14px',
-                          border: `1px solid ${theme.border}`,
-                          borderRadius: '4px',
-                          backgroundColor: theme.background,
-                          color: theme.text,
-                          width: '100%',
-                          cursor: 'pointer'
-                        }}
-                      />
-                    </div>
-
-                    {configImpressao.logoCartorio && (
-                      <div style={{
-                        padding: '16px',
-                        border: `2px solid ${theme.border}`,
-                        borderRadius: '8px',
-                        backgroundColor: theme.background,
-                        textAlign: 'center'
-                      }}>
-                        <p style={{
-                          margin: '0 0 12px 0',
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          color: theme.textSecondary
-                        }}>
-                          Pré-visualização:
-                        </p>
-                        <img 
-                          src={configImpressao.logoCartorio} 
-                          alt="Logo do Cartório" 
-                          style={{
-                            maxWidth: '200px',
-                            maxHeight: '150px',
-                            objectFit: 'contain',
-                            border: `1px solid ${theme.border}`,
-                            borderRadius: '4px',
-                            padding: '8px',
-                            backgroundColor: '#fff'
-                          }}
-                        />
-                        <button
-                          onClick={() => setConfigImpressao({ ...configImpressao, logoCartorio: '' })}
-                          style={{
-                            marginTop: '12px',
-                            padding: '8px 16px',
-                            fontSize: '13px',
-                            backgroundColor: '#ef4444',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: '500'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                        >
-                          🗑️ Remover Logo
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
                 {/* Dimensões da Lombada */}
                 <div style={{
@@ -2495,42 +2676,6 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                       🧩 Organização das Seções
                     </h4>
                     <div style={{ display: 'grid', gap: '16px' }}>
-                      <div style={layoutSubSectionStyle}>
-                        <h5 style={layoutSubHeaderStyle}>🎚️ Ajuste Vertical Global (mm)</h5>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
-                          {[
-                            { label: 'Logo', key: 'offsetLogo' as const },
-                            { label: 'Letra', key: 'offsetLetra' as const },
-                            { label: 'Número', key: 'offsetNumero' as const },
-                            { label: 'Datas', key: 'offsetDatas' as const }
-                          ].map((item) => (
-                            <div key={item.key}>
-                              <label style={labelStyles}>{item.label}</label>
-                              <input
-                                type="number"
-                                step="0.1"
-                                value={configImpressao[item.key]}
-                                onChange={(e) => {
-                                  const valor = parseFloat(e.target.value);
-                                  setConfigImpressao({
-                                    ...configImpressao,
-                                    [item.key]: Number.isNaN(valor) ? configImpressao[item.key] : valor
-                                  })
-                                }}
-                                style={inputStyles}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <p style={{
-                          margin: '4px 0 0 0',
-                          fontSize: '11px',
-                          color: theme.textSecondary
-                        }}>
-                          Ajuste padrão para todos os tipos. Valores positivos descem, negativos sobem.
-                        </p>
-                      </div>
-
                       <div style={layoutSubSectionStyle}>
                         <h5 style={layoutSubHeaderStyle}>🎯 Configuração Específica (Tipo/Letra)</h5>
                         <div style={{

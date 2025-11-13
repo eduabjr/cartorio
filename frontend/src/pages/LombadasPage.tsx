@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { BasePage } from '../components/BasePage';
 import { useAccessibility } from '../hooks/useAccessibility';
@@ -6,6 +6,148 @@ import { useAccessibility } from '../hooks/useAccessibility';
 const PERFIL_BASE_KEY = 'Casamento__B';
 const LETRAS_COMPARTILHADAS = new Set(['B', 'C', 'E', 'A']);
 
+const DEFAULT_LAYOUT_PROFILE_OVERRIDES: Record<string, Partial<LayoutConfig>> = {
+  'Casamento__B': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 90,
+    fonteNumero: 90,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Casamento__B-AUX': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 55,
+    fonteNumero: 55,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Nascimento__A': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 90,
+    fonteNumero: 90,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Livro E__E': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 90,
+    fonteNumero: 90,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Óbito__C-AUX': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 55,
+    fonteNumero: 55,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Remissivo__Livro de Transporte': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 55,
+    fonteNumero: 55,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  },
+  'Edital de Proclamas__D': {
+    alturaLogo: 50,
+    alturaLetra: 30,
+    alturaNumero: 15.83,
+    alturaDatas: 15.83,
+    fonteLetra: 90,
+    fonteNumero: 90,
+    fonteDatas: 22,
+    larguraLogoSecao: 28,
+    larguraLetraSecao: 9,
+    larguraNumeroSecao: 9,
+    larguraDatasSecao: 9,
+    logoEscala: 140,
+    offsetLogo: -17,
+    offsetLetra: -33,
+    offsetNumero: -25,
+    offsetDatas: -10,
+    bordaAtiva: true,
+    bordaQuadrada: false
+  }
+};
 type LayoutConfig = {
   alturaLogo: number;
   alturaLetra: number;
@@ -116,14 +258,39 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
   const [larguraNumeroSecao, setLarguraNumeroSecao] = useState<number>(DEFAULT_TEXT_WIDTH_MM);
   const [larguraDatasSecao, setLarguraDatasSecao] = useState<number>(DEFAULT_TEXT_WIDTH_MM);
   const [logoEscala, setLogoEscala] = useState<number>(100);
-  const [perfis, setPerfis] = useState<Record<string, PerfilOverrides>>({});
+  const [perfis, setPerfis] = useState<Record<string, PerfilOverrides>>({ ...DEFAULT_LAYOUT_PROFILE_OVERRIDES });
   const [offsetLogo, setOffsetLogo] = useState<number>(DEFAULT_OFFSET_MM);
   const [offsetLetra, setOffsetLetra] = useState<number>(DEFAULT_OFFSET_MM);
   const [offsetNumero, setOffsetNumero] = useState<number>(DEFAULT_OFFSET_MM);
   const [offsetDatas, setOffsetDatas] = useState<number>(DEFAULT_OFFSET_MM);
   const [bordaAtiva, setBordaAtiva] = useState<boolean>(true);
   const [bordaQuadrada, setBordaQuadrada] = useState<boolean>(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
 
+  const [lombadas, setLombadas] = useState<LombadaData[]>(() => {
+    try {
+      const lombadasSalvas = localStorage.getItem('lombadas-livros');
+      if (lombadasSalvas) {
+        const lombadasParseadas = JSON.parse(lombadasSalvas) as Partial<LombadaData>[];
+        return lombadasParseadas.map((lombada) => ({
+          codigo: '0',
+          logo: lombada.logo ?? '',
+          tipoLivro: lombada.tipoLivro ?? '',
+          letra: lombada.letra ?? '',
+          numero: lombada.numero ?? '',
+          dataInicio: lombada.dataInicio ?? '',
+          dataFim: lombada.dataFim ?? '',
+          infoAdicional: lombada.infoAdicional ?? '',
+          contexto: lombada.contexto === 'classificador' ? 'classificador' : 'livro',
+          layout: lombada.layout as LayoutConfig | undefined
+        }));
+      }
+    } catch (error) {
+      console.error('Erro ao carregar lombadas:', error);
+    }
+    return [];
+  });
   // Função para carregar configurações
   const carregarConfiguracoes = useCallback(() => {
     try {
@@ -151,7 +318,11 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
         setOffsetDatas(config.offsetDatas ?? DEFAULT_OFFSET_MM);
         setBordaAtiva(config.bordaAtiva ?? true);
         setBordaQuadrada(config.bordaQuadrada ?? false);
-        setPerfis(config.perfis ?? {});
+        const mergedPerfis = {
+          ...DEFAULT_LAYOUT_PROFILE_OVERRIDES,
+          ...(config.perfis ?? {})
+        };
+        setPerfis(mergedPerfis);
         console.log('✅ Configurações carregadas:', config);
       } else {
         setAlturaLombada(DEFAULT_SPINE_HEIGHT_MM);
@@ -174,7 +345,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
         setOffsetDatas(DEFAULT_OFFSET_MM);
         setBordaAtiva(true);
         setBordaQuadrada(false);
-        setPerfis({});
+        setPerfis({ ...DEFAULT_LAYOUT_PROFILE_OVERRIDES });
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -192,7 +363,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
       setLarguraNumeroSecao(DEFAULT_TEXT_WIDTH_MM);
       setLarguraDatasSecao(DEFAULT_TEXT_WIDTH_MM);
       setLogoEscala(100);
-      setPerfis({});
+      setPerfis({ ...DEFAULT_LAYOUT_PROFILE_OVERRIDES });
       setOffsetLogo(DEFAULT_OFFSET_MM);
       setOffsetLetra(DEFAULT_OFFSET_MM);
       setOffsetNumero(DEFAULT_OFFSET_MM);
@@ -212,6 +383,11 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     const handleConfigUpdate = () => {
       console.log('🖼️ Configurações de impressão atualizadas! Recarregando...');
       carregarConfiguracoes();
+      setLombadas((prev) =>
+        prev.map((lombada) =>
+          lombada.layout ? { ...lombada, layout: undefined } : lombada
+        )
+      );
     };
 
     window.addEventListener('config-impressao-updated', handleConfigUpdate);
@@ -236,7 +412,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     'Nascimento': ['A'],
     'Livro E': ['E'],
     'Edital de Proclamas': ['D'],
-    'Remissivo': ['Livro Transporte']
+    'Remissivo': ['Livro de Transporte']
   };
 
   const criarChavePerfil = (tipo: string, letra: string) => `${tipo}__${letra}`;
@@ -309,6 +485,13 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     }
     return obterLayoutPara(lombada.tipoLivro, lombada.letra);
   }, [construirLayout, obterLayoutPara]);
+
+  const formatTwoDecimalsTruncated = (value: number) => {
+    if (!Number.isFinite(value)) {
+      return '0.00';
+    }
+    return (Math.trunc(value * 100) / 100).toFixed(2);
+  };
 
   const calcularLayoutDados = useCallback((layout: LayoutConfig) => {
     const availableHeightMm = Math.max(alturaLombada - SECTION_GAP_MM * TEXT_SECTION_COUNT, 0);
@@ -444,31 +627,6 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
       bordaQuadrada
     };
   }, [alturaLombada, larguraLombada]);
-  // Carregar lombadas salvas do localStorage
-  const [lombadas, setLombadas] = useState<LombadaData[]>(() => {
-    try {
-      const lombadasSalvas = localStorage.getItem('lombadas-livros');
-      if (lombadasSalvas) {
-        const lombadasParseadas = JSON.parse(lombadasSalvas) as Partial<LombadaData>[];
-        // Migração: garantir campo código com valor padrão '0'
-        return lombadasParseadas.map((lombada) => ({
-          codigo: '0',
-          logo: lombada.logo ?? '',
-          tipoLivro: lombada.tipoLivro ?? '',
-          letra: lombada.letra ?? '',
-          numero: lombada.numero ?? '',
-          dataInicio: lombada.dataInicio ?? '',
-          dataFim: lombada.dataFim ?? '',
-          infoAdicional: lombada.infoAdicional ?? '',
-          contexto: lombada.contexto === 'classificador' ? 'classificador' : 'livro',
-          layout: lombada.layout as LayoutConfig | undefined
-        }));
-      }
-    } catch (error) {
-      console.error('Erro ao carregar lombadas:', error);
-    }
-    return [];
-  });
 
   useEffect(() => {
     if (logo) {
@@ -541,6 +699,57 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
   const [letrasDisponiveis, setLetrasDisponiveis] = useState<string[]>([]);
   const [lombadaSelecionada, setLombadaSelecionada] = useState<number | null>(null);
   const [modoEdicao, setModoEdicao] = useState(false);
+
+  const activePreviewIndices = useMemo(() => {
+    if (selectionMode && selectedIndices.length > 0) {
+      return selectedIndices;
+    }
+    if (lombadaSelecionada !== null) {
+      return [lombadaSelecionada];
+    }
+    return lombadas.length > 0 ? [0] : [];
+  }, [selectionMode, selectedIndices, lombadaSelecionada, lombadas.length]);
+
+  const lombadasParaImpressao = useMemo(() => {
+    if (selectionMode && selectedIndices.length > 0) {
+      return selectedIndices
+        .map((index) => lombadas[index])
+        .filter((item): item is LombadaData => Boolean(item));
+    }
+    if (lombadaSelecionada !== null) {
+      const item = lombadas[lombadaSelecionada];
+      return item ? [item] : [];
+    }
+    if (lombadas.length > 0) {
+      const first = lombadas[0];
+      return first ? [first] : [];
+    }
+    return [];
+  }, [selectionMode, selectedIndices, lombadaSelecionada, lombadas]);
+
+  const previewLabel = useMemo(() => {
+    const currentIndex = activePreviewIndices.indexOf(lombadaSelecionada ?? -1);
+    if (currentIndex === -1) {
+      return '';
+    }
+    const total = selectionMode && activePreviewIndices.length > 0 ? activePreviewIndices.length : lombadas.length;
+    return ` (${currentIndex + 1}/${total})`;
+  }, [activePreviewIndices, selectionMode, lombadaSelecionada, lombadas.length]);
+
+  useEffect(() => {
+    if (selectionMode) {
+      if (selectedIndices.length > 0) {
+        if (!selectedIndices.includes(lombadaSelecionada ?? -1)) {
+          setLombadaSelecionada(selectedIndices[0]);
+        }
+      } else {
+        setSelectionMode(false);
+        setLombadaSelecionada(null);
+      }
+    } else if (lombadas.length > 0 && (lombadaSelecionada === null || lombadaSelecionada >= lombadas.length)) {
+      setLombadaSelecionada(0);
+    }
+  }, [selectionMode, selectedIndices, lombadas.length, lombadaSelecionada]);
 
   const selecionarSubmenu = useCallback((novo: 'livro' | 'classificador', resetForm = true) => {
     setSubmenuCadastro(novo);
@@ -621,9 +830,9 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     onBeforePrint: aguardarImagens
   });
 
-  const handlePrintClick = () => {
-    if (lombadas.length === 0) {
-      alert('⚠️ Não há lombadas para imprimir!');
+  const handlePrintClick = useCallback(() => {
+    if (lombadasParaImpressao.length === 0) {
+      alert('⚠️ Selecione ao menos uma lombada para imprimir.');
       return;
     }
     if (typeof printHandler === 'function') {
@@ -631,7 +840,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     } else {
       alert('Não foi possível iniciar a impressão.');
     }
-  };
+  }, [printHandler, lombadasParaImpressao.length]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -672,18 +881,84 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
   };
 
   const removerLombada = (index: number) => {
-    setLombadas(lombadas.filter((_, i) => i !== index));
-    if (lombadaSelecionada === index) {
-      setLombadaSelecionada(null);
-    } else if (lombadaSelecionada !== null && lombadaSelecionada > index) {
-      setLombadaSelecionada(lombadaSelecionada - 1);
+    setLombadas((prev) => prev.filter((_, i) => i !== index));
+
+    if (selectionMode) {
+      setSelectedIndices((prev) => {
+        const adjusted = prev
+          .filter((i) => i !== index)
+          .map((i) => (i > index ? i - 1 : i));
+
+        if (adjusted.length === 0) {
+          setSelectionMode(false);
+          setLombadaSelecionada(null);
+        } else {
+          setLombadaSelecionada(adjusted[adjusted.length - 1]);
+        }
+
+        return adjusted;
+      });
+    } else {
+      if (lombadaSelecionada === index) {
+        setLombadaSelecionada(null);
+      } else if (lombadaSelecionada !== null && lombadaSelecionada > index) {
+        setLombadaSelecionada(lombadaSelecionada - 1);
+      }
     }
   };
 
-  const selecionarLombada = (index: number) => {
-    setLombadaSelecionada((prev) => (prev === index ? null : index));
+  const handleItemClick = (event: React.MouseEvent<HTMLDivElement>, index: number) => {
+    if (event.detail > 1) {
+      return;
+    }
     setModoEdicao(false);
+
+    if (selectionMode) {
+      setSelectedIndices((prev) => {
+        const exists = prev.includes(index);
+        let next: number[];
+        if (exists) {
+          next = prev.filter((i) => i !== index);
+        } else {
+          next = [...prev, index];
+        }
+
+        if (next.length > 0) {
+          setLombadaSelecionada(next[next.length - 1]);
+        } else {
+          setLombadaSelecionada(null);
+          setSelectionMode(false);
+        }
+
+        return next;
+      });
+    } else {
+      setLombadaSelecionada((prev) => (prev === index ? null : index));
+    }
   };
+
+  const handleItemDoubleClick = (index: number) => {
+    setModoEdicao(false);
+    if (!selectionMode) {
+      setSelectionMode(true);
+      setSelectedIndices([index]);
+      setLombadaSelecionada(index);
+    }
+  };
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIndices([]);
+    setLombadaSelecionada((prev) => {
+      if (lombadas.length === 0) {
+        return null;
+      }
+      if (prev !== null && prev < lombadas.length) {
+        return prev;
+      }
+      return 0;
+    });
+  }, [lombadas.length]);
 
   const editarLombada = (index: number) => {
     const lombada = lombadas[index];
@@ -870,6 +1145,8 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     { id: 'classificador', label: 'Lombada de Classificador', icon: '🗂️' }
   ];
 
+  const [mostrarMedidas, setMostrarMedidas] = useState(false);
+
   const renderPreview = () => {
     if (lombadaSelecionada === null || !lombadas[lombadaSelecionada]) {
       return (
@@ -888,14 +1165,63 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     const logoAtual = lombadaAtual.logo || logo;
     const layoutConfig = obterLayoutParaLombada(lombadaAtual);
     const layoutDados = calcularLayoutDados(layoutConfig);
+    const logoEscalaPercent = Number.isFinite(layoutConfig.logoEscala) ? Number(layoutConfig.logoEscala) : 100;
     const previewBorder = layoutDados.bordaAtiva ? `2px solid ${theme.border}` : 'none';
     const previewShadow = layoutDados.bordaAtiva ? '0 12px 28px rgba(0,0,0,0.18)' : 'none';
 
     const dataInicioFormatada = new Date(lombadaAtual.dataInicio).toLocaleDateString('pt-BR');
     const dataFimFormatada = new Date(lombadaAtual.dataFim).toLocaleDateString('pt-BR');
 
+    const metrics = [
+      {
+        label: 'Altura (mm)',
+        values: [
+          `Logo: ${formatTwoDecimalsTruncated(layoutDados.heightsMm.logo)}`,
+          `Letra: ${formatTwoDecimalsTruncated(layoutDados.heightsMm.letra)}`,
+          `Número: ${formatTwoDecimalsTruncated(layoutDados.heightsMm.numero)}`,
+          `Datas: ${formatTwoDecimalsTruncated(layoutDados.heightsMm.datas)}`
+        ]
+      },
+      {
+        label: 'Logo (%)',
+        values: [`${Math.trunc(logoEscalaPercent)}%`]
+      },
+      {
+        label: 'Offsets (mm)',
+        values: [
+          `Logo: ${formatTwoDecimalsTruncated(layoutConfig.offsetLogo ?? 0)}`,
+          `Letra: ${formatTwoDecimalsTruncated(layoutConfig.offsetLetra ?? 0)}`,
+          `Número: ${formatTwoDecimalsTruncated(layoutConfig.offsetNumero ?? 0)}`,
+          `Datas: ${formatTwoDecimalsTruncated(layoutConfig.offsetDatas ?? 0)}`
+        ]
+      },
+      {
+        label: 'Borda',
+        values: [
+          layoutDados.bordaAtiva ? (layoutDados.bordaQuadrada ? 'Sim (Quadrada)' : 'Sim (Arredondada)') : 'Não'
+        ]
+      },
+      {
+        label: 'Largura (mm)',
+        values: [
+          `Logo: ${formatTwoDecimalsTruncated(layoutDados.widthsMm.logo)}`,
+          `Letra: ${formatTwoDecimalsTruncated(layoutDados.widthsMm.letra)}`,
+          `Número: ${formatTwoDecimalsTruncated(layoutDados.widthsMm.numero)}`,
+          `Datas: ${formatTwoDecimalsTruncated(layoutDados.widthsMm.datas)}`
+        ]
+      }
+    ];
+
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          width: '100%'
+        }}
+      >
         <div
           style={{
             width: `${previewContainerWidth}px`,
@@ -943,36 +1269,87 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              textTransform: 'uppercase',
               fontWeight: 900,
               fontFamily: '"Arial Black", Arial, sans-serif',
-              fontSize: `${layoutDados.previewLetterFontSize}px`,
               color: '#000',
-            lineHeight: 1,
-            transform: `translateY(${layoutDados.previewOffsets.letra}px)`
+              transform: `translateY(${layoutDados.previewOffsets.letra}px)`
             }}
           >
-            {lombadaAtual.letra || '—'}
+            {(() => {
+              const letra = lombadaAtual.letra || '—';
+              const parts =
+                letra === 'Livro de Transporte'
+                  ? ['Livro de', 'Transporte']
+                  : [letra];
+              const perLineFontSize =
+                layoutDados.previewLetterFontSize / Math.max(parts.length, 1);
+
+              return (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    width: '100%',
+                    textAlign: 'center',
+                    gap: parts.length > 1 ? `${previewGapPx * 0.1}px` : 0
+                  }}
+                >
+                  {parts.map((part, index) => (
+                    <span
+                      key={`preview-letter-part-${index}`}
+                      style={{
+                        fontSize: `${perLineFontSize}px`,
+                        textTransform: 'uppercase',
+                        lineHeight: 1,
+                        whiteSpace: 'nowrap',
+                        margin: 0
+                      }}
+                    >
+                      {part}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
-          <div
-            style={{
-              height: `${layoutDados.previewHeights.numero}px`,
-              width: '100%',
-              maxWidth: `${layoutDados.previewWidths.numero}px`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 900,
-              fontFamily: '"Arial Black", Arial, sans-serif',
-              fontSize: `${layoutDados.previewNumberFontSize}px`,
-              color: '#000',
-            lineHeight: 1,
-            transform: `translateY(${layoutDados.previewOffsets.numero}px)`
-            }}
-          >
-            {lombadaAtual.numero || '—'}
-          </div>
+          {(() => {
+            const letraAtual = lombadaAtual.letra || '';
+            const numeroAtual = lombadaAtual.numero || '—';
+            const isLivroTransporte = letraAtual === 'Livro de Transporte';
+
+            return (
+              <div
+                style={{
+                  height: `${layoutDados.previewHeights.numero}px`,
+                  width: '100%',
+                  maxWidth: `${layoutDados.previewWidths.numero}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: isLivroTransporte ? `${previewGapPx * 0.3}px` : 0,
+                  fontWeight: 900,
+                  fontFamily: '"Arial Black", Arial, sans-serif',
+                  fontSize: `${layoutDados.previewNumberFontSize}px`,
+                  color: '#000',
+                  lineHeight: 1,
+                  transform: `translateY(${layoutDados.previewOffsets.numero}px)`
+                }}
+              >
+                {isLivroTransporte ? (
+                  <>
+                    <span style={{ fontSize: `${layoutDados.previewNumberFontSize * 0.75}px` }}>nº</span>
+                    <span>{numeroAtual}</span>
+                  </>
+                ) : (
+                  numeroAtual
+                )}
+              </div>
+            );
+          })()}
 
           <div
             style={{
@@ -999,23 +1376,91 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
         </div>
         <div
           style={{
-            fontSize: '12px',
-            color: theme.textSecondary,
-            textAlign: 'center',
-            lineHeight: 1.4,
-            width: `${previewContainerWidth}px`
+            width: `${previewContainerWidth}px`,
+            display: 'flex',
+            justifyContent: 'center',
+            marginTop: '8px'
           }}
         >
-          {`Altura (mm) → Logo: ${layoutDados.heightsMm.logo.toFixed(2)} • Letra: ${layoutDados.heightsMm.letra.toFixed(2)} • Número: ${layoutDados.heightsMm.numero.toFixed(2)} • Datas: ${layoutDados.heightsMm.datas.toFixed(2)}`}
-          <br />
-          {`Logo (%) → ${layoutConfig.logoEscala.toFixed(0)}%`}
-          <br />
-          {`Offsets (mm) → Logo: ${layoutConfig.offsetLogo.toFixed(2)} • Letra: ${layoutConfig.offsetLetra.toFixed(2)} • Número: ${layoutConfig.offsetNumero.toFixed(2)} • Datas: ${layoutConfig.offsetDatas.toFixed(2)}`}
-          <br />
-          {`Borda: ${layoutDados.bordaAtiva ? (layoutDados.bordaQuadrada ? 'Sim (Quadrada)' : 'Sim (Arredondada)') : 'Não'}`}
-          <br />
-          {`Largura (mm) → Logo: ${layoutDados.widthsMm.logo.toFixed(2)} • Letra: ${layoutDados.widthsMm.letra.toFixed(2)} • Número: ${layoutDados.widthsMm.numero.toFixed(2)} • Datas: ${layoutDados.widthsMm.datas.toFixed(2)}`}
+          <button
+            type="button"
+            onClick={() => setMostrarMedidas(true)}
+            style={{
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 600,
+              borderRadius: '6px',
+              border: `1px solid ${theme.border}`,
+              backgroundColor: theme.surface,
+              color: theme.text,
+              cursor: 'pointer',
+              transition: 'background-color 0.2s ease'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = hoverItemBackground)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = theme.surface)}
+          >
+            Medidas
+          </button>
         </div>
+
+        {mostrarMedidas && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+            onClick={() => setMostrarMedidas(false)}
+          >
+            <div
+              onClick={(event) => event.stopPropagation()}
+              style={{
+                width: Math.min(previewContainerWidth, 360),
+                maxWidth: '90vw',
+                backgroundColor: theme.surface,
+                color: theme.text,
+                borderRadius: '10px',
+                padding: '18px 20px',
+                boxShadow: '0 22px 48px rgba(0,0,0,0.35)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ margin: 0, fontSize: '14px', letterSpacing: '0.5px' }}>Medidas da Lombada</h4>
+                <button
+                  type="button"
+                  onClick={() => setMostrarMedidas(false)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: theme.textSecondary,
+                    fontSize: '18px',
+                    cursor: 'pointer',
+                    lineHeight: 1
+                  }}
+                  aria-label="Fechar"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
+                {metrics.map((row) => (
+                  <div key={row.label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontWeight: 600, color: theme.text }}>{row.label}</span>
+                    <span style={{ color: theme.textSecondary, lineHeight: 1.4 }}>{row.values.join(' • ')}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1026,7 +1471,32 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
 
   const renderLista = () => (
     <div style={previewListStyle}>
-      <h3 style={{ color: theme.text, marginBottom: '15px' }}>📚 Lombadas Criadas ({lombadas.length})</h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+        <h3 style={{ color: theme.text, margin: 0 }}>📚 Lombadas Criadas ({lombadas.length})</h3>
+        {selectionMode && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#2ec4b6' }}>
+              Modo seleção múltipla ativo
+            </span>
+            <button
+              type="button"
+              onClick={exitSelectionMode}
+              style={{
+                padding: '4px 10px',
+                fontSize: '11px',
+                borderRadius: '6px',
+                border: '1px solid #2ec4b6',
+                backgroundColor: '#d7f8f4',
+                color: '#087a6d',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              Sair do modo seleção
+            </button>
+          </div>
+        )}
+      </div>
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -1036,31 +1506,50 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
         paddingRight: lombadas.length > 4 ? '6px' : 0
       }}>
         {lombadas.map((lombada, index) => {
-          const selecionada = lombadaSelecionada === index;
+          const isSelected = selectionMode
+            ? selectedIndices.includes(index)
+            : lombadaSelecionada === index;
+          const borderColor = selectionMode
+            ? isSelected
+              ? '#2ec4b6'
+              : theme.border
+            : isSelected
+              ? theme.primary
+              : theme.border;
+          const backgroundColor = selectionMode
+            ? isSelected
+              ? '#d7f8f4'
+              : theme.surface
+            : isSelected
+              ? selectedItemBackground
+              : theme.surface;
+          const hoverColor = selectionMode ? '#e9fffb' : hoverItemBackground;
+
           return (
             <div 
               key={index} 
-              onClick={() => selecionarLombada(index)}
+              onClick={(e) => handleItemClick(e, index)}
+              onDoubleClick={() => handleItemDoubleClick(index)}
               style={{
                 padding: '12px 16px',
-                border: `2px solid ${selecionada ? theme.primary : theme.border}`,
+                border: `2px solid ${borderColor}`,
                 borderRadius: '8px',
-                backgroundColor: selecionada ? selectedItemBackground : theme.surface,
+                backgroundColor,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 transition: 'all 0.2s',
-                boxShadow: selecionada ? `0 0 0 3px ${theme.primary}33` : 'none'
+                boxShadow: isSelected && !selectionMode ? `0 0 0 3px ${theme.primary}33` : 'none'
               }}
               onMouseEnter={(e) => {
-                if (!selecionada) {
-                  e.currentTarget.style.backgroundColor = hoverItemBackground;
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = hoverColor;
                 }
               }}
               onMouseLeave={(e) => {
-                if (!selecionada) {
-                  e.currentTarget.style.backgroundColor = theme.surface;
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = backgroundColor;
                 }
               }}
             >
@@ -1175,8 +1664,8 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
       resizable={false}
       headerColor={headerColor}
     >
-      <div style={outerWrapperStyle}>
-        <div style={{ ...containerStyle, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...containerStyle, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           {/* Abas */}
           <div style={tabContainerStyle}>
             <button 
@@ -1357,7 +1846,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                       minHeight: 0
                     }}>
                       <h3 style={{ color: theme.text, marginBottom: '15px', textAlign: 'center' }}>
-                        📋 Preview da Lombada {lombadaSelecionada !== null ? `(${lombadaSelecionada + 1}/${lombadas.length})` : ''}
+                        📋 Preview da Lombada{previewLabel}
                       </h3>
                       <div style={{ display: 'flex', justifyContent: 'center', flex: 1, minHeight: 0 }}>
                         {renderPreview()}
@@ -1434,7 +1923,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
             padding: '24px',
             backgroundColor: '#f5f7f7'
           }}>
-            {lombadas.map((lombada, index) => {
+            {lombadasParaImpressao.map((lombada, index) => {
               const larguraPx = Math.max(larguraLombada, 0.1) * MM_TO_PX;
               const alturaPx = Math.max(alturaLombada, 0.1) * MM_TO_PX;
               const logoImpressao = lombada.logo || logo;
@@ -1492,37 +1981,87 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: `${layoutDados.printLetterFontPx}px`,
                     fontWeight: 900,
                     fontFamily: '"Arial Black", Arial, sans-serif',
                     color: '#000',
                     textTransform: 'uppercase',
-                    lineHeight: 1,
                     transform: `translateY(${layoutDados.printOffsets.letra}px)`
                   }}
                 >
-                  {lombada.letra || '—'}
+                  {(() => {
+                    const letra = lombada.letra || '—';
+                    const parts =
+                      letra === 'Livro de Transporte'
+                        ? ['Livro de', 'Transporte']
+                        : [letra];
+                    const perLineFontPx =
+                      layoutDados.printLetterFontPx / Math.max(parts.length, 1);
+
+                    return (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '100%',
+                          width: '100%',
+                          textAlign: 'center',
+                          gap: parts.length > 1 ? `${printGapPx * 0.2}px` : 0
+                        }}
+                      >
+                        {parts.map((part, index) => (
+                          <span
+                            key={`print-letter-part-${index}`}
+                            style={{
+                              fontSize: `${perLineFontPx}px`,
+                              lineHeight: 1,
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {part}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Número */}
-                <div
-                  style={{
-                    height: `${layoutDados.printHeightsPx.numero}px`,
-                    width: '100%',
-                    maxWidth: `${layoutDados.printWidthsPx.numero}px`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: `${layoutDados.printNumberFontPx}px`,
-                    fontWeight: 900,
-                    fontFamily: '"Arial Black", Arial, sans-serif',
-                    color: '#000',
-                    lineHeight: 1,
-                    transform: `translateY(${layoutDados.printOffsets.numero}px)`
-                  }}
-                >
-                  {lombada.numero || '—'}
-                </div>
+                {(() => {
+                  const letraAtual = lombada.letra || '';
+                  const numeroAtual = lombada.numero || '—';
+                  const isLivroTransporte = letraAtual === 'Livro de Transporte';
+
+                  return (
+                    <div
+                      style={{
+                        height: `${layoutDados.printHeightsPx.numero}px`,
+                        width: '100%',
+                        maxWidth: `${layoutDados.printWidthsPx.numero}px`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: isLivroTransporte ? `${printGapPx * 0.4}px` : 0,
+                        fontSize: `${layoutDados.printNumberFontPx}px`,
+                        fontWeight: 900,
+                        fontFamily: '"Arial Black", Arial, sans-serif',
+                        color: '#000',
+                        lineHeight: 1,
+                        transform: `translateY(${layoutDados.printOffsets.numero}px)`
+                      }}
+                    >
+                      {isLivroTransporte ? (
+                        <>
+                          <span style={{ fontSize: `${layoutDados.printNumberFontPx * 0.75}px` }}>nº</span>
+                          <span>{numeroAtual}</span>
+                        </>
+                      ) : (
+                        numeroAtual
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Datas */}
                 <div
