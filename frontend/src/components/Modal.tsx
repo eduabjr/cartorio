@@ -29,7 +29,7 @@ export function Modal({
   cancelText,
   icon
 }: ModalProps) {
-  const { getTheme } = useAccessibility()
+  const { getTheme, currentTheme } = useAccessibility()
   const theme = getTheme()
   const [inputValue, setInputValue] = React.useState(defaultValue)
   const inputRef = React.useRef<HTMLInputElement>(null)
@@ -46,6 +46,39 @@ export function Modal({
       setInputValue(defaultValue)
     }
   }, [isOpen, defaultValue])
+
+  const formattedMessage = React.useMemo(() => {
+    const blocks = message.split('\n\n').map(block => block.trim()).filter(Boolean)
+
+    return blocks.map((block) => {
+      const lines = block.split('\n').map(line => line.trim()).filter(Boolean)
+      if (lines.length === 0) {
+        return { type: 'text' as const, content: block }
+      }
+
+      const headingCandidate = lines[0]
+      const remaining = lines.slice(1)
+      const isSection = headingCandidate.endsWith(':') && remaining.length > 0
+
+      if (isSection) {
+        const items = remaining.map(line => line.replace(/^•\s*/, '').trim())
+        return {
+          type: 'section' as const,
+          heading: headingCandidate.replace(/:$/, ''),
+          items
+        }
+      }
+
+      if (lines.every(line => line.startsWith('•'))) {
+        return {
+          type: 'list' as const,
+          items: lines.map(line => line.replace(/^•\s*/, '').trim())
+        }
+      }
+
+      return { type: 'text' as const, content: lines.join(' ') }
+    })
+  }, [message])
 
   if (!isOpen) return null
 
@@ -86,16 +119,15 @@ export function Modal({
       <div
         style={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 10000,
-          backdropFilter: 'blur(2px)'
+          backdropFilter: 'blur(2px)',
+          padding: '20px',
+          maxHeight: '100%'
         }}
         onClick={handleCancel}
       >
@@ -104,8 +136,10 @@ export function Modal({
           backgroundColor: theme.background,
           borderRadius: '8px',
           padding: '24px',
-          minWidth: '400px',
-          maxWidth: '500px',
+          width: 'min(520px, calc(100% - 40px))',
+          minWidth: 'min(320px, 100%)',
+          maxHeight: 'min(600px, 100%)',
+          overflowY: 'auto',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           border: `1px solid ${theme.border}`,
           display: 'flex',
@@ -128,8 +162,68 @@ export function Modal({
         )}
 
         {/* Message */}
-        <div style={{ color: theme.text, fontSize: '14px', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
-          {message}
+        <div style={{ color: theme.text, fontSize: '14px', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {formattedMessage.map((block, index) => {
+            if (block.type === 'section') {
+              return (
+                <div
+                  key={`section-${index}`}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    border: `1px solid ${theme.border}`,
+                    backgroundColor: currentTheme === 'dark' ? 'rgba(255,255,255,0.04)' : '#f4f7fb'
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: theme.text }}>{block.heading}</span>
+                  <ul style={{ margin: 0, paddingInlineStart: '18px', display: 'grid', gap: '6px', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+                    {block.items.map((item, itemIndex) => (
+                      <li
+                        key={`section-item-${index}-${itemIndex}`}
+                        style={{
+                          listStyle: 'disc',
+                          color: theme.text,
+                          marginInlineStart: '0'
+                        }}
+                      >
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            }
+
+            if (block.type === 'list') {
+              return (
+                <ul
+                  key={`list-${index}`}
+                  style={{
+                    margin: 0,
+                    paddingInlineStart: '18px',
+                    display: 'grid',
+                    gap: '6px',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))'
+                  }}
+                >
+                  {block.items.map((item, itemIndex) => (
+                    <li key={`list-item-${index}-${itemIndex}`} style={{ listStyle: 'disc', color: theme.text }}>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              )
+            }
+
+            return (
+              <p key={`text-${index}`} style={{ margin: 0, color: theme.textSecondary }}>
+                {block.content}
+              </p>
+            )
+          })}
         </div>
 
         {/* Input para prompt */}

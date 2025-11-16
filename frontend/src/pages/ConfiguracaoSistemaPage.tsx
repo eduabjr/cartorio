@@ -21,8 +21,8 @@ const DEFAULT_PROFILE_OVERRIDES: Record<string, PerfilOverrides> = {
     larguraDatasSecao: 9,
     logoEscala: 140,
     offsetLogo: -17,
-    offsetLetra: -33,
-    offsetNumero: -25,
+    offsetLetra: -38,
+    offsetNumero: -32,
     offsetDatas: -10,
     bordaAtiva: true,
     bordaQuadrada: false
@@ -41,8 +41,8 @@ const DEFAULT_PROFILE_OVERRIDES: Record<string, PerfilOverrides> = {
     larguraDatasSecao: 9,
     logoEscala: 140,
     offsetLogo: -17,
-    offsetLetra: -33,
-    offsetNumero: -25,
+    offsetLetra: -38,
+    offsetNumero: -32,
     offsetDatas: -10,
     bordaAtiva: true,
     bordaQuadrada: false
@@ -61,8 +61,8 @@ const DEFAULT_PROFILE_OVERRIDES: Record<string, PerfilOverrides> = {
     larguraDatasSecao: 9,
     logoEscala: 140,
     offsetLogo: -17,
-    offsetLetra: -33,
-    offsetNumero: -25,
+    offsetLetra: -38,
+    offsetNumero: -32,
     offsetDatas: -10,
     bordaAtiva: true,
     bordaQuadrada: false
@@ -81,8 +81,8 @@ const DEFAULT_PROFILE_OVERRIDES: Record<string, PerfilOverrides> = {
     larguraDatasSecao: 9,
     logoEscala: 140,
     offsetLogo: -17,
-    offsetLetra: -33,
-    offsetNumero: -25,
+    offsetLetra: -38,
+    offsetNumero: -32,
     offsetDatas: -10,
     bordaAtiva: true,
     bordaQuadrada: false
@@ -101,8 +101,8 @@ const DEFAULT_PROFILE_OVERRIDES: Record<string, PerfilOverrides> = {
     larguraDatasSecao: 9,
     logoEscala: 140,
     offsetLogo: -17,
-    offsetLetra: -33,
-    offsetNumero: -25,
+    offsetLetra: -38,
+    offsetNumero: -32,
     offsetDatas: -10,
     bordaAtiva: true,
     bordaQuadrada: false
@@ -132,7 +132,7 @@ const DEFAULT_PROFILE_OVERRIDES: Record<string, PerfilOverrides> = {
     alturaLetra: 30,
     alturaNumero: 15.83,
     alturaDatas: 15.83,
-    fonteLetra: 55,
+    fonteLetra: 50,
     fonteNumero: 55,
     fonteDatas: 22,
     larguraLogoSecao: 28,
@@ -228,7 +228,38 @@ interface ConfiguracoesImpressao {
   offsetLetra: number // em mm
   offsetNumero: number // em mm
   offsetDatas: number // em mm
+  bordaAtiva?: boolean
+  bordaQuadrada?: boolean
   perfis?: Record<string, PerfilOverrides>
+  classificador?: ClassificadorConfig
+}
+
+interface ClassificadorConfig {
+  alturaLombada: number
+  larguraLombada: number
+  faixaAltura: number
+  faixaTexto: string
+  faixaFormato: 'retangular' | 'arredondada'
+  logoEscala: number
+  fonteFaixa?: number
+  fonteSuperior: number
+  fonteCentral: number
+  fonteNumero: number
+  fonteInferior: number
+  fonteDatas?: number
+  offsetLogo: number
+  offsetSuperior: number
+  offsetFaixa: number
+  offsetCentral: number
+  offsetNumero: number
+  offsetInferior: number
+  offsetTextoInferior: number
+  larguraLogoSecao: number
+  larguraSuperiorSecao: number
+  larguraCentralSecao: number
+  larguraInferiorSecao: number
+  larguraTextoInferiorSecao: number
+  faixaHabilitada: boolean
 }
 
 const TEXT_SECTION_COUNT = 3
@@ -244,6 +275,33 @@ const DEFAULT_TEXT_HEIGHT_MM = Number(
 const DEFAULT_TEXT_WIDTH_MM = Number(
   ((DEFAULT_SPINE_WIDTH_MM - DEFAULT_LOGO_WIDTH_MM) / TEXT_SECTION_COUNT).toFixed(2)
 )
+const DEFAULT_CLASSIFICADOR_CONFIG: ClassificadorConfig = {
+  alturaLombada: 105,
+  larguraLombada: 55,
+  faixaAltura: 18,
+  faixaTexto: 'CLASSIFICADOR',
+  faixaFormato: 'retangular',
+  logoEscala: 200,
+  fonteFaixa: 18,
+  fonteSuperior: 30,
+  fonteCentral: 35,
+  fonteNumero: 35,
+  fonteInferior: 25,
+  fonteDatas: 22,
+  offsetLogo: -30,
+  offsetSuperior: -57,
+  offsetFaixa: -60,
+  offsetCentral: -50,
+  offsetNumero: -45,
+  offsetInferior: -35,
+  offsetTextoInferior: -15,
+  larguraLogoSecao: 20,
+  larguraSuperiorSecao: 9,
+  larguraCentralSecao: 9,
+  larguraInferiorSecao: 9,
+  larguraTextoInferiorSecao: 9,
+  faixaHabilitada: true
+}
 
 const tipoParaLetras: Record<string, string[]> = {
   'Casamento': ['B', 'B-AUX'],
@@ -271,7 +329,8 @@ const criarLayoutAPartirConfig = (config: ConfiguracoesImpressao): LayoutConfig 
   offsetLetra: config.offsetLetra,
   offsetNumero: config.offsetNumero,
   offsetDatas: config.offsetDatas,
-  bordaAtiva: config.bordaAtiva
+  bordaAtiva: config.bordaAtiva ?? true,
+  bordaQuadrada: config.bordaQuadrada ?? false
 })
 
 interface BloqueioHorario {
@@ -415,6 +474,10 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
         perfis: {
           ...DEFAULT_PROFILE_OVERRIDES,
           ...(config.perfis ?? {})
+        },
+        classificador: {
+          ...DEFAULT_CLASSIFICADOR_CONFIG,
+          ...(config.classificador ?? {})
         }
       }
     }
@@ -440,9 +503,67 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
       offsetDatas: 0,
       bordaAtiva: true,
       perfis: { ...DEFAULT_PROFILE_OVERRIDES },
-      bordaQuadrada: false
+      bordaQuadrada: false,
+      classificador: { ...DEFAULT_CLASSIFICADOR_CONFIG }
     }
   })
+  const [abaDimensoes, setAbaDimensoes] = useState<'livros' | 'classificador'>('livros')
+  const classificadorConfig = useMemo(() => {
+    const bruto = configImpressao.classificador ?? {}
+    const fonteSuperior = (bruto as Partial<ClassificadorConfig> & { fontePrincipal?: number }).fonteSuperior
+      ?? (bruto as { fontePrincipal?: number }).fontePrincipal
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.fonteSuperior
+    const fonteCentral = (bruto as Partial<ClassificadorConfig>).fonteCentral
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.fonteCentral
+    const fonteNumero = (bruto as Partial<ClassificadorConfig>).fonteNumero
+      ?? (bruto as Partial<ClassificadorConfig>).fonteCentral
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.fonteNumero
+    const fonteInferior = (bruto as Partial<ClassificadorConfig>).fonteInferior
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.fonteInferior
+    const fonteDatas = (bruto as Partial<ClassificadorConfig>).fonteDatas
+      ?? (bruto as Partial<ClassificadorConfig>).fonteInferior
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.fonteDatas
+    const logoEscala = (bruto as Partial<ClassificadorConfig>).logoEscala
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.logoEscala
+    const offsetLogo = (bruto as Partial<ClassificadorConfig>).offsetLogo
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.offsetLogo
+    const offsetFaixa = (bruto as Partial<ClassificadorConfig>).offsetFaixa
+      ?? (bruto as Partial<ClassificadorConfig>).offsetSuperior
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.offsetFaixa
+    const offsetCentral = (bruto as Partial<ClassificadorConfig>).offsetCentral
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.offsetCentral
+    const offsetNumero = (bruto as Partial<ClassificadorConfig>).offsetNumero
+      ?? (bruto as Partial<ClassificadorConfig>).offsetCentral
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.offsetNumero
+    const offsetTextoInferior = (bruto as Partial<ClassificadorConfig>).offsetTextoInferior
+      ?? (bruto as Partial<ClassificadorConfig>).offsetInferior
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.offsetTextoInferior
+    const larguraLogoSecao = (bruto as Partial<ClassificadorConfig>).larguraLogoSecao
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.larguraLogoSecao
+    const larguraTextoInferiorSecao = (bruto as Partial<ClassificadorConfig>).larguraTextoInferiorSecao
+      ?? (bruto as Partial<ClassificadorConfig>).larguraInferiorSecao
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.larguraTextoInferiorSecao
+    const faixaFormato = (bruto as Partial<ClassificadorConfig>).faixaFormato
+      ?? DEFAULT_CLASSIFICADOR_CONFIG.faixaFormato
+    return {
+      ...DEFAULT_CLASSIFICADOR_CONFIG,
+      ...bruto,
+      fonteSuperior,
+      fonteCentral,
+      fonteNumero,
+      fonteInferior,
+      fonteDatas,
+      logoEscala,
+      offsetLogo,
+      offsetFaixa,
+      offsetCentral,
+      offsetNumero,
+      offsetTextoInferior,
+      larguraLogoSecao,
+      larguraTextoInferiorSecao,
+      faixaFormato
+    }
+  }, [configImpressao.classificador])
   const persistConfigImpressao = useCallback((config: ConfiguracoesImpressao) => {
     try {
       localStorage.setItem('config-impressao-livros', JSON.stringify(config))
@@ -451,6 +572,20 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
       console.error('❌ Erro ao salvar config-impressao-livros automaticamente:', error)
     }
   }, [])
+  const atualizarClassificadorConfig = useCallback(<K extends keyof ClassificadorConfig>(campo: K, valor: ClassificadorConfig[K]) => {
+    setConfigImpressao((prev) => {
+      const atualizado = {
+        ...prev,
+        classificador: {
+          ...DEFAULT_CLASSIFICADOR_CONFIG,
+          ...(prev.classificador ?? {}),
+          [campo]: valor
+        }
+      }
+      persistConfigImpressao(atualizado)
+      return atualizado
+    })
+  }, [persistConfigImpressao])
 
   const tiposLivro = Object.keys(tipoParaLetras)
   const [perfilTipo, setPerfilTipo] = useState<string>(tiposLivro[0])
@@ -805,6 +940,23 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
     boxSizing: 'border-box'
   }
 
+  const dimensaoTabButtonStyle = (ativo: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: '10px 14px',
+    borderRadius: '8px',
+    border: `1px solid ${ativo ? headerColor : theme.border}`,
+    backgroundColor: ativo
+      ? (currentTheme === 'dark' ? headerColor : 'rgba(0,128,128,0.08)')
+      : theme.surface,
+    color: ativo
+      ? (currentTheme === 'dark' ? '#ffffff' : headerColor)
+      : theme.text,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    boxShadow: ativo ? `0 0 0 2px ${headerColor}22` : 'none'
+  })
+
   const buttonStyles = {
     padding: '10px 20px',
     fontSize: '14px',
@@ -1098,7 +1250,9 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                             const reader = new FileReader()
                             reader.onloadend = () => {
                               const result = reader.result as string
-                              setConfigImpressao({ ...configImpressao, logoCartorio: result })
+                            const atualizado = { ...configImpressao, logoCartorio: result }
+                            setConfigImpressao(atualizado)
+                            persistConfigImpressao(atualizado)
                             }
                             reader.readAsDataURL(file)
                           }
@@ -1146,7 +1300,11 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                           }}
                         />
                         <button
-                          onClick={() => setConfigImpressao({ ...configImpressao, logoCartorio: '' })}
+                          onClick={() => {
+                            const atualizado = { ...configImpressao, logoCartorio: '' }
+                            setConfigImpressao(atualizado)
+                            persistConfigImpressao(atualizado)
+                          }}
                           style={{
                             marginTop: '12px',
                             padding: '8px 16px',
@@ -2573,7 +2731,32 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                   }}>
                     📏 Dimensões da Lombada para Impressão
                   </h3>
-                  
+                  <div style={{
+                    display: 'flex',
+                    gap: '10px',
+                    backgroundColor: theme.background,
+                    padding: '6px',
+                    borderRadius: '10px',
+                    marginBottom: '18px'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => setAbaDimensoes('livros')}
+                      style={dimensaoTabButtonStyle(abaDimensoes === 'livros')}
+                    >
+                      📚 Lombadas de Livros
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAbaDimensoes('classificador')}
+                      style={dimensaoTabButtonStyle(abaDimensoes === 'classificador')}
+                    >
+                      🗂️ Lombada do Classificador
+                    </button>
+                  </div>
+
+                  {abaDimensoes === 'livros' && (
+                    <>
                   <div style={{ 
                     display: 'grid', 
                     gridTemplateColumns: '1fr 1fr', 
@@ -2824,8 +3007,7 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                           {([
                             { label: 'Logo', campo: 'offsetLogo' },
                             { label: 'Letra', campo: 'offsetLetra' },
-                            { label: 'Número', campo: 'offsetNumero' },
-                            { label: 'Datas', campo: 'offsetDatas' }
+                            { label: 'Número', campo: 'offsetNumero' }
                           ] as Array<{ label: string; campo: keyof LayoutConfig }>).map((item) => (
                             <div key={item.campo}>
                               <label style={labelStyles}>{item.label}</label>
@@ -2849,32 +3031,6 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                         }}>
                           Valores positivos descem e negativos sobem a seção selecionada (em mm).
                         </p>
-                      </div>
-
-                      <div style={layoutSubSectionStyle}>
-                        <h5 style={layoutSubHeaderStyle}>🖨️ Borda do Perfil</h5>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: theme.text }}>
-                            <input
-                              type="checkbox"
-                              checked={Boolean(obterValorPerfil('bordaAtiva'))}
-                              onChange={(e) => atualizarPerfil('bordaAtiva', e.target.checked)}
-                              style={{ width: '16px', height: '16px' }}
-                            />
-                            Imprimir com borda para este tipo/letra
-                          </label>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '13px', color: theme.text }}>Formato:</span>
-                            <select
-                              value={obterValorPerfil('bordaQuadrada') ? 'quadrada' : 'arredondada'}
-                              onChange={(e) => atualizarPerfil('bordaQuadrada', e.target.value === 'quadrada')}
-                              style={{ ...inputStyles, width: '150px' }}
-                            >
-                              <option value="arredondada">Arredondada</option>
-                              <option value="quadrada">Quadrada</option>
-                            </select>
-                          </div>
-                        </div>
                       </div>
 
                       <div style={layoutSubSectionStyle}>
@@ -2910,6 +3066,404 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                         }}>
                           Defina larguras específicas respeitando o limite total de {configImpressao.larguraLombada} mm.
                         </p>
+                      </div>
+                    </div>
+                  </div>
+                    </>
+                  )}
+
+                  {abaDimensoes === 'classificador' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                        gap: '14px'
+                      }}>
+                        <div>
+                          <label style={labelStyles}>Altura (mm)</label>
+                          <input
+                            type="number"
+                            min="50"
+                            max="400"
+                            step="1"
+                            value={classificadorConfig.alturaLombada}
+                            onChange={(e) => {
+                              const valor = parseFloat(e.target.value)
+                              if (!Number.isNaN(valor) && valor > 0) {
+                                atualizarClassificadorConfig('alturaLombada', valor)
+                              }
+                            }}
+                            style={inputStyles}
+                          />
+                        </div>
+                        <div>
+                          <label style={labelStyles}>Largura (mm)</label>
+                          <input
+                            type="number"
+                            min="30"
+                            max="150"
+                            step="1"
+                            value={classificadorConfig.larguraLombada}
+                            onChange={(e) => {
+                              const valor = parseFloat(e.target.value)
+                              if (!Number.isNaN(valor) && valor > 0) {
+                                atualizarClassificadorConfig('larguraLombada', valor)
+                              }
+                            }}
+                            style={inputStyles}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={layoutCardStyle}>
+                        <h4 style={layoutSectionTitleStyle}>Faixa “CLASSIFICADOR”</h4>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                          gap: '12px'
+                        }}>
+                          <div>
+                            <label style={labelStyles}>Texto da faixa</label>
+                            <input
+                              type="text"
+                              value={classificadorConfig.faixaTexto}
+                              onChange={(e) => atualizarClassificadorConfig('faixaTexto', e.target.value.toUpperCase())}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Formato da faixa</label>
+                            <select
+                              value={classificadorConfig.faixaFormato}
+                              onChange={(e) => atualizarClassificadorConfig('faixaFormato', e.target.value as 'retangular' | 'arredondada')}
+                              style={{ ...inputStyles, textTransform: 'capitalize' }}
+                            >
+                              <option value="arredondada">Arredondada</option>
+                              <option value="retangular">Retangular</option>
+                            </select>
+                          </div>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px', fontSize: '13px', color: theme.text }}>
+                            <input
+                              type="checkbox"
+                              checked={classificadorConfig.faixaHabilitada}
+                              onChange={(e) => atualizarClassificadorConfig('faixaHabilitada', e.target.checked)}
+                              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            />
+                            Exibir barra sombreada (cobre o texto da faixa)
+                          </label>
+                        </div>
+                      </div>
+
+                      <div style={layoutCardStyle}>
+                        <h4 style={layoutSectionTitleStyle}>🔤 Tamanho das Fontes (px)</h4>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '12px'
+                        }}>
+                          <div>
+                            <label style={labelStyles}>Logo (%)</label>
+                            <input
+                              type="number"
+                              min="10"
+                              max="300"
+                              value={classificadorConfig.logoEscala}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor > 0) {
+                                  atualizarClassificadorConfig('logoEscala', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Faixa CLASSIFICADOR (px)</label>
+                            <input
+                              type="number"
+                              min="8"
+                              max="220"
+                              value={classificadorConfig.fonteFaixa ?? classificadorConfig.fonteSuperior}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor > 0) {
+                                  atualizarClassificadorConfig('fonteFaixa', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Texto Superior</label>
+                            <input
+                              type="number"
+                              min="8"
+                              max="200"
+                              value={classificadorConfig.fonteSuperior}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor > 0) {
+                                  atualizarClassificadorConfig('fonteSuperior', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Número</label>
+                            <input
+                              type="number"
+                              min="8"
+                              max="200"
+                              value={classificadorConfig.fonteNumero}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor > 0) {
+                                  atualizarClassificadorConfig('fonteNumero', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Texto Inferior</label>
+                            <input
+                              type="number"
+                              min="8"
+                              max="200"
+                              value={classificadorConfig.fonteInferior}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor > 0) {
+                                  atualizarClassificadorConfig('fonteInferior', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Datas</label>
+                            <input
+                              type="number"
+                              min="8"
+                              max="200"
+                              value={classificadorConfig.fonteDatas ?? classificadorConfig.fonteInferior}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor > 0) {
+                                  atualizarClassificadorConfig('fonteDatas', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '12px', color: theme.textSecondary }}>
+                          Defina tamanhos proporcionais para cada faixa de texto do classificador.
+                        </p>
+                      </div>
+
+                      <div style={layoutCardStyle}>
+                        <h4 style={layoutSectionTitleStyle}>🎚️ Ajuste Vertical (mm)</h4>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '12px'
+                        }}>
+                          <div>
+                            <label style={labelStyles}>Logo</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={classificadorConfig.offsetLogo}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor)) {
+                                  atualizarClassificadorConfig('offsetLogo', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Faixa CLASSIFICADOR</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={classificadorConfig.offsetFaixa}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor)) {
+                                  atualizarClassificadorConfig('offsetFaixa', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Texto Superior</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={classificadorConfig.offsetSuperior}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor)) {
+                                  atualizarClassificadorConfig('offsetSuperior', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Número / Texto Central</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={classificadorConfig.offsetNumero}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor)) {
+                                  atualizarClassificadorConfig('offsetNumero', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          {/* Texto Inferior agora fica em posição fixa; sem ajuste vertical configurável */}
+                        </div>
+                        <p style={{ margin: 0, fontSize: '12px', color: theme.textSecondary }}>
+                          Valores positivos descem cada faixa; valores negativos sobem (em milímetros).
+                        </p>
+                      </div>
+
+                      <div style={layoutCardStyle}>
+                        <h4 style={layoutSectionTitleStyle}>📏 Distribuição da Largura (mm)</h4>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '12px'
+                        }}>
+                          <div>
+                            <label style={labelStyles}>Logo</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={classificadorConfig.larguraLogoSecao}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor >= 0) {
+                                  atualizarClassificadorConfig('larguraLogoSecao', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Texto Superior</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={classificadorConfig.larguraSuperiorSecao}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor >= 0) {
+                                  atualizarClassificadorConfig('larguraSuperiorSecao', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Texto Central / Número</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={classificadorConfig.larguraCentralSecao}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor >= 0) {
+                                  atualizarClassificadorConfig('larguraCentralSecao', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Datas</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={classificadorConfig.larguraInferiorSecao}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor >= 0) {
+                                  atualizarClassificadorConfig('larguraInferiorSecao', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyles}>Texto Inferior</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={classificadorConfig.larguraTextoInferiorSecao}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value)
+                                if (!Number.isNaN(valor) && valor >= 0) {
+                                  atualizarClassificadorConfig('larguraTextoInferiorSecao', valor)
+                                }
+                              }}
+                              style={inputStyles}
+                            />
+                          </div>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '12px', color: theme.textSecondary }}>
+                          Mantenha a soma próxima de {classificadorConfig.larguraLombada} mm para aproveitar toda a largura da lombada.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Borda global (aplica para TODAS as lombadas) */}
+                  <div style={{ ...layoutCardStyle, marginTop: '20px' }}>
+                    <h4 style={layoutSectionTitleStyle}>🖨️ Borda das Lombadas (GLOBAL)</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: theme.text }}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(configImpressao.bordaAtiva)}
+                          onChange={(e) => {
+                            const atualizado = { ...configImpressao, bordaAtiva: e.target.checked }
+                            setConfigImpressao(atualizado)
+                            persistConfigImpressao(atualizado)
+                          }}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        Imprimir com borda em todas as lombadas
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '13px', color: theme.text }}>Formato:</span>
+                        <select
+                          value={configImpressao.bordaQuadrada ? 'quadrada' : 'arredondada'}
+                          onChange={(e) => {
+                            const bordaQuadrada = e.target.value === 'quadrada'
+                            const atualizado = { ...configImpressao, bordaQuadrada }
+                            setConfigImpressao(atualizado)
+                            persistConfigImpressao(atualizado)
+                          }}
+                          style={{ ...inputStyles, width: '150px' }}
+                        >
+                          <option value="arredondada">Arredondada</option>
+                          <option value="quadrada">Quadrada</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -2962,7 +3516,7 @@ export function ConfiguracaoSistemaPage({ onClose }: ConfiguracaoSistemaPageProp
                     `• Letra: ${configImpressao.offsetLetra}\n` +
                     `• Número: ${configImpressao.offsetNumero}\n` +
                     `• Datas: ${configImpressao.offsetDatas}\n` +
-                    `• Borda: ${configImpressao.bordaAtiva ? (configImpressao.bordaQuadrada ? 'Sim (Quadrada)' : 'Sim (Arredondada)') : 'Não'}` +
+                    `• Borda: ${(configImpressao.bordaAtiva ?? true) ? ((configImpressao.bordaQuadrada ?? false) ? 'Sim (Quadrada)' : 'Sim (Arredondada)') : 'Não'}` +
                     `\n\n🎯 Perfis personalizados: ${Object.keys(configImpressao.perfis ?? {}).length}`,
                     'Configurações Salvas',
                     '✅'

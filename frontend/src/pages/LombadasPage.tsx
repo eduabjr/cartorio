@@ -6,6 +6,95 @@ import { useAccessibility } from '../hooks/useAccessibility';
 const PERFIL_BASE_KEY = 'Casamento__B';
 const LETRAS_COMPARTILHADAS = new Set(['B', 'C', 'E', 'A']);
 
+const CODIGO_STORAGE_KEY = 'lombadas-codigo-sequencial';
+
+const lerUltimoCodigoSalvo = () => {
+  if (typeof window === 'undefined') {
+    return 0;
+  }
+  try {
+    const raw = window.localStorage.getItem(CODIGO_STORAGE_KEY);
+    const parsed = raw ? parseInt(raw, 10) : 0;
+    return Number.isFinite(parsed) ? parsed : 0;
+  } catch (error) {
+    console.error('Erro ao ler sequência de códigos:', error);
+    return 0;
+  }
+};
+
+const persistirUltimoCodigo = (valor: number) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(CODIGO_STORAGE_KEY, String(valor));
+  } catch (error) {
+    console.error('Erro ao salvar sequência de códigos:', error);
+  }
+};
+
+const gerarCodigoSequencial = () => {
+  const ultimo = lerUltimoCodigoSalvo();
+  const proximo = ultimo + 1;
+  persistirUltimoCodigo(proximo);
+  return proximo.toString();
+};
+
+let textMeasureCanvas: HTMLCanvasElement | null = null;
+const obterLarguraTextoPx = (texto: string, fontePx: number) => {
+  if (!Number.isFinite(fontePx) || fontePx <= 0) {
+    return 0;
+  }
+  if (typeof document === 'undefined') {
+    return texto.length * fontePx * 0.62;
+  }
+  if (!textMeasureCanvas) {
+    textMeasureCanvas = document.createElement('canvas');
+  }
+  const context = textMeasureCanvas.getContext('2d');
+  if (!context) {
+    return texto.length * fontePx * 0.62;
+  }
+  context.font = `${fontePx}px "Arial Black", Arial, sans-serif`;
+  return context.measureText(texto || '').width;
+};
+
+const ajustarFonteParaLarguraPx = (texto: string, larguraPx: number, fonteBasePx: number) => {
+  if (!Number.isFinite(fonteBasePx) || fonteBasePx <= 0) {
+    return fonteBasePx;
+  }
+
+  const larguraMaxPx = Math.max(larguraPx, 1);
+  const textoLimpo = (texto || '').trim();
+  if (!textoLimpo.length) {
+    return fonteBasePx;
+  }
+
+  let fonteAtual = fonteBasePx;
+  if (textoLimpo.replace(/\D/g, '').length > 3) {
+    fonteAtual = fonteBasePx * 0.88;
+  }
+
+  const larguraReal = obterLarguraTextoPx(textoLimpo, fonteAtual);
+  if (larguraReal <= larguraMaxPx || larguraReal === 0) {
+    return fonteAtual;
+  }
+
+  const larguraMargemPx = larguraMaxPx * 0.9;
+  const larguraNecessaria = larguraReal;
+  const ratio = larguraNecessaria / larguraMargemPx;
+
+  if (!Number.isFinite(ratio) || ratio <= 1) {
+    return fonteAtual;
+  }
+
+  const fonteAjustada = fonteAtual / Math.pow(ratio, 0.4);
+
+  // permite reduzir mais quando necessário, mas sem passar de ~50% do valor configurado
+  const limiteMin = Math.max(fonteBasePx * 0.5, 16);
+  return Math.max(fonteAjustada, limiteMin);
+};
+
 const DEFAULT_LAYOUT_PROFILE_OVERRIDES: Record<string, Partial<LayoutConfig>> = {
   'Casamento__B': {
     alturaLogo: 50,
@@ -182,11 +271,44 @@ interface LombadaData {
   infoAdicional: string;
   contexto?: 'livro' | 'classificador';
   layout?: LayoutConfig;
+  classificadorAtivo?: boolean;
+  textoSuperior?: string;
+  textoInferior?: string;
+  usarTextoCentral?: boolean;
+  textoCentral?: string;
 }
 
 interface LombadasPageProps {
   onClose: () => void;
   modo?: 'livro' | 'classificador';
+}
+
+interface ClassificadorConfig {
+  alturaLombada: number;
+  larguraLombada: number;
+  faixaAltura: number;
+  faixaTexto: string;
+  faixaFormato: 'retangular' | 'arredondada';
+  logoEscala: number;
+  fonteFaixa?: number;
+  fonteSuperior: number;
+  fonteCentral: number;
+  fonteNumero: number;
+  fonteInferior: number;
+  fonteDatas?: number;
+  offsetLogo: number;
+  offsetSuperior: number;
+  offsetFaixa: number;
+  offsetCentral: number;
+  offsetNumero: number;
+  offsetInferior: number;
+  offsetTextoInferior: number;
+  larguraLogoSecao: number;
+  larguraSuperiorSecao: number;
+  larguraCentralSecao: number;
+  larguraInferiorSecao: number;
+  larguraTextoInferiorSecao: number;
+  faixaHabilitada: boolean;
 }
 
 interface ConfiguracoesImpressao {
@@ -212,6 +334,7 @@ interface ConfiguracoesImpressao {
   offsetDatas: number;
   bordaAtiva?: boolean;
   bordaQuadrada?: boolean;
+  classificador?: ClassificadorConfig;
 }
 
 const MM_TO_PX = 3.7795275591;
@@ -231,6 +354,34 @@ const DEFAULT_TEXT_WIDTH_MM = Number(
   ((DEFAULT_SPINE_WIDTH_MM - DEFAULT_LOGO_WIDTH_MM) / TEXT_SECTION_COUNT).toFixed(2)
 );
 const DEFAULT_OFFSET_MM = 0;
+
+const DEFAULT_CLASSIFICADOR_CONFIG: ClassificadorConfig = {
+  alturaLombada: 105,
+  larguraLombada: 55,
+  faixaAltura: 18,
+  faixaTexto: 'CLASSIFICADOR',
+  faixaFormato: 'retangular',
+  logoEscala: 200,
+  fonteFaixa: 18,
+  fonteSuperior: 30,
+  fonteCentral: 35,
+  fonteNumero: 35,
+  fonteInferior: 25,
+  fonteDatas: 22,
+  offsetLogo: -30,
+  offsetSuperior: -57,
+  offsetFaixa: -60,
+  offsetCentral: -50,
+  offsetNumero: -45,
+  offsetInferior: -35,
+  offsetTextoInferior: -15,
+  larguraLogoSecao: 20,
+  larguraSuperiorSecao: 9,
+  larguraCentralSecao: 9,
+  larguraInferiorSecao: 9,
+  larguraTextoInferiorSecao: 9,
+  faixaHabilitada: true
+};
 
 const clamp = (valor: number, min: number, max: number) => Math.min(Math.max(valor, min), max);
 
@@ -265,26 +416,53 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
   const [offsetDatas, setOffsetDatas] = useState<number>(DEFAULT_OFFSET_MM);
   const [bordaAtiva, setBordaAtiva] = useState<boolean>(true);
   const [bordaQuadrada, setBordaQuadrada] = useState<boolean>(false);
+  const [configClassificador, setConfigClassificador] = useState<ClassificadorConfig>(DEFAULT_CLASSIFICADOR_CONFIG);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+  const [termoBusca, setTermoBusca] = useState<string>('');
 
   const [lombadas, setLombadas] = useState<LombadaData[]>(() => {
+    if (typeof window === 'undefined') {
+      return [];
+    }
     try {
-      const lombadasSalvas = localStorage.getItem('lombadas-livros');
+      const lombadasSalvas = window.localStorage.getItem('lombadas-livros');
       if (lombadasSalvas) {
         const lombadasParseadas = JSON.parse(lombadasSalvas) as Partial<LombadaData>[];
-        return lombadasParseadas.map((lombada) => ({
-          codigo: '0',
-          logo: lombada.logo ?? '',
-          tipoLivro: lombada.tipoLivro ?? '',
-          letra: lombada.letra ?? '',
-          numero: lombada.numero ?? '',
-          dataInicio: lombada.dataInicio ?? '',
-          dataFim: lombada.dataFim ?? '',
-          infoAdicional: lombada.infoAdicional ?? '',
-          contexto: lombada.contexto === 'classificador' ? 'classificador' : 'livro',
-          layout: lombada.layout as LayoutConfig | undefined
-        }));
+        let ultimoCodigo = lerUltimoCodigoSalvo();
+
+        const reconstruidas = lombadasParseadas.map((lombada) => {
+          let codigoAtual = (lombada.codigo ?? '').toString().trim();
+          const codigoNumerico = parseInt(codigoAtual, 10);
+
+          if (!codigoAtual || Number.isNaN(codigoNumerico) || codigoNumerico <= 0) {
+            ultimoCodigo += 1;
+            codigoAtual = ultimoCodigo.toString();
+          } else if (codigoNumerico > ultimoCodigo) {
+            ultimoCodigo = codigoNumerico;
+          }
+
+          return {
+            codigo: codigoAtual,
+            logo: '',
+            tipoLivro: lombada.tipoLivro ?? '',
+            letra: lombada.letra ?? '',
+            numero: lombada.numero ?? '',
+            dataInicio: lombada.dataInicio ?? '',
+            dataFim: lombada.dataFim ?? '',
+            infoAdicional: lombada.infoAdicional ?? '',
+            contexto: lombada.contexto === 'classificador' ? 'classificador' : 'livro',
+            layout: lombada.layout as LayoutConfig | undefined,
+            classificadorAtivo: lombada.classificadorAtivo ?? (lombada.contexto === 'classificador'),
+            textoSuperior: lombada.textoSuperior ?? '',
+            textoInferior: lombada.textoInferior ?? '',
+            usarTextoCentral: lombada.usarTextoCentral ?? false,
+            textoCentral: lombada.textoCentral ?? ''
+          };
+        });
+
+        persistirUltimoCodigo(ultimoCodigo);
+        return reconstruidas as LombadaData[];
       }
     } catch (error) {
       console.error('Erro ao carregar lombadas:', error);
@@ -323,6 +501,10 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
           ...(config.perfis ?? {})
         };
         setPerfis(mergedPerfis);
+        setConfigClassificador({
+          ...DEFAULT_CLASSIFICADOR_CONFIG,
+          ...(config.classificador ?? {})
+        });
         console.log('✅ Configurações carregadas:', config);
       } else {
         setAlturaLombada(DEFAULT_SPINE_HEIGHT_MM);
@@ -346,6 +528,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
         setBordaAtiva(true);
         setBordaQuadrada(false);
         setPerfis({ ...DEFAULT_LAYOUT_PROFILE_OVERRIDES });
+        setConfigClassificador(DEFAULT_CLASSIFICADOR_CONFIG);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -370,6 +553,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
       setOffsetDatas(DEFAULT_OFFSET_MM);
       setBordaAtiva(true);
       setBordaQuadrada(false);
+      setConfigClassificador(DEFAULT_CLASSIFICADOR_CONFIG);
     }
   }, []);
 
@@ -384,9 +568,11 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
       console.log('🖼️ Configurações de impressão atualizadas! Recarregando...');
       carregarConfiguracoes();
       setLombadas((prev) =>
-        prev.map((lombada) =>
-          lombada.layout ? { ...lombada, layout: undefined } : lombada
-        )
+        prev.map((lombada) => ({
+          ...lombada,
+          layout: undefined,
+          logo: ''
+        }))
       );
     };
 
@@ -458,6 +644,28 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     bordaQuadrada
   ]);
 
+  const construirLayoutClassificador = useCallback(() => {
+    const offsetDatas = 0;
+    return construirLayout({
+      alturaLogo,
+      // Quando estamos no modo classificador, todo o conteúdo textual
+      // fica na área de "letra" + "datas"; não reservamos altura para número.
+      alturaNumero: 0,
+      logoEscala: configClassificador.logoEscala,
+      fonteLetra: configClassificador.fonteSuperior,
+      fonteNumero: configClassificador.fonteNumero ?? configClassificador.fonteCentral,
+      fonteDatas: configClassificador.fonteDatas ?? configClassificador.fonteInferior,
+      offsetLogo: typeof configClassificador.offsetLogo === 'number' ? configClassificador.offsetLogo : 0,
+      offsetLetra: configClassificador.offsetSuperior,
+      offsetNumero: configClassificador.offsetNumero ?? configClassificador.offsetCentral,
+      offsetDatas,
+      larguraLogoSecao: Math.max(configClassificador.larguraLogoSecao ?? larguraLogoSecao, 0),
+      larguraLetraSecao: Math.max(configClassificador.larguraSuperiorSecao, 0),
+      larguraNumeroSecao: Math.max(configClassificador.larguraCentralSecao, 0),
+      larguraDatasSecao: Math.max(configClassificador.larguraInferiorSecao, 0)
+    });
+  }, [construirLayout, alturaLogo, larguraLogoSecao, configClassificador]);
+
   const obterLayoutPara = useCallback((tipo?: string, letra?: string): LayoutConfig => {
     if (!tipo || !letra) {
       return construirLayout();
@@ -480,21 +688,55 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     if (!lombada) {
       return construirLayout();
     }
+    if (lombada.contexto === 'classificador') {
+      return construirLayoutClassificador();
+    }
     if (lombada.layout) {
       return construirLayout(lombada.layout);
     }
     return obterLayoutPara(lombada.tipoLivro, lombada.letra);
-  }, [construirLayout, obterLayoutPara]);
+  }, [construirLayout, construirLayoutClassificador, obterLayoutPara]);
 
-  const formatTwoDecimalsTruncated = (value: number) => {
+const formatTwoDecimalsTruncated = (value: number) => {
     if (!Number.isFinite(value)) {
       return '0.00';
     }
     return (Math.trunc(value * 100) / 100).toFixed(2);
   };
 
-  const calcularLayoutDados = useCallback((layout: LayoutConfig) => {
-    const availableHeightMm = Math.max(alturaLombada - SECTION_GAP_MM * TEXT_SECTION_COUNT, 0);
+const formatDateOrPlaceholder = (value?: string, placeholder = '') => {
+  if (!value) {
+    return placeholder;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return placeholder;
+  }
+  return date.toLocaleDateString('pt-BR');
+};
+
+// Retorna uma string pronta para exibição:
+// - '' quando não houver datas válidas
+// - 'DATA' quando houver apenas uma
+// - 'DATA1 a DATA2' quando houver as duas
+const formatDateRange = (inicio?: string, fim?: string): string => {
+  const inicioFormatado = formatDateOrPlaceholder(inicio, '');
+  const fimFormatado = formatDateOrPlaceholder(fim, '');
+
+  if (!inicioFormatado && !fimFormatado) {
+    return '';
+  }
+  if (inicioFormatado && fimFormatado) {
+    return `${inicioFormatado} a ${fimFormatado}`;
+  }
+  return inicioFormatado || fimFormatado;
+};
+
+  const calcularLayoutDados = useCallback((layout: LayoutConfig, options?: { alturaMm?: number; larguraMm?: number }) => {
+    const alturaBaseMm = typeof options?.alturaMm === 'number' ? options.alturaMm : alturaLombada;
+    const larguraBaseMm = typeof options?.larguraMm === 'number' ? options.larguraMm : larguraLombada;
+
+    const availableHeightMm = Math.max(alturaBaseMm - SECTION_GAP_MM * TEXT_SECTION_COUNT, 0);
     const logoBaseHeightMm = clamp(layout.alturaLogo, 0, availableHeightMm);
     const logoScaleFactor = Math.max(layout.logoEscala || 100, 1) / 100;
     const logoHeightMm = Math.min(logoBaseHeightMm * logoScaleFactor, availableHeightMm);
@@ -534,7 +776,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
       datas: heightsMm.datas * MM_TO_PX
     };
 
-    const availableWidthMm = Math.max(larguraLombada, 0);
+    const availableWidthMm = Math.max(larguraBaseMm, 0);
     const logoBaseWidthMm = clamp(layout.larguraLogoSecao, 0, availableWidthMm);
     const logoWidthMm = Math.min(logoBaseWidthMm * logoScaleFactor, availableWidthMm);
     const remainingWidthMm = Math.max(availableWidthMm - logoWidthMm, 0);
@@ -678,11 +920,16 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     });
   }, [obterLayoutPara]);
 
-  // Função para gerar código fixo
-  const gerarCodigo = useCallback(() => '0', []);
+  // Função para gerar código sequencial
+  const gerarCodigo = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return Date.now().toString();
+    }
+    return gerarCodigoSequencial();
+  }, []);
 
   const criarFormDataInicial = useCallback((contexto: 'livro' | 'classificador'): LombadaData => ({
-    codigo: gerarCodigo(),
+    codigo: '',
     logo: '',
     tipoLivro: '',
     letra: '',
@@ -691,8 +938,13 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     dataFim: '',
     infoAdicional: '',
     contexto,
-    layout: undefined
-  }), [gerarCodigo]);
+    layout: undefined,
+    classificadorAtivo: contexto === 'classificador',
+    textoSuperior: '',
+    textoInferior: '',
+    usarTextoCentral: false,
+    textoCentral: ''
+  }), []);
 
   const [formData, setFormData] = useState<LombadaData>(() => criarFormDataInicial(modo ?? 'livro'));
 
@@ -711,21 +963,40 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
   }, [selectionMode, selectedIndices, lombadaSelecionada, lombadas.length]);
 
   const lombadasParaImpressao = useMemo(() => {
+    const filtrarParaImpressao = (lista: Array<LombadaData | undefined>) =>
+      lista.filter((item): item is LombadaData => Boolean(item));
+
     if (selectionMode && selectedIndices.length > 0) {
-      return selectedIndices
-        .map((index) => lombadas[index])
-        .filter((item): item is LombadaData => Boolean(item));
+      return filtrarParaImpressao(selectedIndices.map((index) => lombadas[index]));
     }
     if (lombadaSelecionada !== null) {
-      const item = lombadas[lombadaSelecionada];
-      return item ? [item] : [];
+      return filtrarParaImpressao([lombadas[lombadaSelecionada]]);
     }
     if (lombadas.length > 0) {
-      const first = lombadas[0];
-      return first ? [first] : [];
+      return filtrarParaImpressao([lombadas[0]]);
     }
     return [];
   }, [selectionMode, selectedIndices, lombadaSelecionada, lombadas]);
+
+  const lombadasFiltradas = useMemo(() => {
+    if (!termoBusca.trim()) {
+      return lombadas;
+    }
+    const termo = termoBusca.toLowerCase().trim();
+    return lombadas.filter((lombada) => {
+      const isClassificadorItem = lombada.contexto === 'classificador';
+      const descricao = isClassificadorItem 
+        ? (lombada.infoAdicional || 'Sem descrição definida')
+        : '';
+      const tipo = lombada.tipoLivro || '';
+      const codigo = lombada.codigo || '';
+      return (
+        descricao.toLowerCase().includes(termo) ||
+        tipo.toLowerCase().includes(termo) ||
+        codigo.toLowerCase().includes(termo)
+      );
+    });
+  }, [lombadas, termoBusca]);
 
   const previewLabel = useMemo(() => {
     const currentIndex = activePreviewIndices.indexOf(lombadaSelecionada ?? -1);
@@ -849,29 +1120,102 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     if (name === 'tipoLivro') {
       const novasLetras = tipoParaLetras[value] || [];
       setLetrasDisponiveis(novasLetras);
-      setFormData({ ...formData, [name]: value, letra: '' });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const adicionarLombada = () => {
-    if (!formData.letra || !formData.numero || !formData.dataInicio || !formData.dataFim) {
-      alert('Preencha todos os campos obrigatórios');
+      setFormData((prev) => ({
+        ...prev,
+        tipoLivro: value,
+        letra: ''
+      }));
       return;
     }
 
-    const layoutAtual = obterLayoutPara(formData.tipoLivro, formData.letra);
+    setFormData((prev) => {
+      const atualizado: LombadaData = {
+        ...prev,
+        [name]: value
+      } as LombadaData;
+
+      // Regra especial para Texto Inferior no CLASSIFICADOR:
+      // Se ambas as datas (início e fim) estiverem preenchidas,
+      // o campo Texto Inferior não deve ser usado.
+      if (
+        atualizado.contexto === 'classificador' &&
+        (name === 'dataInicio' || name === 'dataFim')
+      ) {
+        const temInicio = !!(name === 'dataInicio' ? value : atualizado.dataInicio);
+        const temFim = !!(name === 'dataFim' ? value : atualizado.dataFim);
+        if (temInicio && temFim) {
+          atualizado.textoInferior = '';
+        }
+      }
+
+      return atualizado;
+    });
+  };
+
+  const handleToggleClassificador = useCallback((checked: boolean) => {
+    setFormData((prev) => {
+      // Quando ativar o classificador, limpamos o Texto Superior
+      // para evitar conflito visual com o texto padrão da faixa.
+      if (checked) {
+        return {
+          ...prev,
+          classificadorAtivo: true,
+          textoSuperior: ''
+        };
+      }
+      // Ao desativar, apenas marcamos como inativo, sem recriar texto.
+      return {
+        ...prev,
+        classificadorAtivo: false
+      };
+    });
+  }, []);
+
+  const handleToggleTextoCentral = useCallback((checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      usarTextoCentral: checked
+    }));
+  }, []);
+
+  const adicionarLombada = () => {
+    const isClassificador = submenuCadastro === 'classificador';
+    if (!isClassificador && (!formData.letra || !formData.numero)) {
+      alert('Preencha os campos obrigatórios: letra e número.');
+      return;
+    }
+
+    const codigoAtual = gerarCodigo();
+
+    const layoutAtual = submenuCadastro === 'classificador'
+      ? undefined
+      : obterLayoutPara(formData.tipoLivro, formData.letra);
 
     if (modoEdicao && lombadaSelecionada !== null) {
+      const selectedIndex = lombadaSelecionada;
       const novasLombadas = [...lombadas];
-      novasLombadas[lombadaSelecionada] = { ...formData, contexto: submenuCadastro, logo, layout: layoutAtual };
+      novasLombadas[selectedIndex] = {
+        ...formData,
+        codigo: formData.codigo && formData.codigo.toString().trim()
+          ? formData.codigo.toString()
+          : codigoAtual,
+        contexto: submenuCadastro,
+        logo: '',
+        layout: layoutAtual
+      };
       setLombadas(novasLombadas);
       setModoEdicao(false);
-      setLombadaSelecionada(null);
+      // Mantém a lombada editada selecionada para que o Preview mostre o que foi salvo
+      setLombadaSelecionada(selectedIndex);
       limparFormulario();
     } else {
-      const novaLombada: LombadaData = { ...formData, contexto: submenuCadastro, logo, layout: layoutAtual };
+      const novaLombada: LombadaData = {
+        ...formData,
+        codigo: codigoAtual,
+        contexto: submenuCadastro,
+        logo: '',
+        layout: layoutAtual
+      };
       setLombadas([...lombadas, novaLombada]);
       setLombadaSelecionada(lombadas.length);
       limparFormulario();
@@ -962,9 +1306,13 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
 
   const editarLombada = (index: number) => {
     const lombada = lombadas[index];
+    // Ao entrar em modo de edição, garantimos que o preview passe a obedecer
+    // apenas à lombada selecionada, desativando qualquer seleção múltipla anterior.
+    setSelectionMode(false);
+    setSelectedIndices([]);
     selecionarSubmenu(lombada.contexto ?? 'livro', false);
     setFormData({
-      codigo: lombada.codigo || '0', // Mantém o código atual ou padrão
+      codigo: lombada.codigo && lombada.codigo.toString().trim() ? lombada.codigo.toString() : '',
       logo: lombada.logo,
       tipoLivro: lombada.tipoLivro,
       letra: lombada.letra,
@@ -973,7 +1321,12 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
       dataFim: lombada.dataFim,
       infoAdicional: lombada.infoAdicional,
       contexto: lombada.contexto ?? submenuCadastro,
-      layout: lombada.layout
+      layout: lombada.layout,
+      classificadorAtivo: lombada.classificadorAtivo ?? (lombada.contexto === 'classificador'),
+      textoSuperior: lombada.textoSuperior ?? '',
+      textoInferior: lombada.textoInferior ?? '',
+      usarTextoCentral: lombada.usarTextoCentral ?? false,
+      textoCentral: lombada.textoCentral ?? ''
     });
     setLetrasDisponiveis(tipoParaLetras[lombada.tipoLivro] || []);
     setLombadaSelecionada(index);
@@ -997,18 +1350,6 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
       : '0 2px 10px rgba(0,0,0,0.08)'
   };
 
-  const outerWrapperStyle: React.CSSProperties = {
-    flex: 1,
-    minHeight: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: theme.background,
-    padding: '16px',
-    borderRadius: '12px',
-    overflow: 'hidden',
-    gap: '16px'
-  };
-
   const formGridStyle: React.CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
@@ -1022,6 +1363,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
   };
 
   const labelStyle: React.CSSProperties = {
+    display: 'block',
     marginBottom: '8px',
     fontWeight: '500',
     color: theme.text,
@@ -1035,7 +1377,8 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     borderRadius: '4px',
     outline: 'none',
     backgroundColor: theme.surface,
-    color: theme.text
+    color: theme.text,
+    width: '100%'
   };
 
   const arrowColor = currentTheme === 'dark' ? '%23FFFFFF' : '%23333333';
@@ -1057,11 +1400,6 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     display: 'flex',
     gap: '10px'
   };
-
-  const previewWidthPx = Math.max(larguraLombada, 0.1) * PREVIEW_SCALE;
-  const previewHeightPx = Math.max(alturaLombada, 0.1) * PREVIEW_SCALE;
-  const previewContainerWidth = previewWidthPx + PREVIEW_PADDING * 2;
-  const previewContainerHeight = previewHeightPx + PREVIEW_PADDING * 2;
 
   const previewGapPx = SECTION_GAP_MM * PREVIEW_SCALE;
   const printGapPx = SECTION_GAP_MM * MM_TO_PX;
@@ -1162,15 +1500,170 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
     }
 
     const lombadaAtual = lombadas[lombadaSelecionada];
-    const logoAtual = lombadaAtual.logo || logo;
-    const layoutConfig = obterLayoutParaLombada(lombadaAtual);
-    const layoutDados = calcularLayoutDados(layoutConfig);
-    const logoEscalaPercent = Number.isFinite(layoutConfig.logoEscala) ? Number(layoutConfig.logoEscala) : 100;
+
+    // Quando estiver em modo de edição, usamos os dados digitados no formulário
+    // como base para o preview, mantendo campos de controle (código/contexto) da lombada original.
+    const dadosPreview: LombadaData = modoEdicao
+      ? {
+          ...lombadaAtual,
+          ...formData,
+          codigo: lombadaAtual.codigo,
+          contexto: lombadaAtual.contexto,
+          layout: lombadaAtual.layout
+        }
+      : lombadaAtual;
+
+    const logoAtual = dadosPreview.logo || logo;
+    const layoutConfig = obterLayoutParaLombada(dadosPreview);
+    const isClassificadorPreview = dadosPreview.contexto === 'classificador';
+    const logoEscalaPercent = isClassificadorPreview
+      ? (configClassificador.logoEscala ?? 100)
+      : (Number.isFinite(layoutConfig.logoEscala) ? Number(layoutConfig.logoEscala) : 100);
+
+    const dataInicioFormatada = formatDateOrPlaceholder(dadosPreview.dataInicio);
+    const dataFimFormatada = formatDateOrPlaceholder(dadosPreview.dataFim);
+    const possuiDataInicio = !!dataInicioFormatada;
+    const possuiDataFim = !!dataFimFormatada;
+    const alturaPreviewMm = isClassificadorPreview ? configClassificador.alturaLombada : alturaLombada;
+    const larguraPreviewMm = isClassificadorPreview ? configClassificador.larguraLombada : larguraLombada;
+    const layoutDados = calcularLayoutDados(layoutConfig, {
+      alturaMm: alturaPreviewMm,
+      larguraMm: larguraPreviewMm
+    });
+    const previewWidthPx = Math.max(larguraPreviewMm, 0.1) * PREVIEW_SCALE;
+    const previewHeightPx = Math.max(alturaPreviewMm, 0.1) * PREVIEW_SCALE;
+    const previewContainerWidth = previewWidthPx + PREVIEW_PADDING * 2;
+    const previewContainerHeight = previewHeightPx + PREVIEW_PADDING * 2;
     const previewBorder = layoutDados.bordaAtiva ? `2px solid ${theme.border}` : 'none';
     const previewShadow = layoutDados.bordaAtiva ? '0 12px 28px rgba(0,0,0,0.18)' : 'none';
+    const textoSuperiorPreview = (dadosPreview.textoSuperior ?? '').trim();
+    const textoCentralPreview = (dadosPreview.textoCentral ?? '').trim();
+    const textoInferiorPreview = (dadosPreview.textoInferior ?? '').trim();
+    const faixaClassificadorAtivaPreview = isClassificadorPreview && Boolean(dadosPreview.classificadorAtivo) && configClassificador.faixaHabilitada;
+    const letraParts = (() => {
+      if (faixaClassificadorAtivaPreview) {
+        // Para o classificador, a faixa usa SEMPRE o texto configurado globalmente,
+        // independente do Texto Superior da lombada individual.
+        const textoFaixa = (configClassificador.faixaTexto || 'Classificador').toUpperCase();
+        return [textoFaixa];
+      }
 
-    const dataInicioFormatada = new Date(lombadaAtual.dataInicio).toLocaleDateString('pt-BR');
-    const dataFimFormatada = new Date(lombadaAtual.dataFim).toLocaleDateString('pt-BR');
+      if (isClassificadorPreview) {
+        // Quando não há faixa ativa, usamos o Texto Superior da lombada
+        // e respeitamos quebras de linha (ENTER) digitadas pelo usuário.
+        const base = (textoSuperiorPreview || '—').toUpperCase();
+        return base
+          .split('\n')
+          .map((parte) => parte.trim())
+          .filter((parte) => parte.length > 0);
+      }
+
+      const letra = dadosPreview.letra || '—';
+      if (letra === 'Livro de Transporte') {
+        return ['Livro de', 'Transporte'];
+      }
+      return [letra];
+    })();
+    const numeroCentral = (() => {
+      // REGRA SIMPLES E ÚNICA:
+      // Sempre usa o NÚMERO da lombada (tanto para livro quanto para classificador).
+      const numeroBase = (dadosPreview.numero ?? '').toString().trim();
+      return numeroBase || '—';
+    })();
+    const mostrarTextoInferiorPreview = isClassificadorPreview && textoInferiorPreview.length > 0;
+    const mostrarFaixaClassificadorPreview = faixaClassificadorAtivaPreview;
+    const faixaBorderRadius = configClassificador.faixaFormato === 'retangular' ? '4px' : '10px';
+    const fonteSuperiorPrintPx = isClassificadorPreview
+      ? (configClassificador.fonteSuperior ?? layoutDados.printLetterFontPx)
+      : layoutDados.printLetterFontPx;
+    const fonteSuperiorPreviewPx = isClassificadorPreview
+      ? fonteSuperiorPrintPx * (PREVIEW_SCALE / MM_TO_PX)
+      : layoutDados.previewLetterFontSize;
+    const faixaFontSizePrintPx = isClassificadorPreview
+      ? (configClassificador.fonteFaixa ?? layoutDados.printLetterFontPx)
+      : layoutDados.printLetterFontPx;
+    const faixaFontSizePreviewPx = isClassificadorPreview
+      ? faixaFontSizePrintPx * (PREVIEW_SCALE / MM_TO_PX)
+      : layoutDados.previewLetterFontSize;
+
+    const textoFaixaPreview = (textoSuperiorPreview || configClassificador.faixaTexto || 'Classificador').toUpperCase();
+    const faixaFontSizePreviewAjustadaPx = mostrarFaixaClassificadorPreview
+      ? ajustarFonteParaLarguraPx(
+          textoFaixaPreview,
+          layoutDados.previewWidths.letra * 0.8,
+          faixaFontSizePreviewPx
+        )
+      : faixaFontSizePreviewPx;
+
+    const fonteSuperiorClassificadorPreviewAjustadaPx = isClassificadorPreview && !mostrarFaixaClassificadorPreview
+      ? ajustarFonteParaLarguraPx(
+          textoSuperiorPreview || '—',
+          layoutDados.previewWidths.letra * 0.9,
+          fonteSuperiorPreviewPx
+        )
+      : fonteSuperiorPreviewPx;
+
+    const textoInferiorWidthMm = isClassificadorPreview
+      ? Math.max(
+          configClassificador.larguraTextoInferiorSecao
+            ?? configClassificador.larguraInferiorSecao
+            ?? layoutDados.widthsMm.datas,
+          0
+        )
+      : layoutDados.widthsMm.datas;
+    const textoInferiorWidthPreviewPx = textoInferiorWidthMm * PREVIEW_SCALE;
+    // Texto inferior não usa mais ajuste vertical de configuração no PREVIEW;
+    // fica sempre em posição fixa abaixo da data.
+    const textoInferiorFontePreviewPx = isClassificadorPreview
+      ? (configClassificador.fonteInferior ?? layoutDados.printDatesFontPx) * (PREVIEW_SCALE / MM_TO_PX)
+      : layoutDados.previewDatesFontSize;
+    const textoInferiorFontePreviewAjustadaPx = ajustarFonteParaLarguraPx(
+      textoInferiorPreview || '',
+      textoInferiorWidthPreviewPx,
+      textoInferiorFontePreviewPx
+    );
+    const faixaAlturaPreviewPx = mostrarFaixaClassificadorPreview
+      ? Math.max(layoutDados.previewHeights.letra, faixaFontSizePreviewPx * 1.35)
+      : layoutDados.previewHeights.letra;
+    const usarTextoCentralPreview = isClassificadorPreview && Boolean(lombadaAtual.usarTextoCentral);
+    const fonteCentralOuNumeroPreviewPx = isClassificadorPreview
+      ? (usarTextoCentralPreview
+          ? (configClassificador.fonteCentral ?? layoutDados.printNumberFontPx)
+          : (configClassificador.fonteNumero ?? configClassificador.fonteCentral ?? layoutDados.printNumberFontPx)
+        ) * (PREVIEW_SCALE / MM_TO_PX)
+      : layoutDados.previewNumberFontSize;
+    const numeroOffsetPreviewPx = isClassificadorPreview
+      ? (usarTextoCentralPreview
+          ? (configClassificador.offsetCentral ?? 0)
+          : (configClassificador.offsetNumero ?? configClassificador.offsetCentral ?? 0)
+        ) * PREVIEW_SCALE
+      : layoutDados.previewOffsets.numero;
+    const textoNumeroLivroPreview = dadosPreview.numero || '—';
+    const fonteNumeroLivroAjustadaPreviewPx = ajustarFonteParaLarguraPx(
+      textoNumeroLivroPreview,
+      layoutDados.previewWidths.numero,
+      layoutDados.previewNumberFontSize
+    );
+    const numeroClassificadorTexto = numeroCentral || '—';
+    const fonteNumeroClassificadorAjustadaPreviewPx = ajustarFonteParaLarguraPx(
+      numeroClassificadorTexto,
+      layoutDados.previewWidths.numero,
+      fonteCentralOuNumeroPreviewPx
+    );
+
+    // Limites de segurança para offsets verticais no preview do classificador,
+    // evitando que o conteúdo "saia" da lombada, mas permitindo um ajuste amplo.
+    const numeroOffsetPreviewSafePx = isClassificadorPreview
+      ? clamp(numeroOffsetPreviewPx, -80, 80)
+      : layoutDados.previewOffsets.numero;
+    // Mantido apenas para compatibilidade, mas fixado em 0 no preview.
+    const textoInferiorOffsetPreviewSafePx = 0;
+
+    const offsetFaixaPreviewPx = (configClassificador.offsetFaixa ?? configClassificador.offsetSuperior ?? 0) * PREVIEW_SCALE;
+    const offsetTextoSuperiorPreviewPx = (configClassificador.offsetSuperior ?? 0) * PREVIEW_SCALE;
+    const offsetLetraPreviewPx = isClassificadorPreview
+      ? (mostrarFaixaClassificadorPreview ? offsetFaixaPreviewPx : offsetTextoSuperiorPreviewPx)
+      : layoutDados.previewOffsets.letra;
 
     const metrics = [
       {
@@ -1235,7 +1728,8 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
             justifyContent: 'flex-start',
             padding: `${PREVIEW_PADDING}px`,
             boxShadow: previewShadow,
-            gap: `${previewGapPx}px`
+            gap: `${previewGapPx}px`,
+            position: 'relative'
           }}
         >
           <div
@@ -1263,60 +1757,120 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
 
           <div
             style={{
-              height: `${layoutDados.previewHeights.letra}px`,
+              // Para classificador SEM faixa, TODO o espaço entre o LOGO e o BLOCO INFERIOR
+              // (datas + texto inferior) é dedicado ao Texto Superior.
+              minHeight: isClassificadorPreview && !mostrarFaixaClassificadorPreview
+                ? `${Math.max(
+                    previewHeightPx
+                      - layoutDados.previewHeights.logo
+                      - layoutDados.previewHeights.datas
+                      - PREVIEW_PADDING * 2
+                      - previewGapPx * 2,
+                    0
+                  )}px`
+                : `${faixaAlturaPreviewPx}px`,
               width: '100%',
-              maxWidth: `${layoutDados.previewWidths.letra}px`,
+              maxWidth: mostrarFaixaClassificadorPreview ? '100%' : `${layoutDados.previewWidths.letra}px`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 900,
               fontFamily: '"Arial Black", Arial, sans-serif',
               color: '#000',
-              transform: `translateY(${layoutDados.previewOffsets.letra}px)`
+              transform: `translateY(${offsetLetraPreviewPx}px)`,
+              backgroundColor: mostrarFaixaClassificadorPreview ? '#b3b3b5' : 'transparent',
+              borderRadius: mostrarFaixaClassificadorPreview ? faixaBorderRadius : 0,
+              padding: mostrarFaixaClassificadorPreview ? '6px 18px' : 0,
+              boxShadow: mostrarFaixaClassificadorPreview ? 'inset 0 2px 4px rgba(0,0,0,0.25)' : 'none',
+              border: mostrarFaixaClassificadorPreview ? '1px solid rgba(0,0,0,0.18)' : 'none',
+              textTransform: 'uppercase',
+              letterSpacing: mostrarFaixaClassificadorPreview ? '2.5px' : 'normal',
+              // Espaço visual extra abaixo da faixa / texto superior
+              marginBottom: previewGapPx * 0.8
             }}
           >
-            {(() => {
-              const letra = lombadaAtual.letra || '—';
-              const parts =
-                letra === 'Livro de Transporte'
-                  ? ['Livro de', 'Transporte']
-                  : [letra];
-              const perLineFontSize =
-                layoutDados.previewLetterFontSize / Math.max(parts.length, 1);
-
-              return (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    width: '100%',
-                    textAlign: 'center',
-                    gap: parts.length > 1 ? `${previewGapPx * 0.1}px` : 0
-                  }}
-                >
-                  {parts.map((part, index) => (
-                    <span
-                      key={`preview-letter-part-${index}`}
-                      style={{
-                        fontSize: `${perLineFontSize}px`,
-                        textTransform: 'uppercase',
-                        lineHeight: 1,
-                        whiteSpace: 'nowrap',
-                        margin: 0
-                      }}
-                    >
-                      {part}
-                    </span>
-                  ))}
-                </div>
-              );
-            })()}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                width: '100%',
+                textAlign: 'center',
+                gap: letraParts.length > 1 ? `${previewGapPx * 0.1}px` : 0
+              }}
+            >
+              {letraParts.map((part, index) => {
+                const baseFontSizePx = mostrarFaixaClassificadorPreview
+                  ? faixaFontSizePreviewAjustadaPx
+                  : (isClassificadorPreview ? fonteSuperiorClassificadorPreviewAjustadaPx : layoutDados.previewLetterFontSize);
+                const larguraDisponivelPx = (mostrarFaixaClassificadorPreview
+                  ? layoutDados.previewWidths.letra * 0.8
+                  : layoutDados.previewWidths.letra * 0.9);
+                const fontSizePx = ajustarFonteParaLarguraPx(
+                  part,
+                  larguraDisponivelPx,
+                  baseFontSizePx
+                );
+                return (
+                  <span
+                    key={`preview-letter-part-${index}`}
+                    style={{
+                      fontSize: `${fontSizePx / Math.max(letraParts.length, 1)}px`,
+                      textTransform: 'uppercase',
+                      lineHeight: 1,
+                      whiteSpace: 'nowrap',
+                      display: 'block',
+                      textAlign: 'center',
+                      margin: 0
+                    }}
+                  >
+                    {part}
+                  </span>
+                );
+              })}
+            </div>
           </div>
 
           {(() => {
+            if (isClassificadorPreview) {
+              // Quando o classificador está sem faixa, todo o espaço entre logo e datas
+              // já é usado pelo Texto Superior. Nesse caso, não renderizamos um
+              // bloco de "número" separado.
+              if (!mostrarFaixaClassificadorPreview) {
+                return null;
+              }
+              return (
+                <div
+                  style={{
+                    // Garante altura mínima para que o texto central/número fique sempre visível
+                    height: `${Math.max(layoutDados.previewHeights.numero, 24)}px`,
+                    width: '100%',
+                    maxWidth: `${layoutDados.previewWidths.numero}px`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontFamily: '"Arial Black", Arial, sans-serif',
+                    fontSize: `${fonteNumeroClassificadorAjustadaPreviewPx}px`,
+                    color: '#000',
+                    lineHeight: 1,
+                    // Aplica o ajuste vertical configurado, com limites de segurança
+                    transform: `translateY(${numeroOffsetPreviewSafePx}px)`,
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'clip',
+                    // Espaço extra abaixo do texto central antes do texto inferior/datas
+                    marginBottom: previewGapPx * 0.8
+                  }}
+                >
+                  {numeroCentral || '—'}
+                </div>
+              );
+            }
+
             const letraAtual = lombadaAtual.letra || '';
             const numeroAtual = lombadaAtual.numero || '—';
             const isLivroTransporte = letraAtual === 'Livro de Transporte';
@@ -1333,7 +1887,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                   gap: isLivroTransporte ? `${previewGapPx * 0.3}px` : 0,
                   fontWeight: 900,
                   fontFamily: '"Arial Black", Arial, sans-serif',
-                  fontSize: `${layoutDados.previewNumberFontSize}px`,
+                fontSize: `${fonteNumeroLivroAjustadaPreviewPx}px`,
                   color: '#000',
                   lineHeight: 1,
                   transform: `translateY(${layoutDados.previewOffsets.numero}px)`
@@ -1341,7 +1895,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
               >
                 {isLivroTransporte ? (
                   <>
-                    <span style={{ fontSize: `${layoutDados.previewNumberFontSize * 0.75}px` }}>nº</span>
+                  <span style={{ fontSize: `${fonteNumeroLivroAjustadaPreviewPx * 0.75}px` }}>nº</span>
                     <span>{numeroAtual}</span>
                   </>
                 ) : (
@@ -1351,28 +1905,63 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
             );
           })()}
 
-          <div
-            style={{
-              height: `${layoutDados.previewHeights.datas}px`,
-              width: '100%',
-              maxWidth: `${layoutDados.previewWidths.datas}px`,
+          {(possuiDataInicio || possuiDataFim || mostrarTextoInferiorPreview) && (() => {
+            // Bloco combinado de datas + texto inferior, sempre DENTRO da lombada,
+            // ancorado na parte inferior.
+            const blocoInferiorStyle: React.CSSProperties = {
+              position: 'absolute',
+              left: `${PREVIEW_PADDING}px`,
+              right: `${PREVIEW_PADDING}px`,
+              width: `calc(100% - ${PREVIEW_PADDING * 2}px)`,
+              bottom: `${PREVIEW_PADDING * 2}px`,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: `${previewGapPx * 0.4}px`,
-              fontWeight: 700,
-              fontSize: `${layoutDados.previewDatesFontSize}px`,
-              color: '#000',
-              lineHeight: 1.1,
-            textAlign: 'center',
-            transform: `translateY(${layoutDados.previewOffsets.datas}px)`
-            }}
-          >
-            <span>{dataInicioFormatada}</span>
-            <span style={{ fontSize: `${layoutDados.previewDatesSeparatorSize}px` }}>a</span>
-            <span>{dataFimFormatada}</span>
-          </div>
+              justifyContent: 'flex-end',
+              gap: `${previewGapPx * 0.3}px`,
+              textAlign: 'center'
+            };
+
+            return (
+              <div style={blocoInferiorStyle}>
+                {(possuiDataInicio || possuiDataFim) && (
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: `${layoutDados.previewDatesFontSize}px`,
+                      color: '#000',
+                      lineHeight: 1.1
+                    }}
+                  >
+                    {possuiDataInicio && <span>{dataInicioFormatada}</span>}
+                    {possuiDataInicio && possuiDataFim && (
+                      <span style={{ fontSize: `${layoutDados.previewDatesSeparatorSize}px` }}> a </span>
+                    )}
+                    {possuiDataFim && <span>{dataFimFormatada}</span>}
+                  </div>
+                )}
+
+                {mostrarTextoInferiorPreview && (
+                  <div
+                    style={{
+                      width: `${textoInferiorWidthPreviewPx}px`,
+                      maxWidth: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 900,
+                      textTransform: 'uppercase',
+                      fontSize: `${textoInferiorFontePreviewAjustadaPx}px`,
+                      color: '#000',
+                      padding: '2px 0'
+                    }}
+                  >
+                    {textoInferiorPreview}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <div
           style={{
@@ -1471,8 +2060,25 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
 
   const renderLista = () => (
     <div style={previewListStyle}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-        <h3 style={{ color: theme.text, margin: 0 }}>📚 Lombadas Criadas ({lombadas.length})</h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px', gap: '12px', flexWrap: 'wrap' }}>
+        <h3 style={{ color: theme.text, margin: 0 }}>📚 Lombadas Criadas ({lombadasFiltradas.length})</h3>
+        <input
+          type="text"
+          placeholder="Buscar por descrição ou tipo..."
+          value={termoBusca}
+          onChange={(e) => setTermoBusca(e.target.value)}
+          style={{
+            padding: '6px 12px',
+            fontSize: '13px',
+            borderRadius: '6px',
+            border: `1px solid ${theme.border}`,
+            backgroundColor: theme.surface,
+            color: theme.text,
+            minWidth: '200px',
+            flex: 1,
+            maxWidth: '300px'
+          }}
+        />
         {selectionMode && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '12px', fontWeight: 600, color: '#2ec4b6' }}>
@@ -1501,11 +2107,24 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
-        maxHeight: lombadas.length > 4 ? '360px' : 'none',
-        overflowY: lombadas.length > 4 ? 'auto' : 'visible',
-        paddingRight: lombadas.length > 4 ? '6px' : 0
+        maxHeight: lombadasFiltradas.length > 4 ? '360px' : 'none',
+        overflowY: lombadasFiltradas.length > 4 ? 'auto' : 'visible',
+        paddingRight: lombadasFiltradas.length > 4 ? '6px' : 0
       }}>
-        {lombadas.map((lombada, index) => {
+        {lombadasFiltradas.map((lombada) => {
+          const index = lombadas.indexOf(lombada);
+          const isClassificadorItem = lombada.contexto === 'classificador';
+          const codigoExibicao = lombada.codigo ? `#${lombada.codigo}` : '—';
+          const tituloPrincipal = isClassificadorItem
+            ? `Classificador ${codigoExibicao}`.trim()
+            : `${lombada.letra || '—'} ${lombada.numero || ''}`.trim();
+          const subtituloPrincipal = isClassificadorItem
+            ? (lombada.infoAdicional ? lombada.infoAdicional : 'Sem descrição definida')
+            : (lombada.tipoLivro || 'Tipo não definido');
+          const statusLabel = isClassificadorItem
+            ? (lombada.classificadorAtivo ? 'Classificador Ativo' : 'Classificador Inativo')
+            : 'Lombada de Livros';
+
           const isSelected = selectionMode
             ? selectedIndices.includes(index)
             : lombadaSelecionada === index;
@@ -1565,7 +2184,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                   color: theme.text,
                   minWidth: '80px'
                 }}>
-                  {lombada.letra} {lombada.numero}
+                  {tituloPrincipal}
                 </div>
                 <div style={{
                   display: 'flex',
@@ -1578,21 +2197,28 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                     fontWeight: '600',
                     color: theme.text
                   }}>
-                    {lombada.tipoLivro}
+                    {subtituloPrincipal}
+                  </div>
+                  <div style={{ fontSize: '12px', color: theme.textSecondary }}>
+                    Código: {codigoExibicao}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: theme.textSecondary
+                    }}
+                  >
+                    {formatDateRange(lombada.dataInicio, lombada.dataFim)}
                   </div>
                   <div style={{
                     fontSize: '12px',
-                    color: theme.textSecondary
-                  }}>
-                    {new Date(lombada.dataInicio).toLocaleDateString('pt-BR')} a {new Date(lombada.dataFim).toLocaleDateString('pt-BR')}
-                  </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: theme.primary,
+                    color: isClassificadorItem
+                      ? (lombada.classificadorAtivo ? '#16a34a' : '#ef4444')
+                      : theme.primary,
                     fontWeight: 600,
                     textTransform: 'uppercase'
                   }}>
-                    {lombada.contexto === 'classificador' ? 'Lombada de Classificador' : 'Lombada de Livros'}
+                    {statusLabel}
                   </div>
                 </div>
               </div>
@@ -1707,96 +2333,227 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                 ))}
               </div>
               <div style={formWrapperStyle}>
-                <div style={formGridStyle}>
-          {/* Código (Somente Leitura) */}
-          <div style={{ ...fieldContainerStyle, gridColumn: 'span 1' }}>
-            <label style={labelStyle}>🔒 Código:</label>
-            <input
-              type="text"
-              value={formData.codigo}
-              readOnly
-              disabled
-              style={{
-                ...inputStyle,
-                backgroundColor: theme.surface,
-                cursor: 'not-allowed',
-                fontWeight: 'bold',
-                color: theme.primary,
-                border: `2px solid ${theme.primary}`
-              }}
-              title="Código gerado automaticamente - não editável"
-            />
-          </div>
-
-          {/* Tipo de Livro */}
-          <div style={{ ...fieldContainerStyle, gridColumn: 'span 1' }}>
-            <label style={labelStyle}>Tipo de Livro:</label>
-            <select
-              name="tipoLivro"
-              value={formData.tipoLivro}
-              onChange={handleInputChange}
-              style={selectStyle}
-            >
-              <option value="">Selecione...</option>
-              {tiposLivro.map((tipo) => (
-                <option key={tipo} value={tipo}>{tipo}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Letra */}
-          <div style={{ ...fieldContainerStyle, gridColumn: 'span 1' }}>
-            <label style={labelStyle}>Letra / Nomenclatura:</label>
-            <select
-              name="letra"
-              value={formData.letra}
-              onChange={handleInputChange}
-              style={selectStyle}
-              disabled={letrasDisponiveis.length === 0}
-            >
-              <option value="">Selecione...</option>
-              {letrasDisponiveis.map((letraOpt) => (
-                <option key={letraOpt} value={letraOpt}>{letraOpt}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Número */}
-          <div style={{ ...fieldContainerStyle, gridColumn: 'span 1' }}>
-            <label style={labelStyle}>Número: *</label>
-            <input
-              type="text"
-              name="numero"
-              value={formData.numero}
-              onChange={handleInputChange}
-              style={inputStyle}
-              placeholder="383, 607..."
-            />
-          </div>
-
-          {/* Data Início */}
-          <div style={{ ...fieldContainerStyle, gridColumn: 'span 2' }}>
-            <label style={labelStyle}>Data Início: *</label>
-            <input
-              type="date"
-              name="dataInicio"
-              value={formData.dataInicio}
-              onChange={handleInputChange}
-              style={inputStyle}
-            />
-          </div>
-
-          {/* Data Fim */}
-          <div style={{ ...fieldContainerStyle, gridColumn: 'span 2' }}>
-            <label style={labelStyle}>Data Fim: *</label>
-            <input
-              type="date"
-              name="dataFim"
-              value={formData.dataFim}
-              onChange={handleInputChange}
-              style={inputStyle}
-            />
-          </div>
+                <div style={submenuCadastro === 'classificador' ? { ...formGridStyle, gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } : formGridStyle}>
+          {submenuCadastro === 'classificador' ? (
+            <>
+              <div style={{ ...fieldContainerStyle, gridColumn: 'span 2', display: 'grid', gridTemplateColumns: 'minmax(120px, 150px) minmax(160px, 220px) minmax(0, 1fr)', gap: '18px', alignItems: 'center', padding: '0 18px 0 6px' }}>
+                <div style={{ paddingLeft: '6px' }}>
+                  <label style={labelStyle}>🔒 Código:</label>
+                  <input
+                    type="text"
+                    value={formData.codigo}
+                    readOnly
+                    disabled
+                    style={{
+                      ...inputStyle,
+                      backgroundColor: theme.surface,
+                      cursor: 'not-allowed',
+                      fontWeight: 'bold',
+                      color: formData.codigo ? theme.primary : theme.textSecondary,
+                      border: formData.codigo ? `2px solid ${theme.primary}` : `1px dashed ${theme.border}`
+                    }}
+                    title="Código gerado automaticamente - não editável"
+                  />
+                  <small style={{ display: 'block', marginTop: '4px', color: theme.textSecondary, fontSize: '11px' }}>
+                    Será gerado ao clicar em &quot;Gerar Lombada&quot;.
+                  </small>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', marginLeft: '24px' }}>
+                  <span style={{ ...labelStyle, marginBottom: 0 }}>Ativar Classificador</span>
+                  <input
+                    type="checkbox"
+                    id="classificador-ativo"
+                    aria-label="Ativar Classificador"
+                    checked={Boolean(formData.classificadorAtivo)}
+                    onChange={(e) => handleToggleClassificador(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                </div>
+                <div style={{ paddingRight: '4px' }}>
+                  <label style={labelStyle}>Texto Superior:</label>
+                  <textarea
+                    name="textoSuperior"
+                    value={formData.textoSuperior ?? ''}
+                    onChange={handleInputChange}
+                    rows={2}
+                    placeholder="Texto exibido na parte superior"
+                    style={{
+                      ...inputStyle,
+                      resize: 'vertical',
+                      minHeight: '52px'
+                    }}
+                  />
+                </div>
+              </div>
+              <div
+                style={{
+                  ...fieldContainerStyle,
+                  gridColumn: 'span 2',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(200px, 1fr)',
+                  gap: '18px',
+                  alignItems: 'end',
+                  padding: '0 18px 0 6px'
+                }}
+              >
+                <div style={{ paddingRight: '6px' }}>
+                  <label style={labelStyle}>Texto Inferior:</label>
+                  <input
+                    type="text"
+                    name="textoInferior"
+                    value={formData.textoInferior ?? ''}
+                    onChange={handleInputChange}
+                    style={{
+                      ...inputStyle,
+                      backgroundColor: formData.dataInicio && formData.dataFim ? theme.surface : inputStyle.backgroundColor,
+                      cursor: formData.dataInicio && formData.dataFim ? 'not-allowed' : 'text',
+                      opacity: formData.dataInicio && formData.dataFim ? 0.6 : 1
+                    }}
+                    placeholder={formData.dataInicio && formData.dataFim
+                      ? 'Indisponível quando duas datas são informadas'
+                      : 'Texto exibido na base'}
+                    disabled={Boolean(formData.dataInicio && formData.dataFim)}
+                  />
+                </div>
+              </div>
+              <div
+                style={{
+                  ...fieldContainerStyle,
+                  gridColumn: 'span 2',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, minmax(160px, 1fr))',
+                  gap: '24px',
+                  alignItems: 'end',
+                  padding: '0 28px 0 6px'
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>Data Início:</label>
+                  <input
+                    type="date"
+                    name="dataInicio"
+                    value={formData.dataInicio}
+                    onChange={handleInputChange}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Data Fim:</label>
+                  <input
+                    type="date"
+                    name="dataFim"
+                    value={formData.dataFim}
+                    onChange={handleInputChange}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Descrição:</label>
+                  <input
+                    type="text"
+                    name="infoAdicional"
+                    value={formData.infoAdicional ?? ''}
+                    onChange={handleInputChange}
+                    style={inputStyle}
+                    placeholder="Descrição opcional"
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ ...fieldContainerStyle, gridColumn: 'span 1' }}>
+                <label style={labelStyle}>🔒 Código:</label>
+                <input
+                  type="text"
+                  value={formData.codigo}
+                  readOnly
+                  disabled
+                  style={{
+                    ...inputStyle,
+                    backgroundColor: theme.surface,
+                    cursor: 'not-allowed',
+                    fontWeight: 'bold',
+                    color: formData.codigo ? theme.primary : theme.textSecondary,
+                    border: formData.codigo ? `2px solid ${theme.primary}` : `1px dashed ${theme.border}`
+                  }}
+                  title="Código gerado automaticamente - não editável"
+                />
+                <small style={{ display: 'block', marginTop: '4px', color: theme.textSecondary, fontSize: '11px' }}>
+                  Será gerado ao clicar em &quot;Gerar Lombada&quot;.
+                </small>
+              </div>
+              <div style={{ ...fieldContainerStyle, gridColumn: 'span 1' }}>
+                <label style={labelStyle}>Tipo de Livro:</label>
+                <select
+                  name="tipoLivro"
+                  value={formData.tipoLivro}
+                  onChange={handleInputChange}
+                  style={selectStyle}
+                >
+                  <option value="">Selecione...</option>
+                  {tiposLivro.map((tipo) => (
+                    <option key={tipo} value={tipo}>{tipo}</option>
+                  ))}
+                </select>
+              </div>
+  
+              <div style={{ ...fieldContainerStyle, gridColumn: 'span 1' }}>
+                <label style={labelStyle}>Letra / Nomenclatura:</label>
+                <select
+                  name="letra"
+                  value={formData.letra}
+                  onChange={handleInputChange}
+                  style={selectStyle}
+                  disabled={letrasDisponiveis.length === 0}
+                >
+                  <option value="">Selecione...</option>
+                  {letrasDisponiveis.map((letraOpt) => (
+                    <option key={letraOpt} value={letraOpt}>{letraOpt}</option>
+                  ))}
+                </select>
+              </div>
+  
+              <div style={{ ...fieldContainerStyle, gridColumn: 'span 1' }}>
+                <label style={labelStyle}>Número: *</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  name="numero"
+                  value={formData.numero}
+                  onChange={(e) => {
+                    const valor = e.target.value.replace(/\D/g, '');
+                    setFormData((prev) => ({ ...prev, numero: valor }));
+                  }}
+                  style={inputStyle}
+                  placeholder="383, 607..."
+                />
+              </div>
+  
+              <div style={{ ...fieldContainerStyle, gridColumn: 'span 2' }}>
+                <label style={labelStyle}>Data Início:</label>
+                <input
+                  type="date"
+                  name="dataInicio"
+                  value={formData.dataInicio}
+                  onChange={handleInputChange}
+                  style={inputStyle}
+                />
+              </div>
+  
+              <div style={{ ...fieldContainerStyle, gridColumn: 'span 2' }}>
+                <label style={labelStyle}>Data Fim:</label>
+                <input
+                  type="date"
+                  name="dataFim"
+                  value={formData.dataFim}
+                  onChange={handleInputChange}
+                  style={inputStyle}
+                />
+              </div>
+            </>
+          )}
         </div>
 
             <div style={buttonContainerStyle}>
@@ -1885,7 +2642,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                         e.currentTarget.style.opacity = '1';
                       }}
                     >
-                      🖨️ Imprimir Lombada
+                      🖨️ Imprimir Lombada / Classificador
                     </button>
                   </div>
                 </>
@@ -1924,13 +2681,124 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
             backgroundColor: '#f5f7f7'
           }}>
             {lombadasParaImpressao.map((lombada, index) => {
-              const larguraPx = Math.max(larguraLombada, 0.1) * MM_TO_PX;
-              const alturaPx = Math.max(alturaLombada, 0.1) * MM_TO_PX;
               const logoImpressao = lombada.logo || logo;
-              const dataInicioFormatada = new Date(lombada.dataInicio).toLocaleDateString('pt-BR');
-              const dataFimFormatada = new Date(lombada.dataFim).toLocaleDateString('pt-BR');
+              const dataInicioFormatada = formatDateOrPlaceholder(lombada.dataInicio);
+              const dataFimFormatada = formatDateOrPlaceholder(lombada.dataFim);
+              const possuiDataInicio = !!dataInicioFormatada;
+              const possuiDataFim = !!dataFimFormatada;
+              const isClassificadorPrint = lombada.contexto === 'classificador';
+              const alturaImpressaoMm = isClassificadorPrint ? configClassificador.alturaLombada : alturaLombada;
+              const larguraImpressaoMm = isClassificadorPrint ? configClassificador.larguraLombada : larguraLombada;
+              const larguraPx = Math.max(larguraImpressaoMm, 0.1) * MM_TO_PX;
+              const alturaPx = Math.max(alturaImpressaoMm, 0.1) * MM_TO_PX;
+              const textoSuperiorPrint = (lombada.textoSuperior ?? '').trim();
+              const textoCentralPrint = (lombada.textoCentral ?? '').trim();
+              const textoInferiorPrint = (lombada.textoInferior ?? '').trim();
+              const faixaClassificadorAtivaPrint = isClassificadorPrint && Boolean(lombada.classificadorAtivo) && configClassificador.faixaHabilitada;
+              const letraPartsPrint = (() => {
+                if (faixaClassificadorAtivaPrint) {
+                  const textoFaixa = textoSuperiorPrint || configClassificador.faixaTexto || 'Classificador';
+                  return [textoFaixa.toUpperCase()];
+                }
+                if (isClassificadorPrint) {
+                  return [textoSuperiorPrint || '—'];
+                }
+                const letra = lombada.letra || '—';
+                if (letra === 'Livro de Transporte') {
+                  return ['Livro de', 'Transporte'];
+                }
+                return [letra];
+              })();
+              const numeroCentralPrint = (() => {
+                // Mesma regra do preview: sempre usa o NÚMERO.
+                const numeroBase = (lombada.numero ?? '').toString().trim();
+                return numeroBase || '—';
+              })();
               const layoutConfig = obterLayoutParaLombada(lombada);
-              const layoutDados = calcularLayoutDados(layoutConfig);
+              const layoutDados = calcularLayoutDados(layoutConfig, {
+                alturaMm: alturaImpressaoMm,
+                larguraMm: larguraImpressaoMm
+              });
+              const mostrarTextoInferiorPrint = isClassificadorPrint && textoInferiorPrint.length > 0;
+              const mostrarSemDatasPrint = false;
+              const mostrarFaixaClassificadorPrint = faixaClassificadorAtivaPrint;
+              const fonteSuperiorPrintPx = isClassificadorPrint
+                ? (configClassificador.fonteSuperior ?? layoutDados.printLetterFontPx)
+                : layoutDados.printLetterFontPx;
+              const faixaFontSizePrintPx = isClassificadorPrint
+                ? (configClassificador.fonteFaixa ?? layoutDados.printLetterFontPx)
+                : layoutDados.printLetterFontPx;
+
+              const textoFaixaPrint = (textoSuperiorPrint || configClassificador.faixaTexto || 'Classificador').toUpperCase();
+              const faixaFontSizePrintAjustadaPx = mostrarFaixaClassificadorPrint
+                ? ajustarFonteParaLarguraPx(
+                    textoFaixaPrint,
+                    layoutDados.printWidthsPx.letra * 0.8,
+                    faixaFontSizePrintPx
+                  )
+                : faixaFontSizePrintPx;
+
+              const fonteSuperiorClassificadorPrintAjustadaPx = isClassificadorPrint && !mostrarFaixaClassificadorPrint
+                ? ajustarFonteParaLarguraPx(
+                    textoSuperiorPrint || '—',
+                    layoutDados.printWidthsPx.letra * 0.9,
+                    fonteSuperiorPrintPx
+                  )
+                : fonteSuperiorPrintPx;
+
+              const faixaAlturaPrintPx = mostrarFaixaClassificadorPrint
+                ? Math.max(layoutDados.printHeightsPx.letra, faixaFontSizePrintPx * 1.35)
+                : layoutDados.printHeightsPx.letra;
+              const offsetFaixaPrintPx = (configClassificador.offsetFaixa ?? configClassificador.offsetSuperior ?? 0) * MM_TO_PX;
+              const offsetTextoSuperiorPrintPx = (configClassificador.offsetSuperior ?? 0) * MM_TO_PX;
+              const offsetLetraPrintPx = isClassificadorPrint
+                ? (mostrarFaixaClassificadorPrint ? offsetFaixaPrintPx : offsetTextoSuperiorPrintPx)
+                : layoutDados.printOffsets.letra;
+              const textoInferiorWidthMm = isClassificadorPrint
+                ? Math.max(
+                    configClassificador.larguraTextoInferiorSecao
+                      ?? configClassificador.larguraInferiorSecao
+                      ?? layoutDados.widthsMm.datas,
+                    0
+                  )
+                : layoutDados.widthsMm.datas;
+              const textoInferiorWidthPrintPx = textoInferiorWidthMm * MM_TO_PX;
+              const textoInferiorOffsetPrintPx = (isClassificadorPrint
+                ? (configClassificador.offsetTextoInferior ?? 0)
+                : 0) * MM_TO_PX;
+              const textoInferiorFontePrintPx = isClassificadorPrint
+                ? (configClassificador.fonteInferior ?? layoutDados.printDatesFontPx)
+                : layoutDados.printDatesFontPx;
+              const textoInferiorFontePrintAjustadaPx = ajustarFonteParaLarguraPx(
+                textoInferiorPrint || '',
+                textoInferiorWidthPrintPx,
+                textoInferiorFontePrintPx
+              );
+              const usarTextoCentralPrint = isClassificadorPrint && Boolean(lombada.usarTextoCentral);
+              const fonteCentralOuNumeroPrintPx = isClassificadorPrint
+                ? (usarTextoCentralPrint
+                    ? (configClassificador.fonteCentral ?? layoutDados.printNumberFontPx)
+                    : (configClassificador.fonteNumero ?? configClassificador.fonteCentral ?? layoutDados.printNumberFontPx)
+                  )
+                : layoutDados.printNumberFontPx;
+              const numeroOffsetPrintPx = isClassificadorPrint
+                ? (usarTextoCentralPrint
+                    ? (configClassificador.offsetCentral ?? 0)
+                    : (configClassificador.offsetNumero ?? configClassificador.offsetCentral ?? 0)
+                  ) * MM_TO_PX
+                : layoutDados.printOffsets.numero;
+              const textoNumeroLivroPrint = lombada.numero || '—';
+              const fonteNumeroLivroAjustadaPrintPx = ajustarFonteParaLarguraPx(
+                textoNumeroLivroPrint,
+                layoutDados.printWidthsPx.numero,
+                layoutDados.printNumberFontPx
+              );
+              const numeroClassificadorTextoPrint = numeroCentralPrint || '—';
+              const fonteNumeroClassificadorAjustadaPrintPx = ajustarFonteParaLarguraPx(
+                numeroClassificadorTextoPrint,
+                layoutDados.printWidthsPx.numero,
+                fonteCentralOuNumeroPrintPx
+              );
 
               return (
               <div
@@ -1947,9 +2815,10 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                   alignItems: 'center',
                   justifyContent: 'flex-start',
                   gap: `${printGapPx}px`,
-                  padding: '0',
+                padding: '0',
                   boxShadow: layoutDados.bordaAtiva ? '0 10px 28px rgba(0,0,0,0.22)' : 'none',
-                  border: layoutDados.bordaAtiva ? '2px solid #000' : 'none'
+                border: layoutDados.bordaAtiva ? '2px solid #000' : 'none',
+                position: 'relative'
                 }}
               >
                 {/* Logo */}
@@ -1975,9 +2844,10 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                 {/* Letra */}
                 <div
                   style={{
-                    height: `${layoutDados.printHeightsPx.letra}px`,
+                    minHeight: `${faixaAlturaPrintPx}px`,
+                    maxHeight: `${faixaAlturaPrintPx}px`,
                     width: '100%',
-                    maxWidth: `${layoutDados.printWidthsPx.letra}px`,
+                    maxWidth: mostrarFaixaClassificadorPrint ? '100%' : `${layoutDados.printWidthsPx.letra}px`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1985,46 +2855,57 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                     fontFamily: '"Arial Black", Arial, sans-serif',
                     color: '#000',
                     textTransform: 'uppercase',
-                    transform: `translateY(${layoutDados.printOffsets.letra}px)`
+                    transform: `translateY(${offsetLetraPrintPx}px)`,
+                    backgroundColor: mostrarFaixaClassificadorPrint ? '#b3b3b5' : 'transparent',
+                    borderRadius: mostrarFaixaClassificadorPrint ? (configClassificador.faixaFormato === 'retangular' ? '4px' : '12px') : 0,
+                    padding: mostrarFaixaClassificadorPrint ? '8px 20px' : 0,
+                    boxShadow: mostrarFaixaClassificadorPrint ? 'inset 0 2px 4px rgba(0,0,0,0.25)' : 'none',
+                    border: mostrarFaixaClassificadorPrint ? '1px solid rgba(0,0,0,0.25)' : 'none',
+                    letterSpacing: mostrarFaixaClassificadorPrint ? '2.5px' : 'normal',
+                    overflow: 'hidden'
                   }}
                 >
-                  {(() => {
-                    const letra = lombada.letra || '—';
-                    const parts =
-                      letra === 'Livro de Transporte'
-                        ? ['Livro de', 'Transporte']
-                        : [letra];
-                    const perLineFontPx =
-                      layoutDados.printLetterFontPx / Math.max(parts.length, 1);
-
-                    return (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          height: '100%',
-                          width: '100%',
-                          textAlign: 'center',
-                          gap: parts.length > 1 ? `${printGapPx * 0.2}px` : 0
-                        }}
-                      >
-                        {parts.map((part, index) => (
-                          <span
-                            key={`print-letter-part-${index}`}
-                            style={{
-                              fontSize: `${perLineFontPx}px`,
-                              lineHeight: 1,
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {part}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      width: '100%',
+                      textAlign: 'center',
+                      gap: letraPartsPrint.length > 1 ? `${printGapPx * 0.2}px` : 0,
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {letraPartsPrint.map((part, index) => {
+                      const baseFontSizePx = mostrarFaixaClassificadorPrint
+                        ? faixaFontSizePrintAjustadaPx
+                        : (isClassificadorPrint ? fonteSuperiorClassificadorPrintAjustadaPx : layoutDados.printLetterFontPx);
+                      const larguraDisponivelPx = (mostrarFaixaClassificadorPrint
+                        ? layoutDados.printWidthsPx.letra * 0.8
+                        : layoutDados.printWidthsPx.letra * 0.9);
+                      const fontSizePx = ajustarFonteParaLarguraPx(
+                        part,
+                        larguraDisponivelPx,
+                        baseFontSizePx
+                      );
+                      return (
+                        <span
+                          key={`print-letter-part-${index}`}
+                          style={{
+                            fontSize: `${fontSizePx / Math.max(letraPartsPrint.length, 1)}px`,
+                            lineHeight: 1,
+                            whiteSpace: 'nowrap',
+                            display: 'block',
+                            textAlign: 'center'
+                          }}
+                        >
+                          {part}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Número */}
@@ -2032,6 +2913,30 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                   const letraAtual = lombada.letra || '';
                   const numeroAtual = lombada.numero || '—';
                   const isLivroTransporte = letraAtual === 'Livro de Transporte';
+
+                  if (isClassificadorPrint) {
+                    return (
+                      <div
+                        style={{
+                          height: `${layoutDados.printHeightsPx.numero}px`,
+                          width: '100%',
+                          maxWidth: `${layoutDados.printWidthsPx.numero}px`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: `${fonteNumeroClassificadorAjustadaPrintPx}px`,
+                          fontWeight: 900,
+                          fontFamily: '"Arial Black", Arial, sans-serif',
+                          color: '#000',
+                          lineHeight: 1,
+                          textTransform: 'uppercase',
+                      transform: `translateY(${numeroOffsetPrintPx}px)`
+                        }}
+                      >
+                        {numeroCentralPrint || '—'}
+                      </div>
+                    );
+                  }
 
                   return (
                     <div
@@ -2043,7 +2948,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: isLivroTransporte ? `${printGapPx * 0.4}px` : 0,
-                        fontSize: `${layoutDados.printNumberFontPx}px`,
+                        fontSize: `${fonteNumeroLivroAjustadaPrintPx}px`,
                         fontWeight: 900,
                         fontFamily: '"Arial Black", Arial, sans-serif',
                         color: '#000',
@@ -2053,7 +2958,7 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                     >
                       {isLivroTransporte ? (
                         <>
-                          <span style={{ fontSize: `${layoutDados.printNumberFontPx * 0.75}px` }}>nº</span>
+                          <span style={{ fontSize: `${fonteNumeroLivroAjustadaPrintPx * 0.75}px` }}>nº</span>
                           <span>{numeroAtual}</span>
                         </>
                       ) : (
@@ -2063,12 +2968,43 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                   );
                 })()}
 
-                {/* Datas */}
-                <div
-                  style={{
+                {mostrarTextoInferiorPrint && (() => {
+                  const textoInferiorPrintStyle: React.CSSProperties = {
+                    width: `${textoInferiorWidthPrintPx}px`,
+                    maxWidth: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    fontSize: `${textoInferiorFontePrintAjustadaPx}px`,
+                    color: '#000',
+                    padding: '6px 0',
+                    transform: `translateY(${textoInferiorOffsetPrintPx}px)`
+                  };
+                  if (isClassificadorPrint) {
+                    const baseBottomPx = printGapPx * 3 + layoutDados.printHeightsPx.datas;
+                    const ajustePx = textoInferiorOffsetPrintPx;
+                    textoInferiorPrintStyle.position = 'absolute';
+                    textoInferiorPrintStyle.left = `${printGapPx}px`;
+                    textoInferiorPrintStyle.right = `${printGapPx}px`;
+                    textoInferiorPrintStyle.width = `calc(100% - ${printGapPx * 2}px)`;
+                    textoInferiorPrintStyle.transform = 'translateY(0)';
+                    textoInferiorPrintStyle.bottom = `${baseBottomPx - ajustePx}px`;
+                  }
+                  return (
+                  <div
+                    style={textoInferiorPrintStyle}
+                  >
+                    {textoInferiorPrint}
+                  </div>
+                  );
+                })()}
+
+                {(possuiDataInicio || possuiDataFim) && (() => {
+                  const estiloDatasPrint: React.CSSProperties = {
                     height: `${layoutDados.printHeightsPx.datas}px`,
-                    width: '100%',
-                    maxWidth: `${layoutDados.printWidthsPx.datas}px`,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -2079,13 +3015,28 @@ export default function LombadasPage({ onClose, modo }: LombadasPageProps) {
                     color: '#000',
                     textAlign: 'center',
                     lineHeight: 1.1,
-                    transform: `translateY(${layoutDados.printOffsets.datas}px)`
-                  }}
-                >
-                  <span>{dataInicioFormatada}</span>
-                  <span style={{ fontSize: `${layoutDados.printDatesSeparatorFontPx}px` }}>a</span>
-                  <span>{dataFimFormatada}</span>
-                </div>
+                    position: 'absolute',
+                    left: `${printGapPx}px`,
+                    right: `${printGapPx}px`,
+                    width: `calc(100% - ${printGapPx * 2}px)`,
+                    bottom: `${(isClassificadorPrint ? printGapPx * 4 : printGapPx * 3)}px`
+                  };
+                  return (
+                  <div
+                    style={estiloDatasPrint}
+                  >
+                    {possuiDataInicio && (
+                      <span>{dataInicioFormatada}</span>
+                    )}
+                    {possuiDataInicio && possuiDataFim && (
+                      <span style={{ fontSize: `${layoutDados.printDatesSeparatorFontPx}px` }}>a</span>
+                    )}
+                    {possuiDataFim && (
+                      <span>{dataFimFormatada}</span>
+                    )}
+                  </div>
+                  );
+                })()}
               </div>
             );
             })}
